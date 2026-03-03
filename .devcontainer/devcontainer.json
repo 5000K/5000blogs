@@ -1,0 +1,17 @@
+{
+  "name": "go-dev",
+  "image": "ghcr.io/willfantom/devcontainer-go:latest",
+  "workspaceMount": "source=${localWorkspaceFolder}/,target=/workspace,type=bind,consistency=cached",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ],
+      "settings": {}
+    }
+  }
+}
