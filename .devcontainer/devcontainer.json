@@ -4,7 +4,7 @@
   "workspaceMount": "source=${localWorkspaceFolder}/,target=/workspace,type=bind,consistency=cached",
   "workspaceFolder": "/workspace",
   "features": {
-    "ghcr.io/willfantom/features/dotfiles:1": {}
+    "ghcr.io/devcontainers/features/go:1": {}
   },
   "customizations": {
     "vscode": {
