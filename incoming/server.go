@@ -1,6 +1,7 @@
 package incoming
 
 import (
+	"5000blogs/config"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,7 +12,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func Serve() {
+func Serve(cfg *config.Config) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -21,7 +22,7 @@ func Serve() {
 	filesDir := http.Dir(filepath.Join(workDir, "public"))
 	FileServer(r, "/static", filesDir)
 
-	_ = http.ListenAndServe(":3000", r)
+	_ = http.ListenAndServe(cfg.ServerAddress, r)
 }
 
 func FileServer(r chi.Router, path string, root http.FileSystem) {
