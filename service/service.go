@@ -26,7 +26,7 @@ type Metadata struct {
 
 type Post struct {
 	path     string
-	contents *string
+	contents *[]byte
 }
 
 type Service struct {
@@ -100,13 +100,13 @@ func (s *Service) GetPost(path string) *Post {
 	return nil
 }
 
-func renderPost(post *Post) *string {
+func renderPost(post *Post) *[]byte {
 	if post.contents == nil {
 		// read file and render markdown to HTML, then set post.contents
 
 		// read file
 
-		fi, err := os.Open("input.txt")
+		fi, err := os.Open(post.path)
 		if err != nil {
 			// todo: log error
 			return nil
@@ -127,7 +127,7 @@ func renderPost(post *Post) *string {
 
 		// render markdown to HTML
 		// For now, just return the raw content as a placeholder
-		content := string(buf)
+		content := render(buf)
 		return &content
 	}
 
