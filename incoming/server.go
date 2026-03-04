@@ -2,6 +2,7 @@ package incoming
 
 import (
 	"5000blogs/config"
+	"5000blogs/service"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,15 +13,21 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func Serve(cfg *config.Config) {
+func Serve(cfg *config.Config, svc *service.Service) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	workDir, _ := os.Getwd()
-	filesDir := http.Dir(filepath.Join(workDir, "public"))
+	filesDir := http.Dir(filepath.Join(workDir, cfg.Paths.Static))
 	FileServer(r, "/static", filesDir)
+
+	r.Get("/posts/{slug}", func(w http.ResponseWriter, r *http.Request) {
+		slug := chi.URLParam(r, "slug")
+		path := filepath.Join(cfg.Paths.Posts, slug+".md")
+		svc.ServePost(path, w)
+	})
 
 	_ = http.ListenAndServe(cfg.ServerAddress, r)
 }

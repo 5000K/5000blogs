@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // PostSource is the interface for discovering and reading post files.
@@ -12,6 +13,8 @@ type PostSource interface {
 	ListPosts() ([]string, error)
 	// ReadPost returns the raw bytes of the post at the given path.
 	ReadPost(path string) ([]byte, error)
+	// StatPost returns the modification time of the post at the given path.
+	StatPost(path string) (time.Time, error)
 }
 
 // FileSystemSource reads posts from a directory on disk.
@@ -47,4 +50,13 @@ func (fs *FileSystemSource) ListPosts() ([]string, error) {
 // ReadPost returns the raw bytes of the file at path.
 func (fs *FileSystemSource) ReadPost(path string) ([]byte, error) {
 	return os.ReadFile(path)
+}
+
+// StatPost returns the modification time of the file at path.
+func (fs *FileSystemSource) StatPost(path string) (time.Time, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return info.ModTime(), nil
 }

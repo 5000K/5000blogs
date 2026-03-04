@@ -13,7 +13,8 @@ type Config struct {
 		Static string `env:"STATIC_PATH" env-default:"./static/" yaml:"static"`
 	} `yaml:"paths"`
 
-	RescanCron string `env:"RESCAN_CRON" env-default:"0 * * * *" yaml:"rescan_cron"`
+	RescanCron           string `env:"RESCAN_CRON" env-default:"0 * * * *" yaml:"rescan_cron"`
+	SkipUnchangedModTime bool   `env:"SKIP_UNCHANGED_MOD_TIME" env-default:"true" yaml:"skip_unchanged_mod_time"`
 }
 
 func Get() (*Config, error) {

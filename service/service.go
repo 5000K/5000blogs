@@ -25,8 +25,10 @@ type Metadata struct {
 }
 
 type Post struct {
-	path     string
-	hash     uint64
+	path    string
+	hash    uint64
+	modTime time.Time
+
 	metadata *Metadata
 	contents *[]byte
 }
@@ -128,16 +130,39 @@ func (s *Service) removePost(path string) {
 func (s *Service) updatePost(path string) {
 	for _, post := range s.posts {
 		if post.path == path {
-			buf, err := s.source.ReadPost(path)
-			if err != nil {
-				// todo: log error
-				return
-			}
-			if hashBytes(buf) == post.hash {
-				return // file unchanged, no re-render needed
-			}
-			if err := parseAndRender(post, buf); err != nil {
-				// todo: log error
+			if s.conf.SkipUnchangedModTime {
+				modTime, err := s.source.StatPost(path)
+				if err != nil {
+					// todo: log error
+					return
+				}
+				if modTime.Equal(post.modTime) {
+					return // mod time unchanged, skip read
+				}
+				buf, err := s.source.ReadPost(path)
+				if err != nil {
+					// todo: log error
+					return
+				}
+				post.modTime = modTime // update regardless of hash
+				if hashBytes(buf) == post.hash {
+					return // content unchanged
+				}
+				if err := parseAndRender(post, buf); err != nil {
+					// todo: log error
+				}
+			} else {
+				buf, err := s.source.ReadPost(path)
+				if err != nil {
+					// todo: log error
+					return
+				}
+				if hashBytes(buf) == post.hash {
+					return // content unchanged
+				}
+				if err := parseAndRender(post, buf); err != nil {
+					// todo: log error
+				}
 			}
 			return
 		}
@@ -190,7 +215,7 @@ func hashBytes(data []byte) uint64 {
 	return h.Sum64()
 }
 
-// parseAndRender parses raw markdown bytes, extracts metadata, renders HTML,
+// parseAndRender parses markdown bytes, extracts metadata, renders HTML,
 // and stores the hash, metadata and rendered contents on the post.
 func parseAndRender(post *Post, buf []byte) error {
 	post.hash = hashBytes(buf)
@@ -215,11 +240,17 @@ func parseAndRender(post *Post, buf []byte) error {
 }
 
 // renderPost reads the file at post.path via the source and calls parseAndRender.
+// It also records the file's modification time on the post.
 func (s *Service) renderPost(post *Post) error {
+	modTime, err := s.source.StatPost(post.path)
+	if err != nil {
+		return err
+	}
 	buf, err := s.source.ReadPost(post.path)
 	if err != nil {
 		return err
 	}
+	post.modTime = modTime
 	return parseAndRender(post, buf)
 }
 
