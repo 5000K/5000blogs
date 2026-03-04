@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/gomarkdown/markdown"
@@ -195,6 +196,17 @@ type Service struct {
 	log    *slog.Logger
 
 	scheduler *cron.Cron
+
+	feedMu    sync.RWMutex
+	feedCache []byte // cached RSS feed; nil means stale
+}
+
+// invalidateFeedCache marks the RSS feed cache as stale.
+// Must be called whenever the post collection changes.
+func (s *Service) invalidateFeedCache() {
+	s.feedMu.Lock()
+	s.feedCache = nil
+	s.feedMu.Unlock()
 }
 
 func extractMetadata(doc ast.Node) (*Metadata, error) {
@@ -270,6 +282,7 @@ func (s *Service) addPost(path string) {
 	}
 	s.log.Info("added post", "path", path)
 	s.repo.Add(post)
+	s.invalidateFeedCache()
 }
 
 func (s *Service) updatePost(path string) {
@@ -300,7 +313,9 @@ func (s *Service) updatePost(path string) {
 	}
 	if err := parseAndRender(post, buf); err != nil {
 		s.log.Error("failed to parse/render post", "path", path, "err", err)
+		return
 	}
+	s.invalidateFeedCache()
 }
 
 func (s *Service) rescan() {
@@ -332,6 +347,9 @@ func (s *Service) rescan() {
 	for _, path := range toRemove {
 		s.log.Info("removed post", "path", path)
 		s.repo.Remove(path)
+	}
+	if len(toRemove) > 0 {
+		s.invalidateFeedCache()
 	}
 	s.log.Debug("rescan complete", "total", len(paths))
 }

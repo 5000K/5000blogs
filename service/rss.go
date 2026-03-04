@@ -42,10 +42,31 @@ type rssFeed struct {
 	Channel rssChannel
 }
 
-// RSSFeed builds and returns a complete RSS 2.0 feed document for the most
-// recent RSS-visible posts (up to one full page). Posts with visible: false or
-// rss-visible: false in their front-matter are excluded.
+// RSSFeed returns a complete RSS 2.0 feed document for the most recent
+// RSS-visible posts (up to one full page). The result is cached and only
+// regenerated when a post is added, updated, or removed.
 func (s *Service) RSSFeed() ([]byte, error) {
+	// Fast path: return cached feed under a read lock.
+	s.feedMu.RLock()
+	cached := s.feedCache
+	s.feedMu.RUnlock()
+	if cached != nil {
+		return cached, nil
+	}
+
+	// Slow path: build the feed, then store under a write lock.
+	data, err := s.buildFeed()
+	if err != nil {
+		return nil, err
+	}
+	s.feedMu.Lock()
+	s.feedCache = data
+	s.feedMu.Unlock()
+	return data, nil
+}
+
+// buildFeed constructs the RSS 2.0 document without consulting the cache.
+func (s *Service) buildFeed() ([]byte, error) {
 	size := s.conf.PageSize
 	if size <= 0 {
 		size = 10
