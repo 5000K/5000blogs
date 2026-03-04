@@ -15,7 +15,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func Serve(cfg *config.Config, svc *service.Service, renderer *view.Renderer) {
+func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -28,18 +28,18 @@ func Serve(cfg *config.Config, svc *service.Service, renderer *view.Renderer) {
 	r.Get("/posts/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "slug")
 		path := filepath.Join(cfg.Paths.Posts, slug+".md")
-		renderer.ServePost(svc.GetPost(path), w)
+		renderer.ServePost(repo.Get(path), w)
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		homePath := filepath.Join(cfg.Paths.Posts, "home.md")
-		if home := svc.GetPost(homePath); home != nil {
+		if home := repo.Get(homePath); home != nil {
 			if data := home.Data(); len(data.Content) > 0 {
 				renderer.ServePost(home, w)
 				return
 			}
 		}
-		renderer.ServePostList(svc.GetPage(1), w)
+		renderer.ServePostList(repo.GetPage(1), w)
 	})
 
 	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
@@ -49,11 +49,11 @@ func Serve(cfg *config.Config, svc *service.Service, renderer *view.Renderer) {
 				page = n
 			}
 		}
-		renderer.ServePostList(svc.GetPage(page), w)
+		renderer.ServePostList(repo.GetPage(page), w)
 	})
 
 	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {
-		data, err := svc.RSSFeed()
+		data, err := repo.RSSFeed()
 		if err != nil {
 			http.Error(w, "failed to generate feed", http.StatusInternalServerError)
 			return

@@ -26,16 +26,18 @@ func main() {
 		log.Fatalf("initial setup failed: %v", err)
 	}
 
-	svc := service.NewService(cfg, logger)
-	if err := svc.Start(); err != nil {
-		log.Fatalf("failed to start service: %v", err)
+	source := service.NewFileSystemSource(cfg.Paths.Posts, logger)
+	converter := &service.GoMarkdownConverter{}
+	repo := service.NewMemoryPostRepository(cfg, source, converter, logger)
+	if err := repo.Start(); err != nil {
+		log.Fatalf("failed to start repository: %v", err)
 	}
-	defer svc.Stop()
+	defer repo.Stop()
 
 	renderer, err := view.NewRenderer(cfg, logger)
 	if err != nil {
 		log.Fatalf("failed to create renderer: %v", err)
 	}
 
-	incoming.Serve(cfg, svc, renderer)
+	incoming.Serve(cfg, repo, renderer)
 }

@@ -41,38 +41,37 @@ type rssFeed struct {
 	Channel rssChannel
 }
 
-// RSSFeed returns a RSS 2.0 feed document, cached (invalidated if a post changes)
-func (s *Service) RSSFeed() ([]byte, error) {
+// RSSFeed returns a RSS 2.0 feed document, cached (invalidated on rescan changes).
+func (r *MemoryPostRepository) RSSFeed() ([]byte, error) {
 	// Fast path: return cached feed under a read lock.
-	s.feedMu.RLock()
-	cached := s.feedCache
-	s.feedMu.RUnlock()
+	r.feedMu.RLock()
+	cached := r.feedCache
+	r.feedMu.RUnlock()
 	if cached != nil {
 		return cached, nil
 	}
 
 	// Slow path: build the feed, then store under a write lock.
-	data, err := s.buildFeed()
+	data, err := r.buildFeed()
 	if err != nil {
 		return nil, err
 	}
-	s.feedMu.Lock()
-	s.feedCache = data
-	s.feedMu.Unlock()
+	r.feedMu.Lock()
+	r.feedCache = data
+	r.feedMu.Unlock()
 	return data, nil
 }
 
 // buildFeed constructs the RSS 2.0 document without consulting the cache.
-func (s *Service) buildFeed() ([]byte, error) {
-	size := s.conf.PageSize
+func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
+	size := r.conf.PageSize
 	if size <= 0 {
 		size = 10
 	}
 
 	// Collect RSS-visible posts, sort by date descending.
-	all := s.repo.List()
-	filtered := make([]*Post, 0, len(all))
-	for _, p := range all {
+	filtered := make([]*Post, 0, len(r.posts))
+	for _, p := range r.posts {
 		if p.IsRSSVisible() {
 			filtered = append(filtered, p)
 		}
@@ -94,7 +93,7 @@ func (s *Service) buildFeed() ([]byte, error) {
 	items := make([]rssItem, 0, len(filtered))
 	for _, p := range filtered {
 		d := p.Data()
-		link := fmt.Sprintf("%s/posts/%s", s.conf.SiteURL, d.Slug)
+		link := fmt.Sprintf("%s/posts/%s", r.conf.SiteURL, d.Slug)
 		item := rssItem{
 			Title:       d.Title,
 			Link:        link,
@@ -110,9 +109,9 @@ func (s *Service) buildFeed() ([]byte, error) {
 	feed := rssFeed{
 		Version: "2.0",
 		Channel: rssChannel{
-			Title:         s.conf.FeedTitle,
-			Link:          s.conf.SiteURL,
-			Description:   s.conf.FeedDescription,
+			Title:         r.conf.FeedTitle,
+			Link:          r.conf.SiteURL,
+			Description:   r.conf.FeedDescription,
 			LastBuildDate: rssTime{time.Now()},
 			Items:         items,
 		},
@@ -120,7 +119,7 @@ func (s *Service) buildFeed() ([]byte, error) {
 
 	out, err := xml.MarshalIndent(feed, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("service.RSSFeed: marshal: %w", err)
+		return nil, fmt.Errorf("repository.RSSFeed: marshal: %w", err)
 	}
 	return append([]byte(xml.Header), out...), nil
 }
