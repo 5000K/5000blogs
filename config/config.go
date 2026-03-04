@@ -5,9 +5,13 @@ import (
 )
 
 type Config struct {
-	ConfigPath string `env:"CONFIG_PATH" env-default:"config.yml"`
+	ServerAddress string `env:"SERVER_ADDRESS" env-default:":8080" yaml:"address"`
 
-	ServerAddress string `env:"SERVER_ADDRESS" env-default:":8080"`
+	Paths struct {
+		Config string `env:"CONFIG_PATH" env-default:"config.yml"`
+		Posts  string `env:"POSTS_PATH" env-default:"./posts/" yaml:"posts"`
+		Static string `env:"STATIC_PATH" env-default:"./static/" yaml:"static"`
+	} `yaml:"paths"`
 }
 
 func Get() (*Config, error) {
@@ -18,7 +22,7 @@ func Get() (*Config, error) {
 		return nil, err
 	}
 
-	err = cleanenv.ReadConfig(cfg.ConfigPath, &cfg)
+	err = cleanenv.ReadConfig(cfg.Paths.Config, &cfg)
 
 	if err != nil {
 		return nil, err

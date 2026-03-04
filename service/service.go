@@ -86,8 +86,8 @@ func NewService(conf *config.Config) *Service {
 	}
 }
 
-func (s *Service) GetPosts() []*Post {
-	return s.posts
+func (s *Service) rescan(){
+	
 }
 
 func (s *Service) GetPost(path string) *Post {
