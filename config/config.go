@@ -16,6 +16,7 @@ type Config struct {
 	RescanCron           string `env:"RESCAN_CRON" env-default:"0 * * * *" yaml:"rescan_cron"`
 	SkipUnchangedModTime bool   `env:"SKIP_UNCHANGED_MOD_TIME" env-default:"true" yaml:"skip_unchanged_mod_time"`
 	LogLevel             string `env:"LOG_LEVEL" env-default:"info" yaml:"log_level"`
+	PageSize             int    `env:"PAGE_SIZE" env-default:"10" yaml:"page_size"`
 }
 
 func Get() (*Config, error) {

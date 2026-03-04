@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{if .Title}}{{.Title}}{{else}}Blog{{end}}</title>
+  {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
+  <link rel="stylesheet" href="https://unpkg.com/tachyons@4.12.0/css/tachyons.min.css"/>
+  <style>
+    body { background: #111; }
+
+    /* Typography for markdown-rendered content (no utility classes on generated tags) */
+    .post-body { color: #d8d8d8; }
+    .post-body h1,
+    .post-body h2,
+    .post-body h3,
+    .post-body h4 { color: #f0f0f0; font-weight: 600; line-height: 1.25; margin-top: 2rem; margin-bottom: .5rem; }
+    .post-body h1 { font-size: 1.75rem; }
+    .post-body h2 { font-size: 1.375rem; border-bottom: 1px solid #2a2a2a; padding-bottom: .35rem; }
+    .post-body h3 { font-size: 1.125rem; }
+    .post-body p  { margin-top: 0; margin-bottom: 1rem; }
+    .post-body a  { color: #7eb8f7; text-decoration: none; }
+    .post-body a:hover { text-decoration: underline; }
+    .post-body strong { color: #f0f0f0; }
+    .post-body em    { color: #c8c8c8; }
+    .post-body code  { background: #1e1e2e; color: #c8d3f5; padding: .1em .35em; border-radius: 3px; font-size: .875em; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; }
+    .post-body pre   { background: #1e1e2e; padding: 1rem 1.25rem; border-radius: 6px; overflow-x: auto; margin-bottom: 1.25rem; }
+    .post-body pre code { background: none; padding: 0; font-size: .85em; color: #c8d3f5; }
+    .post-body blockquote { border-left: 3px solid #444; margin: 0 0 1rem; padding: .5rem 0 .5rem 1rem; color: #999; }
+    .post-body blockquote p { margin-bottom: 0; }
+    .post-body ul,
+    .post-body ol  { padding-left: 1.5rem; margin-bottom: 1rem; }
+    .post-body li  { margin-bottom: .25rem; }
+    .post-body hr  { border: none; border-top: 1px solid #2a2a2a; margin: 2rem 0; }
+    .post-body img { max-width: 100%; height: auto; border-radius: 4px; }
+    .post-body table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+    .post-body th,
+    .post-body td  { border: 1px solid #333; padding: .5rem .75rem; text-align: left; }
+    .post-body th  { background: #1a1a1a; color: #f0f0f0; }
+  </style>
+</head>
+<body class="sans-serif near-white">
+
+  <div id="brand"></div>
+
+  <div class="mw7 center ph3 ph4-ns pv5 pv6-ns">
+
+    <article>
+      {{if .IsListPage}}
+
+      <h1 class="f2 fw6 lh-title mt0 mb5" style="color:#f0f0f0;">Posts</h1>
+
+      {{if .Posts}}
+      <ul class="list pl0 mt0">
+        {{range .Posts}}
+        <li class="mb5 pb4" style="border-bottom:1px solid #1e1e1e;">
+          <a href="/posts/{{.Slug}}" class="no-underline db f4 fw6 lh-title mb1" style="color:#f0f0f0;">{{.Title}}</a>
+          {{if .DateStr}}<time class="f6 ttu tracked db mb2" style="color:#444; letter-spacing:.1em;">{{.DateStr}}</time>{{end}}
+          {{if .Description}}<p class="f5 lh-copy mt0 mb0" style="color:#888;">{{.Description}}</p>{{end}}
+        </li>
+        {{end}}
+      </ul>
+      {{else}}
+      <p style="color:#555;">No posts yet.</p>
+      {{end}}
+
+      {{if or .Pagination.HasPrev .Pagination.HasNext}}
+      <nav class="flex justify-between mt5 pt4" style="border-top:1px solid #1e1e1e;">
+        <span>
+          {{if .Pagination.HasPrev}}
+          <a href="/posts?page={{.Pagination.PrevPage}}" class="no-underline f6 ttu tracked" style="color:#7eb8f7; letter-spacing:.1em;">← newer</a>
+          {{end}}
+        </span>
+        <span class="f6" style="color:#444;">page {{.Pagination.Page}} / {{.Pagination.TotalPages}}</span>
+        <span>
+          {{if .Pagination.HasNext}}
+          <a href="/posts?page={{.Pagination.NextPage}}" class="no-underline f6 ttu tracked" style="color:#7eb8f7; letter-spacing:.1em;">older →</a>
+          {{end}}
+        </span>
+      </nav>
+      {{end}}
+
+      {{else}}
+
+      {{if .Title}}
+      <h1 class="f2 f1-ns fw6 lh-title mt0 mb2" style="color:#f0f0f0;">{{.Title}}</h1>
+      {{end}}
+      {{if .DateStr}}
+      <time class="f6 ttu tracked db mb5" style="color:#555; letter-spacing:.1em;">{{.DateStr}}</time>
+      {{end}}
+      <div class="post-body lh-copy f5">
+        {{.Content}}
+      </div>
+
+      {{end}}
+    </article>
+
+  </div>
+
+  <script>
+    fetch('/static/brand.html')
+      .then(function(r) { return r.ok ? r.text() : ''; })
+      .then(function(html) { document.getElementById('brand').innerHTML = html; });
+  </script>
+</body>
+</html>

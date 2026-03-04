@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log/slog"
-	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/gomarkdown/markdown"
@@ -34,6 +34,100 @@ type Post struct {
 	contents *[]byte
 }
 
+// PostData holds the rendered data for a post, safe to pass to a view layer.
+type PostData struct {
+	Slug        string
+	Title       string
+	Description string
+	Date        time.Time
+	Content     []byte // rendered HTML
+}
+
+// Data returns a PostData view of the post.
+func (p *Post) Data() PostData {
+	d := PostData{
+		Slug: slugFromPath(p.path),
+	}
+	if p.metadata != nil {
+		d.Title = p.metadata.Title
+		d.Description = p.metadata.Description
+		d.Date = p.metadata.Date
+	}
+	if p.contents != nil {
+		d.Content = *p.contents
+	}
+	return d
+}
+
+// PostSummary is a lightweight view of a post for list pages.
+type PostSummary struct {
+	Slug        string
+	Title       string
+	Description string
+	Date        time.Time
+}
+
+// PageResult is the output of GetPage.
+type PageResult struct {
+	Posts      []PostSummary
+	Page       int
+	PageSize   int
+	TotalPosts int
+	TotalPages int
+	HasPrev    bool
+	HasNext    bool
+	PrevPage   int
+	NextPage   int
+}
+
+// GetPage returns a page of post summaries sorted by date descending.
+func (s *Service) GetPage(page int) PageResult {
+	size := s.conf.PageSize
+	if size <= 0 {
+		size = 10
+	}
+	total := s.repo.Count()
+	totalPages := (total + size - 1) / size
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
+	posts := s.repo.Page(page, size)
+	summaries := make([]PostSummary, 0, len(posts))
+	for _, p := range posts {
+		d := p.Data()
+		summaries = append(summaries, PostSummary{
+			Slug:        d.Slug,
+			Title:       d.Title,
+			Description: d.Description,
+			Date:        d.Date,
+		})
+	}
+	res := PageResult{
+		Posts:      summaries,
+		Page:       page,
+		PageSize:   size,
+		TotalPosts: total,
+		TotalPages: totalPages,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
+	}
+	return res
+}
+
+// slugFromPath derives a URL slug from a file path (basename without extension).
+func slugFromPath(path string) string {
+	base := filepath.Base(path)
+	if ext := filepath.Ext(base); ext != "" {
+		return base[:len(base)-len(ext)]
+	}
+	return base
+}
+
 type Service struct {
 	conf   *config.Config
 	source PostSource
@@ -54,7 +148,7 @@ func extractMetadata(doc ast.Node) (*Metadata, error) {
 		if !ok || !entering {
 			return ast.GoToNext
 		}
-		if bytes.EqualFold(cb.Info, []byte("meta")) {
+		if bytes.EqualFold(cb.Info, []byte("yaml")) {
 			metaNode = cb
 			return ast.Terminate
 		}
@@ -229,24 +323,4 @@ func (s *Service) renderPost(post *Post) error {
 	}
 	post.modTime = modTime
 	return parseAndRender(post, buf)
-}
-
-func (s *Service) ServePost(path string, w http.ResponseWriter) {
-	post := s.GetPost(path)
-
-	if post == nil {
-		s.log.Debug("post not found", "path", path)
-		http.NotFound(w, nil)
-		return
-	}
-
-	if post.contents == nil {
-		s.log.Debug("post has no rendered contents", "path", path)
-		http.NotFound(w, nil)
-		return
-	}
-
-	_, _ = w.Write([]byte(*post.contents))
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 }

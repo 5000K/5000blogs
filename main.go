@@ -4,6 +4,7 @@ import (
 	"5000blogs/config"
 	"5000blogs/incoming"
 	"5000blogs/service"
+	"5000blogs/view"
 	"log"
 	"log/slog"
 	"os"
@@ -27,5 +28,10 @@ func main() {
 	}
 	defer svc.Stop()
 
-	incoming.Serve(cfg, svc)
+	renderer, err := view.NewRenderer(cfg, logger)
+	if err != nil {
+		log.Fatalf("failed to create renderer: %v", err)
+	}
+
+	incoming.Serve(cfg, svc, renderer)
 }

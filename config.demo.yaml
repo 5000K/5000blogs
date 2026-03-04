@@ -1,0 +1,8 @@
+address: ":8080"
+
+paths:
+  posts: './demo/posts'
+  static: './demo/static'
+
+log_level: 'debug'
+page_size: 10

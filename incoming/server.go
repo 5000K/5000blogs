@@ -3,9 +3,11 @@ package incoming
 import (
 	"5000blogs/config"
 	"5000blogs/service"
+	"5000blogs/view"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,7 +15,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func Serve(cfg *config.Config, svc *service.Service) {
+func Serve(cfg *config.Config, svc *service.Service, renderer *view.Renderer) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -26,7 +28,17 @@ func Serve(cfg *config.Config, svc *service.Service) {
 	r.Get("/posts/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "slug")
 		path := filepath.Join(cfg.Paths.Posts, slug+".md")
-		svc.ServePost(path, w)
+		renderer.ServePost(svc.GetPost(path), w)
+	})
+
+	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
+		page := 1
+		if p := r.URL.Query().Get("page"); p != "" {
+			if n, err := strconv.Atoi(p); err == nil && n > 0 {
+				page = n
+			}
+		}
+		renderer.ServePostList(svc.GetPage(page), w)
 	})
 
 	_ = http.ListenAndServe(cfg.ServerAddress, r)
