@@ -22,6 +22,10 @@ func main() {
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 
+	if err := service.RunInitialSetup(cfg, logger); err != nil {
+		log.Fatalf("initial setup failed: %v", err)
+	}
+
 	svc := service.NewService(cfg, logger)
 	if err := svc.Start(); err != nil {
 		log.Fatalf("failed to start service: %v", err)

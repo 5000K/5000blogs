@@ -21,6 +21,8 @@ type Config struct {
 	SiteURL         string `env:"SITE_URL" env-default:"http://localhost:8080" yaml:"site_url"`
 	FeedTitle       string `env:"FEED_TITLE" env-default:"Blog" yaml:"feed_title"`
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`
+
+	TemplateURL string `env:"TEMPLATE_URL" env-default:"" yaml:"template-url"`
 }
 
 func Get() (*Config, error) {
