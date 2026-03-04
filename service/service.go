@@ -7,6 +7,7 @@ import (
 	"hash/fnv"
 	"log/slog"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/gomarkdown/markdown"
@@ -21,6 +22,8 @@ type Metadata struct {
 	Title       string    `yaml:"title"`
 	Description string    `yaml:"description"`
 	Date        time.Time `yaml:"date"`
+	Visible     *bool     `yaml:"visible"`
+	RSSVisible  *bool     `yaml:"rss-visible"`
 
 	Raw map[string]interface{} `yaml:",inline"`
 }
@@ -41,12 +44,16 @@ type PostData struct {
 	Description string
 	Date        time.Time
 	Content     []byte // rendered HTML
+	Visible     bool
+	RSSVisible  bool
 }
 
 // Data returns a PostData view of the post.
 func (p *Post) Data() PostData {
 	d := PostData{
-		Slug: slugFromPath(p.path),
+		Slug:       slugFromPath(p.path),
+		Visible:    p.IsVisible(),
+		RSSVisible: p.IsRSSVisible(),
 	}
 	if p.metadata != nil {
 		d.Title = p.metadata.Title
@@ -57,6 +64,28 @@ func (p *Post) Data() PostData {
 		d.Content = *p.contents
 	}
 	return d
+}
+
+// IsVisible reports whether the post should appear in the public post list.
+// Posts are visible by default; set visible: false in front-matter to hide.
+func (p *Post) IsVisible() bool {
+	if p.metadata == nil || p.metadata.Visible == nil {
+		return true
+	}
+	return *p.metadata.Visible
+}
+
+// IsRSSVisible reports whether the post should appear in the RSS feed.
+// A post is RSS-visible only when it is also visible and rss-visible is not
+// explicitly set to false.
+func (p *Post) IsRSSVisible() bool {
+	if !p.IsVisible() {
+		return false
+	}
+	if p.metadata == nil || p.metadata.RSSVisible == nil {
+		return true
+	}
+	return *p.metadata.RSSVisible
 }
 
 // PostSummary is a lightweight view of a post for list pages.
@@ -80,13 +109,34 @@ type PageResult struct {
 	NextPage   int
 }
 
-// GetPage returns a page of post summaries sorted by date descending.
+// GetPage returns a page of visible post summaries sorted by date descending.
+// Posts with visible: false in their front-matter are excluded.
 func (s *Service) GetPage(page int) PageResult {
 	size := s.conf.PageSize
 	if size <= 0 {
 		size = 10
 	}
-	total := s.repo.Count()
+
+	// Collect only visible posts then sort by date descending.
+	all := s.repo.List()
+	filtered := make([]*Post, 0, len(all))
+	for _, p := range all {
+		if p.IsVisible() {
+			filtered = append(filtered, p)
+		}
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		di, dj := time.Time{}, time.Time{}
+		if filtered[i].metadata != nil {
+			di = filtered[i].metadata.Date
+		}
+		if filtered[j].metadata != nil {
+			dj = filtered[j].metadata.Date
+		}
+		return di.After(dj)
+	})
+
+	total := len(filtered)
 	totalPages := (total + size - 1) / size
 	if totalPages == 0 {
 		totalPages = 1
@@ -94,9 +144,19 @@ func (s *Service) GetPage(page int) PageResult {
 	if page < 1 {
 		page = 1
 	}
-	posts := s.repo.Page(page, size)
-	summaries := make([]PostSummary, 0, len(posts))
-	for _, p := range posts {
+
+	start := (page - 1) * size
+	var pagePosts []*Post
+	if start < total {
+		end := start + size
+		if end > total {
+			end = total
+		}
+		pagePosts = filtered[start:end]
+	}
+
+	summaries := make([]PostSummary, 0, len(pagePosts))
+	for _, p := range pagePosts {
 		d := p.Data()
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,

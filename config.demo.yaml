@@ -6,3 +6,7 @@ paths:
 
 log_level: 'debug'
 page_size: 10
+
+site_url: 'http://localhost:8080'
+feed_title: 'My Blog'
+feed_description: 'Latest posts from My Blog'

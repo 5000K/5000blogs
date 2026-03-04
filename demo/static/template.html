@@ -3,13 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- page title / meta — fed by templateData.Title / .Description -->
   <title>{{if .Title}}{{.Title}}{{else}}Blog{{end}}</title>
   {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
+
+  <!-- tachyons utility CSS; RSS autodiscovery -->
   <link rel="stylesheet" href="https://unpkg.com/tachyons@4.12.0/css/tachyons.min.css"/>
+  <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/feed.xml">
+
   <style>
     body { background: #111; }
 
-    /* Typography for markdown-rendered content (no utility classes on generated tags) */
+    /* .post-body — scoped styles for markdown-rendered HTML (no utility classes on generated tags) */
     .post-body { color: #d8d8d8; }
     .post-body h1,
     .post-body h2,
@@ -41,15 +47,20 @@
 </head>
 <body class="sans-serif near-white">
 
+  <!-- brand banner — injected from /static/brand.html via JS below -->
   <div id="brand"></div>
 
+  <!-- main content column — max-width constrained, centred -->
   <div class="mw7 center ph3 ph4-ns pv5 pv6-ns">
 
     <article>
+
+      <!-- ── LIST VIEW (IsListPage = true) ── -->
       {{if .IsListPage}}
 
       <h1 class="f2 fw6 lh-title mt0 mb5" style="color:#f0f0f0;">Posts</h1>
 
+      <!-- post list; each item: title, optional date, optional description -->
       {{if .Posts}}
       <ul class="list pl0 mt0">
         {{range .Posts}}
@@ -64,6 +75,7 @@
       <p style="color:#555;">No posts yet.</p>
       {{end}}
 
+      <!-- pagination — only shown when there is more than one page -->
       {{if or .Pagination.HasPrev .Pagination.HasNext}}
       <nav class="flex justify-between mt5 pt4" style="border-top:1px solid #1e1e1e;">
         <span>
@@ -80,14 +92,18 @@
       </nav>
       {{end}}
 
+      <!-- ── SINGLE POST VIEW (IsListPage = false) ── -->
       {{else}}
 
+      <!-- title & date header -->
       {{if .Title}}
       <h1 class="f2 f1-ns fw6 lh-title mt0 mb2" style="color:#f0f0f0;">{{.Title}}</h1>
       {{end}}
       {{if .DateStr}}
       <time class="f6 ttu tracked db mb5" style="color:#555; letter-spacing:.1em;">{{.DateStr}}</time>
       {{end}}
+
+      <!-- rendered markdown body -->
       <div class="post-body lh-copy f5">
         {{.Content}}
       </div>
@@ -97,6 +113,15 @@
 
   </div>
 
+  <!-- footer — RSS link -->
+  <footer class="mw7 center ph3 ph4-ns pb5 pt0">
+    <p class="f7 ttu tracked" style="color:#333; letter-spacing:.1em;">
+      <a href="/feed.xml" class="no-underline" style="color:#555;">RSS Feed</a>
+    </p>
+  </footer>
+
+  <!-- async branding injection -->
+  <!-- it's mostly irrelevant for SEO and easier to modify for users this way, so we'll do it like this-->
   <script>
     fetch('/static/brand.html')
       .then(function(r) { return r.ok ? r.text() : ''; })

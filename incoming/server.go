@@ -41,6 +41,16 @@ func Serve(cfg *config.Config, svc *service.Service, renderer *view.Renderer) {
 		renderer.ServePostList(svc.GetPage(page), w)
 	})
 
+	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {
+		data, err := svc.RSSFeed()
+		if err != nil {
+			http.Error(w, "failed to generate feed", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+		_, _ = w.Write(data)
+	})
+
 	_ = http.ListenAndServe(cfg.ServerAddress, r)
 }
 
