@@ -7,8 +7,7 @@ import (
 	"time"
 )
 
-// rssTime wraps time.Time and marshals to the RFC 1123Z format required by
-// RSS 2.0 (e.g. "Mon, 02 Jan 2006 15:04:05 -0700").
+// rssTime -> RSS 2.0 needs RFC 1123Z (e.g. "Mon, 02 Jan 2006 15:04:05 -0700").
 type rssTime struct{ time.Time }
 
 func (t rssTime) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
@@ -42,9 +41,7 @@ type rssFeed struct {
 	Channel rssChannel
 }
 
-// RSSFeed returns a complete RSS 2.0 feed document for the most recent
-// RSS-visible posts (up to one full page). The result is cached and only
-// regenerated when a post is added, updated, or removed.
+// RSSFeed returns a RSS 2.0 feed document, cached (invalidated if a post changes)
 func (s *Service) RSSFeed() ([]byte, error) {
 	// Fast path: return cached feed under a read lock.
 	s.feedMu.RLock()
@@ -72,7 +69,7 @@ func (s *Service) buildFeed() ([]byte, error) {
 		size = 10
 	}
 
-	// Collect RSS-visible posts and sort by date descending.
+	// Collect RSS-visible posts, sort by date descending.
 	all := s.repo.List()
 	filtered := make([]*Post, 0, len(all))
 	for _, p := range all {
