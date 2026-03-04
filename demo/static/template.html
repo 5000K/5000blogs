@@ -133,5 +133,10 @@
       .then(function(r) { return r.ok ? r.text() : ''; })
       .then(function(html) { document.getElementById('brand').innerHTML = html; });
   </script>
+
+  <!-- plugins from config.plugins -->
+  {{range .Plugins}}
+  <script src="{{.}}"></script>
+  {{end}}
 </body>
 </html>

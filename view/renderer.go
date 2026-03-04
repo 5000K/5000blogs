@@ -17,6 +17,7 @@ type templateData struct {
 	// Shared
 	Title       string
 	Description string
+	Plugins     []string
 
 	// Post view
 	DateStr string
@@ -104,6 +105,7 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter) {
 		Description: data.Description,
 		Author:      data.Author,
 		Content:     template.HTML(data.Content), //nolint:gosec // content is markdown-rendered HTML
+		Plugins:     r.cfg.Plugins,
 	}
 	if !data.Date.IsZero() {
 		td.DateStr = data.Date.Format("January 2, 2006")
@@ -135,6 +137,7 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter) {
 		Title:      "Posts",
 		IsListPage: true,
 		Posts:      items,
+		Plugins:    r.cfg.Plugins,
 		Pagination: paginationData{
 			Page:       pr.Page,
 			TotalPages: pr.TotalPages,
