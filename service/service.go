@@ -23,6 +23,7 @@ type Metadata struct {
 	Title       string    `yaml:"title"`
 	Description string    `yaml:"description"`
 	Date        time.Time `yaml:"date"`
+	Author      string    `yaml:"author"`
 	Visible     *bool     `yaml:"visible"`
 	RSSVisible  *bool     `yaml:"rss-visible"`
 
@@ -44,6 +45,7 @@ type PostData struct {
 	Title       string
 	Description string
 	Date        time.Time
+	Author      string
 	Content     []byte // rendered HTML
 	Visible     bool
 	RSSVisible  bool
@@ -60,6 +62,11 @@ func (p *Post) Data() PostData {
 		d.Title = p.metadata.Title
 		d.Description = p.metadata.Description
 		d.Date = p.metadata.Date
+		d.Author = p.metadata.Author
+	}
+	// Fall back to file modification time when no date is set in metadata.
+	if d.Date.IsZero() {
+		d.Date = p.modTime
 	}
 	if p.contents != nil {
 		d.Content = *p.contents
@@ -95,6 +102,7 @@ type PostSummary struct {
 	Title       string
 	Description string
 	Date        time.Time
+	Author      string
 }
 
 // PageResult is the output of GetPage.
@@ -164,6 +172,7 @@ func (s *Service) GetPage(page int) PageResult {
 			Title:       d.Title,
 			Description: d.Description,
 			Date:        d.Date,
+			Author:      d.Author,
 		})
 	}
 	res := PageResult{

@@ -31,6 +31,17 @@ func Serve(cfg *config.Config, svc *service.Service, renderer *view.Renderer) {
 		renderer.ServePost(svc.GetPost(path), w)
 	})
 
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		homePath := filepath.Join(cfg.Paths.Posts, "home.md")
+		if home := svc.GetPost(homePath); home != nil {
+			if data := home.Data(); len(data.Content) > 0 {
+				renderer.ServePost(home, w)
+				return
+			}
+		}
+		renderer.ServePostList(svc.GetPage(1), w)
+	})
+
 	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
 		page := 1
 		if p := r.URL.Query().Get("page"); p != "" {

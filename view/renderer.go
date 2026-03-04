@@ -20,6 +20,7 @@ type templateData struct {
 
 	// Post view
 	DateStr string
+	Author  string
 	Content template.HTML
 
 	// List view
@@ -33,6 +34,7 @@ type postListItem struct {
 	Title       string
 	Description string
 	DateStr     string
+	Author      string
 }
 
 type paginationData struct {
@@ -100,6 +102,7 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter) {
 	td := templateData{
 		Title:       data.Title,
 		Description: data.Description,
+		Author:      data.Author,
 		Content:     template.HTML(data.Content), //nolint:gosec // content is markdown-rendered HTML
 	}
 	if !data.Date.IsZero() {
@@ -117,6 +120,7 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter) {
 			Slug:        p.Slug,
 			Title:       p.Title,
 			Description: p.Description,
+			Author:      p.Author,
 		}
 		if !p.Date.IsZero() {
 			item.DateStr = p.Date.Format("January 2, 2006")
