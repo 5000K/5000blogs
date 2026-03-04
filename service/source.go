@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,15 +21,17 @@ type PostSource interface {
 // FileSystemSource reads posts from a directory on disk.
 type FileSystemSource struct {
 	dir string
+	log *slog.Logger
 }
 
 // NewFileSystemSource creates a FileSystemSource that reads .md files from dir.
-func NewFileSystemSource(dir string) *FileSystemSource {
-	return &FileSystemSource{dir: dir}
+func NewFileSystemSource(dir string, logger *slog.Logger) *FileSystemSource {
+	return &FileSystemSource{dir: dir, log: logger.With("component", "FileSystemSource")}
 }
 
 // ListPosts returns the paths of all .md files in the source directory.
 func (fs *FileSystemSource) ListPosts() ([]string, error) {
+	fs.log.Debug("listing posts", "dir", fs.dir)
 	entries, err := os.ReadDir(fs.dir)
 	if err != nil {
 		return nil, err
@@ -49,11 +52,14 @@ func (fs *FileSystemSource) ListPosts() ([]string, error) {
 
 // ReadPost returns the raw bytes of the file at path.
 func (fs *FileSystemSource) ReadPost(path string) ([]byte, error) {
+	fs.log.Debug("reading post", "path", path)
 	return os.ReadFile(path)
 }
 
 // StatPost returns the modification time of the file at path.
 func (fs *FileSystemSource) StatPost(path string) (time.Time, error) {
+	fs.log.Debug("stat post", "path", path)
+	fs.log.Debug("stat post", "path", path)
 	info, err := os.Stat(path)
 	if err != nil {
 		return time.Time{}, err

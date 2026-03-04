@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -36,8 +37,9 @@ type Post struct {
 type Service struct {
 	conf   *config.Config
 	source PostSource
+	repo   PostRepository
+	log    *slog.Logger
 
-	posts     []*Post
 	scheduler *cron.Cron
 }
 
@@ -73,16 +75,20 @@ func extractMetadata(doc ast.Node) (*Metadata, error) {
 	return &meta, nil
 }
 
-func NewService(conf *config.Config) *Service {
+func NewService(conf *config.Config, logger *slog.Logger) *Service {
+	log := logger.With("component", "Service")
 	return &Service{
 		conf:   conf,
-		source: NewFileSystemSource(conf.Paths.Posts),
+		source: NewFileSystemSource(conf.Paths.Posts, logger),
+		repo:   NewMemoryPostRepository(),
+		log:    log,
 	}
 }
 
 // Start performs an initial rescan and then schedules periodic rescans
 // according to the cron expression in the config. Call Stop to release resources.
 func (s *Service) Start() error {
+	s.log.Info("starting service")
 	s.rescan()
 
 	s.scheduler = cron.New()
@@ -96,83 +102,58 @@ func (s *Service) Start() error {
 
 // Stop gracefully shuts down the rescan scheduler.
 func (s *Service) Stop() {
+	s.log.Info("stopping service")
 	if s.scheduler != nil {
 		s.scheduler.Stop()
 	}
 }
 
-func (s *Service) hasPost(path string) bool {
-	for _, post := range s.posts {
-		if post.path == path {
-			return true
-		}
-	}
-	return false
-}
-
 func (s *Service) addPost(path string) {
 	post := &Post{path: path}
 	if err := s.renderPost(post); err != nil {
-		// todo: log error
+		s.log.Error("failed to render post", "path", path, "err", err)
+		return
 	}
-	s.posts = append(s.posts, post)
-}
-
-func (s *Service) removePost(path string) {
-	for i, post := range s.posts {
-		if post.path == path {
-			s.posts = append(s.posts[:i], s.posts[i+1:]...)
-			return
-		}
-	}
+	s.log.Info("added post", "path", path)
+	s.repo.Add(post)
 }
 
 func (s *Service) updatePost(path string) {
-	for _, post := range s.posts {
-		if post.path == path {
-			if s.conf.SkipUnchangedModTime {
-				modTime, err := s.source.StatPost(path)
-				if err != nil {
-					// todo: log error
-					return
-				}
-				if modTime.Equal(post.modTime) {
-					return // mod time unchanged, skip read
-				}
-				buf, err := s.source.ReadPost(path)
-				if err != nil {
-					// todo: log error
-					return
-				}
-				post.modTime = modTime // update regardless of hash
-				if hashBytes(buf) == post.hash {
-					return // content unchanged
-				}
-				if err := parseAndRender(post, buf); err != nil {
-					// todo: log error
-				}
-			} else {
-				buf, err := s.source.ReadPost(path)
-				if err != nil {
-					// todo: log error
-					return
-				}
-				if hashBytes(buf) == post.hash {
-					return // content unchanged
-				}
-				if err := parseAndRender(post, buf); err != nil {
-					// todo: log error
-				}
-			}
+	post := s.repo.Get(path)
+	if post == nil {
+		return
+	}
+
+	if s.conf.SkipUnchangedModTime {
+		modTime, err := s.source.StatPost(path)
+		if err != nil {
+			s.log.Error("failed to stat post", "path", path, "err", err)
 			return
 		}
+		if modTime.Equal(post.modTime) {
+			return // mod time unchanged, skip read
+		}
+		post.modTime = modTime // update regardless of hash
+	}
+
+	buf, err := s.source.ReadPost(path)
+	if err != nil {
+		s.log.Error("failed to read post", "path", path, "err", err)
+		return
+	}
+	if hashBytes(buf) == post.hash {
+		return // content unchanged
+	}
+	if err := parseAndRender(post, buf); err != nil {
+		s.log.Error("failed to parse/render post", "path", path, "err", err)
 	}
 }
 
 func (s *Service) rescan() {
+	s.log.Debug("rescanning posts")
 	paths, err := s.source.ListPosts()
 	if err != nil {
-		// todo: log error
+		s.log.Error("failed to list posts", "err", err)
 		return
 	}
 
@@ -180,7 +161,7 @@ func (s *Service) rescan() {
 	found := make(map[string]bool)
 	for _, path := range paths {
 		found[path] = true
-		if s.hasPost(path) {
+		if s.repo.Has(path) {
 			s.updatePost(path)
 		} else {
 			s.addPost(path)
@@ -189,24 +170,20 @@ func (s *Service) rescan() {
 
 	// Remove posts that are no longer present on disk.
 	var toRemove []string
-	for _, post := range s.posts {
+	for _, post := range s.repo.List() {
 		if !found[post.path] {
 			toRemove = append(toRemove, post.path)
 		}
 	}
 	for _, path := range toRemove {
-		s.removePost(path)
+		s.log.Info("removed post", "path", path)
+		s.repo.Remove(path)
 	}
+	s.log.Debug("rescan complete", "total", len(paths))
 }
 
 func (s *Service) GetPost(path string) *Post {
-	for _, post := range s.posts {
-		if post.path == path {
-			return post
-		}
-	}
-
-	return nil
+	return s.repo.Get(path)
 }
 
 func hashBytes(data []byte) uint64 {
@@ -258,11 +235,13 @@ func (s *Service) ServePost(path string, w http.ResponseWriter) {
 	post := s.GetPost(path)
 
 	if post == nil {
+		s.log.Debug("post not found", "path", path)
 		http.NotFound(w, nil)
 		return
 	}
 
 	if post.contents == nil {
+		s.log.Debug("post has no rendered contents", "path", path)
 		http.NotFound(w, nil)
 		return
 	}

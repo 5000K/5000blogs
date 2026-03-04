@@ -5,6 +5,8 @@ import (
 	"5000blogs/incoming"
 	"5000blogs/service"
 	"log"
+	"log/slog"
+	"os"
 )
 
 func main() {
@@ -13,7 +15,13 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	svc := service.NewService(cfg)
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(cfg.LogLevel)); err != nil {
+		log.Fatalf("invalid log level %q: %v", cfg.LogLevel, err)
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+
+	svc := service.NewService(cfg, logger)
 	if err := svc.Start(); err != nil {
 		log.Fatalf("failed to start service: %v", err)
 	}
