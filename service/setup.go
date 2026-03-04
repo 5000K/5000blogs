@@ -40,7 +40,7 @@ func ensureTemplate(cfg *config.Config, log *slog.Logger) error {
 	}
 
 	if cfg.TemplateURL == "" {
-		// it will be set in the default examples, but I don't want to force it on everyone so it defaults to empty.
+		// it will be set in the example docker configs and stuff i'll write, but I don't want to force it on everyone so it defaults to empty.
 		log.Warn("template.html not found and template-url is not configured; skipping template download. Configure template-url to enable automatic downloading of a default template.")
 		return nil
 	}

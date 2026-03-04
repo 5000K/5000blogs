@@ -1,12 +1,12 @@
 ```yaml
-title: Welcome to 5000Blogs
+title: Welcome to 5000blogs
 description: A tiny, file-backed blogging engine in Go.
 date: 2026-03-04
 visible: false
 author: 5000k
 ```
 
-5000Blogs is a lightweight blogging platform built as a simple Go monolith.
+5000blogs is a lightweight blogging platform built as a simple Go monolith.
 
 Write posts in Markdown, add metadata in a `yaml` fenced block, and the app handles rendering, listing, and RSS for you.
 
