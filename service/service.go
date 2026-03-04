@@ -4,15 +4,15 @@ import (
 	"5000blogs/config"
 	"bytes"
 	"fmt"
-	"io"
+	"hash/fnv"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
+	"github.com/robfig/cron/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,13 +26,17 @@ type Metadata struct {
 
 type Post struct {
 	path     string
+	hash     uint64
+	metadata *Metadata
 	contents *[]byte
 }
 
 type Service struct {
-	conf *config.Config
+	conf   *config.Config
+	source PostSource
 
-	posts []*Post
+	posts     []*Post
+	scheduler *cron.Cron
 }
 
 func extractMetadata(doc ast.Node) (*Metadata, error) {
@@ -67,27 +71,107 @@ func extractMetadata(doc ast.Node) (*Metadata, error) {
 	return &meta, nil
 }
 
-func render(md []byte) []byte {
-	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
-	p := parser.NewWithExtensions(extensions)
-	doc := p.Parse(md)
-
-	// create HTML renderer with extensions
-	htmlFlags := html.CommonFlags | html.HrefTargetBlank
-	opts := html.RendererOptions{Flags: htmlFlags}
-	renderer := html.NewRenderer(opts)
-
-	return markdown.Render(doc, renderer)
-}
-
 func NewService(conf *config.Config) *Service {
 	return &Service{
-		conf: conf,
+		conf:   conf,
+		source: NewFileSystemSource(conf.Paths.Posts),
 	}
 }
 
-func (s *Service) rescan(){
-	
+// Start performs an initial rescan and then schedules periodic rescans
+// according to the cron expression in the config. Call Stop to release resources.
+func (s *Service) Start() error {
+	s.rescan()
+
+	s.scheduler = cron.New()
+	_, err := s.scheduler.AddFunc(s.conf.RescanCron, s.rescan)
+	if err != nil {
+		return fmt.Errorf("service.Start: invalid rescan cron expression %q: %w", s.conf.RescanCron, err)
+	}
+	s.scheduler.Start()
+	return nil
+}
+
+// Stop gracefully shuts down the rescan scheduler.
+func (s *Service) Stop() {
+	if s.scheduler != nil {
+		s.scheduler.Stop()
+	}
+}
+
+func (s *Service) hasPost(path string) bool {
+	for _, post := range s.posts {
+		if post.path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) addPost(path string) {
+	post := &Post{path: path}
+	if err := s.renderPost(post); err != nil {
+		// todo: log error
+	}
+	s.posts = append(s.posts, post)
+}
+
+func (s *Service) removePost(path string) {
+	for i, post := range s.posts {
+		if post.path == path {
+			s.posts = append(s.posts[:i], s.posts[i+1:]...)
+			return
+		}
+	}
+}
+
+func (s *Service) updatePost(path string) {
+	for _, post := range s.posts {
+		if post.path == path {
+			buf, err := s.source.ReadPost(path)
+			if err != nil {
+				// todo: log error
+				return
+			}
+			if hashBytes(buf) == post.hash {
+				return // file unchanged, no re-render needed
+			}
+			if err := parseAndRender(post, buf); err != nil {
+				// todo: log error
+			}
+			return
+		}
+	}
+}
+
+func (s *Service) rescan() {
+	paths, err := s.source.ListPosts()
+	if err != nil {
+		// todo: log error
+		return
+	}
+
+	// Track which paths exist on disk during this scan.
+	found := make(map[string]bool)
+	for _, path := range paths {
+		found[path] = true
+		if s.hasPost(path) {
+			s.updatePost(path)
+		} else {
+			s.addPost(path)
+		}
+	}
+
+	// Remove posts that are no longer present on disk.
+	var toRemove []string
+	for _, post := range s.posts {
+		if !found[post.path] {
+			toRemove = append(toRemove, post.path)
+		}
+	}
+	for _, path := range toRemove {
+		s.removePost(path)
+	}
 }
 
 func (s *Service) GetPost(path string) *Post {
@@ -100,38 +184,43 @@ func (s *Service) GetPost(path string) *Post {
 	return nil
 }
 
-func renderPost(post *Post) *[]byte {
-	if post.contents == nil {
-		// read file and render markdown to HTML, then set post.contents
+func hashBytes(data []byte) uint64 {
+	h := fnv.New64a()
+	h.Write(data)
+	return h.Sum64()
+}
 
-		// read file
+// parseAndRender parses raw markdown bytes, extracts metadata, renders HTML,
+// and stores the hash, metadata and rendered contents on the post.
+func parseAndRender(post *Post, buf []byte) error {
+	post.hash = hashBytes(buf)
 
-		fi, err := os.Open(post.path)
-		if err != nil {
-			// todo: log error
-			return nil
-		}
+	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+	p := parser.NewWithExtensions(extensions)
+	doc := p.Parse(buf)
 
-		defer func(fi *os.File) {
-			err := fi.Close()
-			if err != nil {
-				// todo: log error
-			}
-		}(fi)
-
-		buf, err := io.ReadAll(fi)
-		if err != nil {
-			// todo: log error
-			return nil
-		}
-
-		// render markdown to HTML
-		// For now, just return the raw content as a placeholder
-		content := render(buf)
-		return &content
+	metadata, err := extractMetadata(doc)
+	if err != nil {
+		return err
 	}
+	post.metadata = metadata
 
-	return post.contents
+	htmlFlags := html.CommonFlags | html.HrefTargetBlank
+	opts := html.RendererOptions{Flags: htmlFlags}
+	renderer := html.NewRenderer(opts)
+
+	rendered := markdown.Render(doc, renderer)
+	post.contents = &rendered
+	return nil
+}
+
+// renderPost reads the file at post.path via the source and calls parseAndRender.
+func (s *Service) renderPost(post *Post) error {
+	buf, err := s.source.ReadPost(post.path)
+	if err != nil {
+		return err
+	}
+	return parseAndRender(post, buf)
 }
 
 func (s *Service) ServePost(path string, w http.ResponseWriter) {

@@ -12,6 +12,8 @@ type Config struct {
 		Posts  string `env:"POSTS_PATH" env-default:"./posts/" yaml:"posts"`
 		Static string `env:"STATIC_PATH" env-default:"./static/" yaml:"static"`
 	} `yaml:"paths"`
+
+	RescanCron string `env:"RESCAN_CRON" env-default:"0 * * * *" yaml:"rescan_cron"`
 }
 
 func Get() (*Config, error) {
