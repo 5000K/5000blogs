@@ -1,29 +1,22 @@
 package service
 
 import (
-	"fmt"
-	"os"
 	"sort"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
-// PostRepository manages the collection of posts.
 type PostRepository interface {
 	Has(path string) bool
 	Get(path string) *Post
 	List() []*Post
-	// Page returns one page of posts sorted by date descending.
-	// page is 1-based; returns an empty slice for out-of-range pages.
 	Page(page, pageSize int) []*Post
 	Count() int
 	Add(post *Post)
 	Remove(path string)
-	// WritePost serializes metadata and markdown content into a .md file at path.
-	// The file is created or overwritten; parent directories must already exist.
-	WritePost(path string, metadata *Metadata, content string) error
 }
+
+// todo: scans should probably be part of the repository instead of the service - since e.g. a db doesn't actually need a scan.
+// not that a db is planned, but... not a reason to not do it properly.
 
 // MemoryPostRepository is an in-memory implementation of PostRepository.
 type MemoryPostRepository struct {
@@ -61,7 +54,6 @@ func (r *MemoryPostRepository) Count() int {
 }
 
 func (r *MemoryPostRepository) Page(page, pageSize int) []*Post {
-	// Sort by date descending into a temporary slice.
 	sorted := make([]*Post, len(r.posts))
 	copy(sorted, r.posts)
 	sort.Slice(sorted, func(i, j int) bool {
@@ -100,48 +92,4 @@ func (r *MemoryPostRepository) Remove(path string) {
 			return
 		}
 	}
-}
-
-// WritePost serializes metadata as a yaml fenced block followed by content
-// and writes the result to path, creating or overwriting the file.
-// Only non-zero metadata fields are included in the output.
-func (r *MemoryPostRepository) WritePost(path string, metadata *Metadata, content string) error {
-	fields := make(map[string]interface{})
-	if metadata != nil {
-		if metadata.Title != "" {
-			fields["title"] = metadata.Title
-		}
-		if metadata.Description != "" {
-			fields["description"] = metadata.Description
-		}
-		if !metadata.Date.IsZero() {
-			fields["date"] = metadata.Date
-		}
-		if metadata.Author != "" {
-			fields["author"] = metadata.Author
-		}
-		if metadata.Visible != nil {
-			fields["visible"] = *metadata.Visible
-		}
-		if metadata.RSSVisible != nil {
-			fields["rss-visible"] = *metadata.RSSVisible
-		}
-		for k, v := range metadata.Raw {
-			if _, exists := fields[k]; !exists {
-				fields[k] = v
-			}
-		}
-	}
-
-	yamlBytes, err := yaml.Marshal(fields)
-	if err != nil {
-		return fmt.Errorf("WritePost: failed to marshal metadata: %w", err)
-	}
-
-	body := fmt.Sprintf("```yaml\n%s```\n\n%s", string(yamlBytes), content)
-
-	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
-		return fmt.Errorf("WritePost: failed to write file %q: %w", path, err)
-	}
-	return nil
 }

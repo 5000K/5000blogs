@@ -11,14 +11,6 @@ import (
 	"path/filepath"
 )
 
-// RunInitialSetup performs first-run bootstrapping:
-//
-//  1. If template.html is absent from the static folder and template-url is
-//     configured, it downloads the zip at that URL and extracts its contents
-//     into the static folder.
-//
-//  2. If home.md is absent from the posts folder, it creates a starter home
-//     post with sensible default metadata.
 func RunInitialSetup(cfg *config.Config, logger *slog.Logger) error {
 	log := logger.With("component", "setup")
 
@@ -29,8 +21,7 @@ func RunInitialSetup(cfg *config.Config, logger *slog.Logger) error {
 	return nil
 }
 
-// ensureTemplate downloads and extracts the template zip when template.html is
-// missing from the static folder.
+// ensureTemplate downloads and extracts the template zip if needed
 func ensureTemplate(cfg *config.Config, log *slog.Logger) error {
 	templatePath := filepath.Join(cfg.Paths.Static, "template.html")
 
@@ -55,7 +46,7 @@ func ensureTemplate(cfg *config.Config, log *slog.Logger) error {
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
-	resp, err := http.Get(cfg.TemplateURL) //nolint:gosec // URL is operator-supplied config
+	resp, err := http.Get(cfg.TemplateURL)
 	if err != nil {
 		return fmt.Errorf("setup: failed to download template from %q: %w", cfg.TemplateURL, err)
 	}
@@ -70,12 +61,11 @@ func ensureTemplate(cfg *config.Config, log *slog.Logger) error {
 	}
 	tmpFile.Close()
 
-	// Ensure static dir exists.
 	if err := os.MkdirAll(cfg.Paths.Static, 0755); err != nil {
 		return fmt.Errorf("setup: failed to create static dir: %w", err)
 	}
 
-	// Extract zip into static folder.
+	// extract zip
 	if err := extractZip(tmpFile.Name(), cfg.Paths.Static); err != nil {
 		return fmt.Errorf("setup: failed to extract template zip: %w", err)
 	}
@@ -84,8 +74,6 @@ func ensureTemplate(cfg *config.Config, log *slog.Logger) error {
 	return nil
 }
 
-// extractZip unzips src into destDir, flattening the root directory if the zip
-// contains exactly one top-level directory.
 func extractZip(src, destDir string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
@@ -102,7 +90,7 @@ func extractZip(src, destDir string) error {
 }
 
 func extractZipEntry(f *zip.File, destDir string) error {
-	// Sanitise the path to prevent zip-slip.
+	// prevent zip-slip.
 	target := filepath.Join(destDir, filepath.Clean("/"+f.Name))
 
 	if f.FileInfo().IsDir() {
@@ -125,7 +113,7 @@ func extractZipEntry(f *zip.File, destDir string) error {
 	}
 	defer rc.Close()
 
-	if _, err = io.Copy(dst, rc); err != nil { //nolint:gosec // zip contents are operator-supplied
+	if _, err = io.Copy(dst, rc); err != nil {
 		return fmt.Errorf("extractZipEntry: copy %q: %w", target, err)
 	}
 	return nil

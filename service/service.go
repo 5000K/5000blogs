@@ -74,8 +74,6 @@ func (p *Post) Data() PostData {
 	return d
 }
 
-// IsVisible reports whether the post should appear in the public post list.
-// Posts are visible by default; set visible: false in front-matter to hide.
 func (p *Post) IsVisible() bool {
 	if p.metadata == nil || p.metadata.Visible == nil {
 		return true
@@ -83,9 +81,6 @@ func (p *Post) IsVisible() bool {
 	return *p.metadata.Visible
 }
 
-// IsRSSVisible reports whether the post should appear in the RSS feed.
-// A post is RSS-visible only when it is also visible and rss-visible is not
-// explicitly set to false.
 func (p *Post) IsRSSVisible() bool {
 	if !p.IsVisible() {
 		return false
@@ -189,7 +184,7 @@ func (s *Service) GetPage(page int) PageResult {
 	return res
 }
 
-// slugFromPath derives a URL slug from a file path (basename without extension).
+// slugFromPath derives URL slug from file path
 func slugFromPath(path string) string {
 	base := filepath.Base(path)
 	if ext := filepath.Ext(base); ext != "" {
@@ -210,8 +205,7 @@ type Service struct {
 	feedCache []byte // cached RSS feed; nil means stale
 }
 
-// invalidateFeedCache marks the RSS feed cache as stale.
-// Must be called whenever the post collection changes.
+// invalidateFeedCache marks the RSS feed cache as stale
 func (s *Service) invalidateFeedCache() {
 	s.feedMu.Lock()
 	s.feedCache = nil
@@ -260,8 +254,6 @@ func NewService(conf *config.Config, logger *slog.Logger) *Service {
 	}
 }
 
-// Start performs an initial rescan and then schedules periodic rescans
-// according to the cron expression in the config. Call Stop to release resources.
 func (s *Service) Start() error {
 	s.log.Info("starting service")
 	s.rescan()
@@ -275,7 +267,6 @@ func (s *Service) Start() error {
 	return nil
 }
 
-// Stop gracefully shuts down the rescan scheduler.
 func (s *Service) Stop() {
 	s.log.Info("stopping service")
 	if s.scheduler != nil {
@@ -335,7 +326,6 @@ func (s *Service) rescan() {
 		return
 	}
 
-	// Track which paths exist on disk during this scan.
 	found := make(map[string]bool)
 	for _, path := range paths {
 		found[path] = true
@@ -346,7 +336,6 @@ func (s *Service) rescan() {
 		}
 	}
 
-	// Remove posts that are no longer present on disk.
 	var toRemove []string
 	for _, post := range s.repo.List() {
 		if !found[post.path] {
@@ -373,8 +362,7 @@ func hashBytes(data []byte) uint64 {
 	return h.Sum64()
 }
 
-// parseAndRender parses markdown bytes, extracts metadata, renders HTML,
-// and stores the hash, metadata and rendered contents on the post.
+// parseAndRender does a lot of small things... too many maybe.
 func parseAndRender(post *Post, buf []byte) error {
 	post.hash = hashBytes(buf)
 
@@ -397,8 +385,7 @@ func parseAndRender(post *Post, buf []byte) error {
 	return nil
 }
 
-// renderPost reads the file at post.path via the source and calls parseAndRender.
-// It also records the file's modification time on the post.
+// renderPost does one thing rather than a lot of things...
 func (s *Service) renderPost(post *Post) error {
 	modTime, err := s.source.StatPost(post.path)
 	if err != nil {
