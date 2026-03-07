@@ -21,11 +21,6 @@ func main() {
 		log.Fatalf("invalid log level %q: %v", cfg.LogLevel, err)
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
-
-	if err := service.RunInitialSetup(cfg, logger); err != nil {
-		log.Fatalf("initial setup failed: %v", err)
-	}
-
 	fsSource := service.NewFileSystemSource(cfg.Paths.Posts, logger)
 	source := service.NewLayeredSource(fsSource, service.NewBuiltinSource())
 	converter := &service.GoMarkdownConverter{}

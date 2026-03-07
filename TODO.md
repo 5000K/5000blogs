@@ -2,9 +2,8 @@
 
 - **Data race in `MemoryPostRepository`**: `r.posts` is read by HTTP handlers and written by `rescan()` without any mutex. Under load this is a concurrent map/slice race. Guard `r.posts` with a `sync.RWMutex`.
 - **Concurrent rescan runs**: no lock prevents two overlapping `rescan()` calls if the cron fires while a previous scan is still running.
-- **Zip slip in `extractZip`** (`service/setup.go`): zip entry paths are not sanitised before joining with `destDir`. A malicious zip could write files outside the target directory. Validate that the cleaned destination path is still under `destDir`.
 - **API returns hidden posts**: `apiListPosts` and `apiSearchPosts` include posts with `visible: false`. Decide whether that is intentional and document it, or filter them out.
-- **Out-of-bounds page**: `GetPage` with a page number beyond the last page silently returns an empty result. Return the last valid page or a clear error instead.
+- **Out-of-bounds page**: `GetPage` with a page number beyond the last page silently returns an empty result. Return the last valid page instead.
 
 ## Testing gaps
 
