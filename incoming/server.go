@@ -59,6 +59,34 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 	}
 }
 
+// reservedPaths lists URL paths explicitly registered by the static router.
+// Configured page routes matching these paths or their prefixes are skipped.
+var reservedPaths = map[string]bool{
+	"/":            true,
+	"/posts":       true,
+	"/feed.xml":    true,
+	"/feed.atom":   true,
+	"/health":      true,
+	"/favicon.ico": true,
+	"/og-logo.png": true,
+	"/robots.txt":  true,
+	"/sitemap.xml": true,
+}
+
+var reservedPrefixes = []string{"/static/", "/api/", "/posts/", "/plain/"}
+
+func isReservedPath(path string) bool {
+	if reservedPaths[path] {
+		return true
+	}
+	for _, prefix := range reservedPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) chi.Router {
 	renderer.SetFooter(func() template.HTML {
 		if post := repo.GetBySlug("footer"); post != nil {
@@ -165,8 +193,16 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		_, _ = w.Write(plain)
 	})
 
+	homeSlug := "home"
+	for _, p := range cfg.Pages {
+		if p.Path == "/" {
+			homeSlug = p.Slug
+			break
+		}
+	}
+
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		if home := repo.GetBySlug("home"); home != nil {
+		if home := repo.GetBySlug(homeSlug); home != nil {
 			if data := home.Data(); len(data.Content) > 0 {
 				if checkLastModified(w, r, home.ModTime()) {
 					return
@@ -228,6 +264,29 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", cfg.SiteURL)
 	})
+
+	for _, pg := range cfg.Pages {
+		if isReservedPath(pg.Path) {
+			continue
+		}
+		slug := pg.Slug
+		path := pg.Path
+		r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+			post := repo.GetBySlug(slug)
+			if post == nil {
+				serve404(w, r)
+				return
+			}
+			if data := post.Data(); len(data.Content) == 0 {
+				serve404(w, r)
+				return
+			}
+			if checkLastModified(w, r, post.ModTime()) {
+				return
+			}
+			renderer.ServePost(post, w, cfg.SiteURL+path, "")
+		})
+	}
 
 	r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
 		entries := repo.Sitemap()

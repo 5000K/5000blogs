@@ -207,6 +207,107 @@ func TestCheckLastModified_ZeroTimeIsNoop(t *testing.T) {
 	}
 }
 
+// --- isReservedPath ---
+
+func TestIsReservedPath_KnownStaticPaths(t *testing.T) {
+	reserved := []string{
+		"/", "/posts", "/feed.xml", "/feed.atom",
+		"/health", "/favicon.ico", "/og-logo.png",
+		"/robots.txt", "/sitemap.xml",
+	}
+	for _, p := range reserved {
+		if !isReservedPath(p) {
+			t.Errorf("want %q to be reserved", p)
+		}
+	}
+}
+
+func TestIsReservedPath_ReservedPrefixes(t *testing.T) {
+	reserved := []string{
+		"/static/foo.css",
+		"/api/v1/posts",
+		"/posts/my-slug",
+		"/plain/my-slug",
+	}
+	for _, p := range reserved {
+		if !isReservedPath(p) {
+			t.Errorf("want %q to be reserved", p)
+		}
+	}
+}
+
+func TestIsReservedPath_CustomPathsAreNotReserved(t *testing.T) {
+	free := []string{"/about", "/contact", "/info", "/services/web"}
+	for _, p := range free {
+		if isReservedPath(p) {
+			t.Errorf("want %q to be free (not reserved), but it was reserved", p)
+		}
+	}
+}
+
+// --- dynamic page routes ---
+
+// pageRouter builds a minimal router that registers one dynamic page route,
+// mirroring the logic in buildRouter for cfg.Pages entries.
+func pageRouter(path, slug string, repo service.PostRepository) chi.Router {
+	r := chi.NewRouter()
+	serve404 := func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}
+	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+		post := repo.GetBySlug(slug)
+		if post == nil {
+			serve404(w, r)
+			return
+		}
+		if data := post.Data(); len(data.Content) == 0 {
+			serve404(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(post.Data().Content)
+	})
+	return r
+}
+
+func TestDynamicPageRoute_ServesPost(t *testing.T) {
+	post := service.NewPost("about.md", &service.Metadata{Title: "About"}, []byte("<p>about us</p>"))
+	repo := &stubRepo{posts: []*service.Post{post}}
+
+	req := httptest.NewRequest(http.MethodGet, "/about", nil)
+	w := httptest.NewRecorder()
+	pageRouter("/about", "about", repo).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("want 200, got %d", w.Code)
+	}
+}
+
+func TestDynamicPageRoute_NotFoundWhenSlugMissing(t *testing.T) {
+	repo := &stubRepo{}
+
+	req := httptest.NewRequest(http.MethodGet, "/about", nil)
+	w := httptest.NewRecorder()
+	pageRouter("/about", "about", repo).ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("want 404, got %d", w.Code)
+	}
+}
+
+func TestDynamicPageRoute_NotFoundWhenPostHasNoContent(t *testing.T) {
+	post := service.NewPost("about.md", &service.Metadata{Title: "About"}, nil)
+	repo := &stubRepo{posts: []*service.Post{post}}
+
+	req := httptest.NewRequest(http.MethodGet, "/about", nil)
+	w := httptest.NewRecorder()
+	pageRouter("/about", "about", repo).ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("want 404, got %d", w.Code)
+	}
+}
+
 // --- /health ---
 
 func TestHealthEndpoint(t *testing.T) {

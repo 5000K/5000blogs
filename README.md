@@ -127,6 +127,7 @@ For a full markdown reference see the [CommonMark spec](https://spec.commonmark.
 There are a few posts that are kind of *special*. They are called *well-known posts*. These are used to simplify definining a few special pages your blog needs. They are:
 
  - home.md - The content of this post will be shown on the main page of your blog. It's your landing page.
- - 404.md - THe content of this post will be shown if the user tries to access a post that isn't 
+ - 404.md - The content of this post will be shown if the user tries to access a post that isn't .
+ - footer.md - The content of the footer shown on every page.
 
 There are defaults for these pages, but if you want to fill them with your own content, just add a file with the correct name in your posts folder.

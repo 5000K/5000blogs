@@ -22,6 +22,9 @@ func TestValidate(t *testing.T) {
 		{"site_url https", Config{PageSize: 5, SiteURL: "https://example.com", OGImage: OGImageConfig{CacheSize: 128}}, false},
 		{"cache_size zero", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 0}}, true},
 		{"cache_size negative", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: -1}}, true},
+		{"pages valid", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Pages: []PageRoute{{Path: "/about", Slug: "about"}}}, false},
+		{"pages path no slash", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Pages: []PageRoute{{Path: "about", Slug: "about"}}}, true},
+		{"pages slug empty", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Pages: []PageRoute{{Path: "/about", Slug: ""}}}, true},
 	}
 
 	for _, tt := range tests {
