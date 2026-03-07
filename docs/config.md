@@ -19,6 +19,7 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | `blog_name` | `BLOG_NAME` | `Blog` | Site name shown in the header, used as the RSS/Atom feed title, and used as a fallback page title. |
 | `icon` | `ICON` | _(empty)_ | Path to a PNG file served as `/favicon.ico` and `/og-logo.png`. Also used as the logo in generated `og:image` PNGs. |
 | `nav_links` | — | _(none)_ | List of header navigation links. Each entry has `name` (display text) and `url`. YAML array only; no env var equivalent. |
+| `pages` | — | _(none)_ | Custom page routes. Each entry has `path` (URL path, must start with `/`) and `slug` (post slug to serve at that path). The `/` path defaults to slug `home` if not listed here. Paths already owned by the static router (e.g. `/posts`, `/feed.xml`) are silently ignored. YAML array only; no env var equivalent. |
 | `plugins` | — | _(none)_ | List of JavaScript URLs injected as `<script>` tags via `.Plugins` in the template to quickly extend the client. YAML array only; no env var equivalent. |
 
 ### og_image
@@ -34,11 +35,12 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 
 ## Well-known posts
 
-Two posts are built in and served automatically:
+Three posts are built in and served automatically:
 
 | Slug | Purpose |
 |---|---|
 | `home` | Rendered at `/` (the root page). Override the slug via `pages: [{path: /, slug: my-home}]`. |
+| `footer` | Rendered as the page footer on every page. Override by placing `footer.md` in your `paths.posts` directory. |
 | `404` | Rendered for any unknown URL. |
 
 To override either, place a file with the matching name in your `paths.posts` directory (e.g. `home.md` or `404.md`). Your file takes precedence over the built-in version.
