@@ -1,10 +1,13 @@
   - Generate og:Image
    - use `golang.org/x/image`
-   - let user configure styling (blog-icon, blog-name, colors)
- - Cleanup post frontmatter:
-   - use enclosing --- instead of codeblock
-   - support full timestamps (if not already)
- - Multi layer source: Meta-source that checks multiple sources for a post before returning that it didn't find it.
-   - Idea: built-in default 404 and home post that are just compiled right into the binary -> also implement this.
+   - let user configure styling (blog-icon, blog-name, colors); default colors to the current default template.html
+ - Multi layer source: Meta-source that checks multiple sources for a post before returning that it didn't find it. When getting a post list, should do the same (for collisions, prioritize the first of the sources)
+   - Why? Using multiple source folders (or later maybe also e.g. external git repos, databases, ...)
+   - This also enables: built-in default 404 and home post that are just compiled right into the binary -> also implement this.
      - home -> with a simple "welcome to your new blog"
      - 404 -> take the one from `demo/posts`
+ - Extended API
+   - This will be helpful for more complex templates. They can hook into the API to show additonal things.
+   - For now, the following routes should be available under the prefix /api/v1:
+     - GET /posts: returns a simple array of all posts by name, without any kind of sorting.
+     - GET /post/{name} : returns all metadata of the post

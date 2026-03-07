@@ -6,7 +6,6 @@ import (
 	"hash/fnv"
 
 	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
 	"gopkg.in/yaml.v3"
@@ -23,15 +22,15 @@ type GoMarkdownConverter struct{}
 func (c *GoMarkdownConverter) Convert(post *Post, raw []byte) error {
 	post.hash = hashBytes(raw)
 
-	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
-	p := parser.NewWithExtensions(extensions)
-	doc := p.Parse(raw)
-
-	metadata, err := extractMetadata(doc)
+	metadata, body, err := extractFrontmatter(raw)
 	if err != nil {
 		return err
 	}
 	post.metadata = metadata
+
+	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+	p := parser.NewWithExtensions(extensions)
+	doc := p.Parse(body)
 
 	htmlFlags := html.CommonFlags | html.HrefTargetBlank
 	opts := html.RendererOptions{Flags: htmlFlags}
@@ -42,36 +41,37 @@ func (c *GoMarkdownConverter) Convert(post *Post, raw []byte) error {
 	return nil
 }
 
-func extractMetadata(doc ast.Node) (*Metadata, error) {
-	var metaNode *ast.CodeBlock
+// extractFrontmatter parses --- delimited YAML front matter from raw markdown.
+// Returns metadata, the remaining markdown body, and any error.
+func extractFrontmatter(raw []byte) (*Metadata, []byte, error) {
+	const open = "---\n"
+	const close = "\n---\n"
 
-	ast.WalkFunc(doc, func(node ast.Node, entering bool) ast.WalkStatus {
-		if metaNode != nil {
-			return ast.Terminate
-		}
-		cb, ok := node.(*ast.CodeBlock)
-		if !ok || !entering {
-			return ast.GoToNext
-		}
-		if bytes.EqualFold(cb.Info, []byte("yaml")) {
-			metaNode = cb
-			return ast.Terminate
-		}
-		return ast.GoToNext
-	})
+	if !bytes.HasPrefix(raw, []byte(open)) {
+		return &Metadata{}, raw, nil
+	}
 
-	if metaNode == nil {
-		return &Metadata{}, nil
+	rest := raw[len(open):]
+
+	var yamlBytes, body []byte
+	if bytes.HasPrefix(rest, []byte("---\n")) {
+		// empty front matter block
+		body = rest[len("---\n"):]
+	} else {
+		idx := bytes.Index(rest, []byte(close))
+		if idx == -1 {
+			return &Metadata{}, raw, nil
+		}
+		yamlBytes = rest[:idx]
+		body = rest[idx+len(close):]
 	}
 
 	var meta Metadata
-	if err := yaml.Unmarshal(metaNode.Literal, &meta); err != nil {
-		return nil, fmt.Errorf("extractMetadata: failed to parse yaml: %w", err)
+	if err := yaml.Unmarshal(yamlBytes, &meta); err != nil {
+		return nil, nil, fmt.Errorf("extractFrontmatter: failed to parse yaml: %w", err)
 	}
 
-	ast.RemoveFromTree(metaNode)
-
-	return &meta, nil
+	return &meta, body, nil
 }
 
 func hashBytes(data []byte) uint64 {

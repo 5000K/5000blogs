@@ -1,14 +1,14 @@
-```yaml
+---
 title: Welcome to 5000blogs
 description: A tiny, file-backed blogging engine in Go.
 date: 2026-03-04
 visible: false
 author: 5000k
-```
+---
 
 5000blogs is a lightweight blogging platform built as a simple Go monolith.
 
-Write posts in Markdown, add metadata in a `yaml` fenced block, and the app handles rendering, listing, and RSS for you.
+Write posts in Markdown, add metadata as `---` front matter, and the app handles rendering, listing, and RSS for you.
 
 ## Why 5000Blogs?
 
@@ -18,7 +18,6 @@ Your data stays in plain text, and that means freedom. You are not locked in, mo
 
 It's very capable for many use cases:
 
- - Publish your obsidian vault with a simple copy/paste (that was the original use-case)
  - Publish your plain text notes or digital garden
  - Setup your new blog in like 5 minutes
  - Publish auto-generated reports or docs in a matter of seconds

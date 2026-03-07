@@ -99,7 +99,7 @@ func (fs *FileSystemSource) WritePost(path string, metadata *Metadata, content s
 		return fmt.Errorf("WritePost: failed to marshal metadata: %w", err)
 	}
 
-	body := fmt.Sprintf("```yaml\n%s```\n\n%s", string(yamlBytes), content)
+	body := fmt.Sprintf("---\n%s---\n\n%s", string(yamlBytes), content)
 
 	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
 		return fmt.Errorf("WritePost: failed to write file %q: %w", path, err)

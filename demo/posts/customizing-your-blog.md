@@ -1,9 +1,9 @@
-```yaml
+---
 title: Customizing your blog
 description: How the templating system works and what you can change to make the site your own.
 date: 2026-03-04
-author: 5000k 
-```
+author: 5000k
+---
 
 # Customizing your blog
 
@@ -47,13 +47,15 @@ The same file drives every page type. A boolean field — `IsListPage` — lets 
 
 Every markdown post can include a YAML front matter block at the top:
 
-```yaml
+```
+---
 title: My post title
 description: A short summary shown in the post list.
 date: 2026-03-04
+---
 ```
 
-Wrap it in a fenced code block tagged `yaml` and the parser will extract it and remove it from the rendered output automatically.
+Place it at the very start of the file, enclosed by `---` delimiters. The parser extracts and removes it from the rendered output automatically.
 
 ## Partials via fetch
 

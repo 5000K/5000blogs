@@ -1,9 +1,9 @@
-```yaml
+---
 title: Introducing 5000blogs
 description: A lightweight platform for blogging, documentation, and automated publishing — with a focus on simplicity.
 date: 2026-03-04
 author: 5000k
-```
+---
 
 # Introducing 5000blogs
 
