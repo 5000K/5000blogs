@@ -37,6 +37,7 @@ func (r *stubRepo) Count() int                      { return len(r.posts) }
 func (r *stubRepo) GetPage(int) service.PageResult  { return service.PageResult{} }
 func (r *stubRepo) RSSFeed() ([]byte, error)        { return nil, nil }
 func (r *stubRepo) AtomFeed() ([]byte, error)       { return nil, nil }
+func (r *stubRepo) LastModified() time.Time         { return time.Time{} }
 func (r *stubRepo) Sitemap() []service.SitemapEntry { return nil }
 func (r *stubRepo) Start() error                    { return nil }
 func (r *stubRepo) Stop()                           {}

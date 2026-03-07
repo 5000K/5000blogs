@@ -70,6 +70,11 @@ func (p *Post) Data() PostData {
 	return d
 }
 
+// ModTime returns the file modification time of the post, used for HTTP caching.
+func (p *Post) ModTime() time.Time {
+	return p.modTime
+}
+
 // PlainText returns the post body as plain text (HTML and markdown formatting stripped).
 func (p *Post) PlainText() []byte {
 	if p.plainText == nil {

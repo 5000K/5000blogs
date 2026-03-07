@@ -17,6 +17,23 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// checkLastModified sets the Last-Modified header and returns true (with 304)
+// if the client's If-Modified-Since indicates the resource is still fresh.
+func checkLastModified(w http.ResponseWriter, r *http.Request, t time.Time) bool {
+	if t.IsZero() {
+		return false
+	}
+	t = t.UTC().Truncate(time.Second)
+	w.Header().Set("Last-Modified", t.Format(http.TimeFormat))
+	if ims := r.Header.Get("If-Modified-Since"); ims != "" {
+		if parsed, err := http.ParseTime(ims); err == nil && !t.After(parsed.UTC()) {
+			w.WriteHeader(http.StatusNotModified)
+			return true
+		}
+	}
+	return false
+}
+
 func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) {
 	r := buildRouter(cfg, repo, renderer, ogGen)
 	_ = http.ListenAndServe(cfg.ServerAddress, r)
@@ -53,6 +70,9 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		post := repo.GetBySlug(slug)
 		if post == nil {
 			serve404(w, r)
+			return
+		}
+		if checkLastModified(w, r, post.ModTime()) {
 			return
 		}
 		var ogImageURL string
@@ -95,6 +115,9 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 			http.Error(w, "plain text not available", http.StatusNotFound)
 			return
 		}
+		if checkLastModified(w, r, post.ModTime()) {
+			return
+		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write(plain)
 	})
@@ -102,14 +125,23 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		if home := repo.GetBySlug("home"); home != nil {
 			if data := home.Data(); len(data.Content) > 0 {
+				if checkLastModified(w, r, home.ModTime()) {
+					return
+				}
 				renderer.ServePost(home, w, cfg.SiteURL+"/", "")
 				return
 			}
+		}
+		if checkLastModified(w, r, repo.LastModified()) {
+			return
 		}
 		renderer.ServePostList(repo.GetPage(1), w, cfg.SiteURL+"/posts")
 	})
 
 	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
+		if checkLastModified(w, r, repo.LastModified()) {
+			return
+		}
 		page := 1
 		if p := r.URL.Query().Get("page"); p != "" {
 			if n, err := strconv.Atoi(p); err == nil && n > 0 {
@@ -120,6 +152,9 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {
+		if checkLastModified(w, r, repo.LastModified()) {
+			return
+		}
 		data, err := repo.RSSFeed()
 		if err != nil {
 			http.Error(w, "failed to generate feed", http.StatusInternalServerError)
@@ -130,6 +165,9 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	r.Get("/feed.atom", func(w http.ResponseWriter, r *http.Request) {
+		if checkLastModified(w, r, repo.LastModified()) {
+			return
+		}
 		data, err := repo.AtomFeed()
 		if err != nil {
 			http.Error(w, "failed to generate atom feed", http.StatusInternalServerError)

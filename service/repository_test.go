@@ -346,3 +346,49 @@ func TestSitemap_LastModFallsBackToModTime(t *testing.T) {
 		t.Errorf("LastMod fallback: got %v, want %v", entries[0].LastMod, mod)
 	}
 }
+
+func TestLastModified_ReturnsZeroWithNoPosts(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	if !repo.LastModified().IsZero() {
+		t.Error("want zero time when no posts")
+	}
+}
+
+func TestLastModified_ReturnsMaxModTime(t *testing.T) {
+	older := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	newer := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		{path: "posts/a.md", modTime: older, metadata: &Metadata{}},
+		{path: "posts/b.md", modTime: newer, metadata: &Metadata{}},
+	}
+
+	got := repo.LastModified()
+	if !got.Equal(newer) {
+		t.Errorf("want %v, got %v", newer, got)
+	}
+}
+
+func TestLastModified_IgnoresInvisiblePosts(t *testing.T) {
+	visible := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	hidden := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	hiddenBool := false
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		{path: "posts/a.md", modTime: visible, metadata: &Metadata{}},
+		{path: "posts/b.md", modTime: hidden, metadata: &Metadata{Visible: &hiddenBool}},
+	}
+
+	got := repo.LastModified()
+	if !got.Equal(visible) {
+		t.Errorf("want %v (ignoring hidden post), got %v", visible, got)
+	}
+}
+
+func TestModTime(t *testing.T) {
+	mod := time.Date(2026, 5, 10, 8, 30, 0, 0, time.UTC)
+	p := &Post{path: "posts/x.md", modTime: mod}
+	if !p.ModTime().Equal(mod) {
+		t.Errorf("ModTime: want %v, got %v", mod, p.ModTime())
+	}
+}

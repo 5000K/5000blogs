@@ -19,6 +19,7 @@ type PostRepository interface {
 	GetPage(page int) PageResult
 	RSSFeed() ([]byte, error)
 	AtomFeed() ([]byte, error)
+	LastModified() time.Time
 	Sitemap() []SitemapEntry
 	Start() error
 	Stop()
@@ -198,6 +199,20 @@ func (r *MemoryPostRepository) GetPage(page int) PageResult {
 		PrevPage:   page - 1,
 		NextPage:   page + 1,
 	}
+}
+
+// LastModified returns the most recent file-modtime across all visible posts.
+// Returns zero time when there are no posts.
+func (r *MemoryPostRepository) LastModified() time.Time {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	var latest time.Time
+	for _, p := range r.posts {
+		if p.IsVisible() && p.modTime.After(latest) {
+			latest = p.modTime
+		}
+	}
+	return latest
 }
 
 func (r *MemoryPostRepository) invalidateFeedCache() {
