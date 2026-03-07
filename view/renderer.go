@@ -37,6 +37,9 @@ type templateData struct {
 	Content template.HTML
 	NoIndex bool
 
+	// Injected by SetFooter
+	FooterContent template.HTML
+
 	// List view
 	IsListPage bool
 	FilterTags []string
@@ -66,10 +69,24 @@ type paginationData struct {
 
 // Renderer loads an HTML template from disk and renders posts through it.
 type Renderer struct {
-	cfg      *config.Config
-	log      *slog.Logger
-	tmplPath string
-	tmpl     *template.Template
+	cfg        *config.Config
+	log        *slog.Logger
+	tmplPath   string
+	tmpl       *template.Template
+	footerHTML func() template.HTML
+}
+
+// SetFooter registers a function that returns the rendered footer content.
+// It is called on every request, so changes to the underlying post are picked up automatically.
+func (r *Renderer) SetFooter(fn func() template.HTML) {
+	r.footerHTML = fn
+}
+
+func (r *Renderer) footer() template.HTML {
+	if r.footerHTML == nil {
+		return ""
+	}
+	return r.footerHTML()
 }
 
 // NewRenderer creates a Renderer, loading the template from the static directory.
@@ -120,11 +137,12 @@ func (r *Renderer) ogLogoURL() string {
 // has content it is rendered; otherwise a placeholder title is used.
 func (r *Renderer) Serve404(post *service.Post, w http.ResponseWriter) {
 	td := templateData{
-		Title:     "404 - Page Not Found",
-		OGLogoURL: r.ogLogoURL(),
-		Plugins:   r.cfg.Plugins,
-		BlogName:  r.cfg.BlogName,
-		NavLinks:  r.navLinks(),
+		Title:         "404 - Page Not Found",
+		OGLogoURL:     r.ogLogoURL(),
+		Plugins:       r.cfg.Plugins,
+		BlogName:      r.cfg.BlogName,
+		NavLinks:      r.navLinks(),
+		FooterContent: r.footer(),
 	}
 	if post != nil {
 		data := post.Data()
@@ -156,19 +174,20 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL 
 	}
 
 	td := templateData{
-		Title:       data.Title,
-		Description: data.Description,
-		URL:         pageURL,
-		OGImageURL:  ogImageURL,
-		OGLogoURL:   r.ogLogoURL(),
-		Author:      data.Author,
-		Tags:        data.Tags,
-		Content:     template.HTML(data.Content), //nolint:gosec // content is markdown-rendered HTML
-		DateISO:     data.DateISO,
-		NoIndex:     data.NoIndex,
-		Plugins:     r.cfg.Plugins,
-		BlogName:    r.cfg.BlogName,
-		NavLinks:    r.navLinks(),
+		Title:         data.Title,
+		Description:   data.Description,
+		URL:           pageURL,
+		OGImageURL:    ogImageURL,
+		OGLogoURL:     r.ogLogoURL(),
+		Author:        data.Author,
+		Tags:          data.Tags,
+		Content:       template.HTML(data.Content), //nolint:gosec // content is markdown-rendered HTML
+		DateISO:       data.DateISO,
+		NoIndex:       data.NoIndex,
+		Plugins:       r.cfg.Plugins,
+		BlogName:      r.cfg.BlogName,
+		NavLinks:      r.navLinks(),
+		FooterContent: r.footer(),
 	}
 	if !data.Date.IsZero() {
 		td.DateStr = data.Date.Format("January 2, 2006")
@@ -198,15 +217,16 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, p
 	}
 
 	td := templateData{
-		Title:      "Posts",
-		URL:        pageURL,
-		OGLogoURL:  r.ogLogoURL(),
-		IsListPage: true,
-		FilterTags: pr.FilterTags,
-		Posts:      items,
-		Plugins:    r.cfg.Plugins,
-		BlogName:   r.cfg.BlogName,
-		NavLinks:   r.navLinks(),
+		Title:         "Posts",
+		URL:           pageURL,
+		OGLogoURL:     r.ogLogoURL(),
+		IsListPage:    true,
+		FilterTags:    pr.FilterTags,
+		Posts:         items,
+		Plugins:       r.cfg.Plugins,
+		BlogName:      r.cfg.BlogName,
+		NavLinks:      r.navLinks(),
+		FooterContent: r.footer(),
 		Pagination: paginationData{
 			Page:       pr.Page,
 			TotalPages: pr.TotalPages,

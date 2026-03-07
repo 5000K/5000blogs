@@ -3,6 +3,7 @@ package view
 import (
 	"5000blogs/config"
 	"5000blogs/service"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +13,7 @@ import (
 	"testing"
 )
 
-const minimalTemplate = `<!DOCTYPE html><html><head><title>{{.Title}}</title></head><body>{{.Content}}</body></html>`
+const minimalTemplate = `<!DOCTYPE html><html><head><title>{{.Title}}</title></head><body>{{.Content}}<footer>{{.FooterContent}}</footer></body></html>`
 
 func newTestRenderer(t *testing.T) *Renderer {
 	t.Helper()
@@ -82,5 +83,37 @@ func TestServePost_Valid(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "world") {
 		t.Errorf("want world in body, got: %s", w.Body.String())
+	}
+}
+
+func TestSetFooter_InjectedIntoPost(t *testing.T) {
+	r := newTestRenderer(t)
+	r.SetFooter(func() template.HTML { return template.HTML("<p>footer-content</p>") })
+	w := httptest.NewRecorder()
+	post := service.NewPost("hello.md", &service.Metadata{Title: "Hello"}, []byte("<p>body</p>"))
+	r.ServePost(post, w, "http://example.com/posts/hello", "")
+	if !strings.Contains(w.Body.String(), "footer-content") {
+		t.Errorf("want footer-content in body, got: %s", w.Body.String())
+	}
+}
+
+func TestSetFooter_InjectedIntoList(t *testing.T) {
+	r := newTestRenderer(t)
+	r.SetFooter(func() template.HTML { return template.HTML("<p>footer-content</p>") })
+	w := httptest.NewRecorder()
+	r.ServePostList(service.PageResult{}, w, "http://example.com/posts")
+	if !strings.Contains(w.Body.String(), "footer-content") {
+		t.Errorf("want footer-content in list body, got: %s", w.Body.String())
+	}
+}
+
+func TestSetFooter_NotSetReturnsEmpty(t *testing.T) {
+	r := newTestRenderer(t)
+	w := httptest.NewRecorder()
+	post := service.NewPost("hello.md", &service.Metadata{Title: "Hello"}, []byte("<p>body</p>"))
+	r.ServePost(post, w, "http://example.com/posts/hello", "")
+	body := w.Body.String()
+	if !strings.Contains(body, "<footer></footer>") {
+		t.Errorf("want empty footer, got: %s", body)
 	}
 }

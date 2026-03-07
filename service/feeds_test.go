@@ -85,7 +85,7 @@ func TestAtomFeed_Structure(t *testing.T) {
 	})
 	cfg := newTestConf(10)
 	cfg.SiteURL = "http://example.com"
-	cfg.FeedTitle = "My Blog"
+	cfg.BlogName = "My Blog"
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 

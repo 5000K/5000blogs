@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -22,14 +23,14 @@ type Config struct {
 	PageSize             int    `env:"PAGE_SIZE" env-default:"10" yaml:"page_size"`
 
 	SiteURL         string `env:"SITE_URL" env-default:"http://localhost:8080" yaml:"site_url"`
-	FeedTitle       string `env:"FEED_TITLE" env-default:"Blog" yaml:"feed_title"`
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`
 	RSSFullContent  bool   `env:"RSS_FULL_CONTENT" env-default:"false" yaml:"rss_full_content"`
 
-	BlogName string    `env:"BLOG_NAME" env-default:"Blog" yaml:"blog_name"`
-	Icon     string    `env:"ICON" env-default:"./static/icon.png" yaml:"icon"` // path to PNG file served as favicon and og:logo
-	NavLinks []NavLink `yaml:"nav_links"`
-	Plugins  []string  `yaml:"plugins"`
+	BlogName string      `env:"BLOG_NAME" env-default:"Blog" yaml:"blog_name"`
+	Icon     string      `env:"ICON" env-default:"./static/icon.png" yaml:"icon"` // path to PNG file served as favicon and og:logo
+	NavLinks []NavLink   `yaml:"nav_links"`
+	Pages    []PageRoute `yaml:"pages"`
+	Plugins  []string    `yaml:"plugins"`
 
 	OGImage OGImageConfig `yaml:"og_image"`
 }
@@ -38,6 +39,12 @@ type Config struct {
 type NavLink struct {
 	Name string `yaml:"name"`
 	URL  string `yaml:"url"`
+}
+
+// PageRoute maps a URL path to a post slug for serving static page content.
+type PageRoute struct {
+	Path string `yaml:"path"`
+	Slug string `yaml:"slug"`
 }
 
 type OGImageConfig struct {
@@ -59,6 +66,14 @@ func (c *Config) Validate() error {
 	}
 	if c.OGImage.CacheSize <= 0 {
 		return fmt.Errorf("og_image.cache_size must be > 0, got %d", c.OGImage.CacheSize)
+	}
+	for _, p := range c.Pages {
+		if !strings.HasPrefix(p.Path, "/") {
+			return fmt.Errorf("pages: path %q must start with /", p.Path)
+		}
+		if p.Slug == "" {
+			return fmt.Errorf("pages: slug for path %q must not be empty", p.Path)
+		}
 	}
 	return nil
 }

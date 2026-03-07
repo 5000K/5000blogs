@@ -50,14 +50,14 @@ func TestBuiltinSource_ListPosts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(paths) != 2 {
-		t.Fatalf("expected 2 builtin posts, got %d", len(paths))
+	if len(paths) != 3 {
+		t.Fatalf("expected 3 builtin posts, got %d", len(paths))
 	}
 	slugs := map[string]bool{}
 	for _, p := range paths {
 		slugs[slugFromPath(p)] = true
 	}
-	for _, want := range []string{"home", "404"} {
+	for _, want := range []string{"home", "404", "footer"} {
 		if !slugs[want] {
 			t.Errorf("expected builtin slug %q", want)
 		}

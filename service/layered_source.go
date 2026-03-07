@@ -17,7 +17,7 @@ type BuiltinSource struct {
 
 func NewBuiltinSource() *BuiltinSource {
 	return &BuiltinSource{
-		paths: []string{"builtin/home.md", "builtin/404.md"},
+		paths: []string{"builtin/home.md", "builtin/404.md", "builtin/footer.md"},
 	}
 }
 

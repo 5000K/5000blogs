@@ -75,6 +75,8 @@
     .post-body th,
     .post-body td  { border: 1px solid #333; padding: .5rem .75rem; text-align: left; }
     .post-body th  { background: #1a1a1a; color: #f0f0f0; }
+
+    .footer a { color: #f0f0f0; text-decoration: none; }
   </style>
 </head>
 <body class="sans-serif near-white">
@@ -167,15 +169,12 @@
 
   </div>
 
-  <!-- footer — RSS link -->
-  <footer class="mw7 center ph3 ph4-ns pb5 pt0 flex items-center justify-center" style="border-top:1px solid #1e1e1e; gap:2rem;">
-    <p class="f7 ttu tracked" style="color:#333; letter-spacing:.1em;">
-      <a href="/feed.xml" class="no-underline" style="color:#555;">RSS Feed</a>
-    </p>
-    <p class="f7 ttu tracked" style="color:#333; letter-spacing:.1em;">
-      <a href="/feed.atom" class="no-underline" style="color:#555;">Atom Feed</a>
-    </p>
+  <!-- footer — content from builtin/footer.md -->
+  {{if .FooterContent}}
+  <footer class="mw7 center ph3 ph4-ns pb5 pt0 post-body footer">
+    <div class="f7 tc" style="color:#555;">{{.FooterContent}}</div>
   </footer>
+  {{end}}
 
   <!-- plugins from config.plugins -->
   {{range .Plugins}}

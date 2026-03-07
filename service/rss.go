@@ -119,7 +119,7 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 	feed := rssFeed{
 		Version: "2.0",
 		Channel: rssChannel{
-			Title:         r.conf.FeedTitle,
+			Title:         r.conf.BlogName,
 			Link:          r.conf.SiteURL,
 			Description:   r.conf.FeedDescription,
 			LastBuildDate: rssTime{time.Now()},

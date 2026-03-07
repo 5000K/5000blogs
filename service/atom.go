@@ -111,7 +111,7 @@ func (r *MemoryPostRepository) buildAtomFeed() ([]byte, error) {
 	selfURL := fmt.Sprintf("%s/feed.atom", r.conf.SiteURL)
 	feed := atomFeedDoc{
 		Xmlns: "http://www.w3.org/2005/Atom",
-		Title: r.conf.FeedTitle,
+		Title: r.conf.BlogName,
 		Links: []atomLink{
 			{Href: r.conf.SiteURL, Rel: "alternate", Type: "text/html"},
 			{Href: selfURL, Rel: "self", Type: "application/atom+xml"},
