@@ -22,8 +22,9 @@ type Post struct {
 	hash    uint64
 	modTime time.Time
 
-	metadata *Metadata
-	contents *[]byte
+	metadata  *Metadata
+	contents  *[]byte
+	plainText *[]byte
 }
 
 // PostData holds the rendered data for a post, safe to pass to a view layer.
@@ -67,6 +68,14 @@ func (p *Post) Data() PostData {
 		d.Content = *p.contents
 	}
 	return d
+}
+
+// PlainText returns the post body as plain text (HTML and markdown formatting stripped).
+func (p *Post) PlainText() []byte {
+	if p.plainText == nil {
+		return nil
+	}
+	return *p.plainText
 }
 
 func (p *Post) IsVisible() bool {

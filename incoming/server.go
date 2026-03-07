@@ -18,6 +18,11 @@ import (
 )
 
 func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) {
+	r := buildRouter(cfg, repo, renderer, ogGen)
+	_ = http.ListenAndServe(cfg.ServerAddress, r)
+}
+
+func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -76,6 +81,22 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 		w.Header().Set("Content-Type", "image/png")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		_, _ = w.Write(data)
+	})
+
+	r.Get("/plain/{slug}", func(w http.ResponseWriter, r *http.Request) {
+		slug := chi.URLParam(r, "slug")
+		post := repo.GetBySlug(slug)
+		if post == nil {
+			serve404(w, r)
+			return
+		}
+		plain := post.PlainText()
+		if plain == nil {
+			http.Error(w, "plain text not available", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write(plain)
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +162,7 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 		_ = enc.Encode(set)
 	})
 
-	_ = http.ListenAndServe(cfg.ServerAddress, r)
+	return r
 }
 
 func FileServer(r chi.Router, path string, root http.FileSystem) {

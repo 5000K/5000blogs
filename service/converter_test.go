@@ -133,3 +133,94 @@ func TestConvert_NoFrontmatter(t *testing.T) {
 		t.Error("want rendered HTML")
 	}
 }
+
+func TestConvert_SetsPlainText(t *testing.T) {
+	c := &GoMarkdownConverter{}
+	post := &Post{}
+	raw := []byte("---\ntitle: Plain Test\n---\n\n# Hello\n\nWorld.\n")
+	if err := c.Convert(post, raw); err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+	if post.plainText == nil {
+		t.Fatal("want plainText to be set after Convert")
+	}
+	plain := string(*post.plainText)
+	if !strings.Contains(plain, "Hello") {
+		t.Errorf("plain text missing heading text: %q", plain)
+	}
+	if !strings.Contains(plain, "World") {
+		t.Errorf("plain text missing paragraph text: %q", plain)
+	}
+	if strings.Contains(plain, "<") || strings.Contains(plain, ">") {
+		t.Errorf("plain text must not contain HTML tags: %q", plain)
+	}
+}
+
+func TestHTMLToPlainText_StripsTagsAndEntities(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string // substrings that must appear
+		gone  []string // substrings that must not appear
+	}{
+		{
+			name:  "paragraph",
+			input: "<p>Hello world</p>",
+			want:  []string{"Hello world"},
+			gone:  []string{"<p>", "</p>"},
+		},
+		{
+			name:  "heading",
+			input: "<h1>Title</h1><p>Body</p>",
+			want:  []string{"Title", "Body"},
+			gone:  []string{"<h1>", "</h1>"},
+		},
+		{
+			name:  "html entities",
+			input: "<p>Tom &amp; Jerry &#8212; cool</p>",
+			want:  []string{"Tom & Jerry"},
+			gone:  []string{"&amp;"},
+		},
+		{
+			name:  "no tags",
+			input: "plain text",
+			want:  []string{"plain text"},
+		},
+		{
+			name:  "inline code",
+			input: "<p>Use <code>foo()</code> here</p>",
+			want:  []string{"foo()"},
+			gone:  []string{"<code>"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := string(htmlToPlainText([]byte(tc.input)))
+			for _, w := range tc.want {
+				if !strings.Contains(got, w) {
+					t.Errorf("want %q in output %q", w, got)
+				}
+			}
+			for _, g := range tc.gone {
+				if strings.Contains(got, g) {
+					t.Errorf("want %q absent from output %q", g, got)
+				}
+			}
+		})
+	}
+}
+
+func TestHTMLToPlainText_BlockNewlines(t *testing.T) {
+	input := "<h1>Title</h1><p>Para one</p><p>Para two</p>"
+	got := string(htmlToPlainText([]byte(input)))
+	// Both paragraphs must be present and separated by whitespace
+	if !strings.Contains(got, "Para one") || !strings.Contains(got, "Para two") {
+		t.Errorf("missing paragraphs: %q", got)
+	}
+	// Title and first paragraph should be on separate lines
+	titleIdx := strings.Index(got, "Title")
+	paraIdx := strings.Index(got, "Para one")
+	if titleIdx >= paraIdx {
+		t.Errorf("Title should appear before Para one: %q", got)
+	}
+}

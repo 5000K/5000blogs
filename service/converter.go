@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+	stdhtml "html"
+	"strings"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
@@ -38,7 +40,52 @@ func (c *GoMarkdownConverter) Convert(post *Post, raw []byte) error {
 
 	rendered := markdown.Render(doc, renderer)
 	post.contents = &rendered
+	plain := htmlToPlainText(rendered)
+	post.plainText = &plain
 	return nil
+}
+
+// blockElements are HTML tags that represent block boundaries and map to newlines in plain text.
+var blockElements = []string{"p", "br", "h1", "h2", "h3", "h4", "h5", "h6", "li", "blockquote", "pre", "div", "tr", "hr"}
+
+// htmlToPlainText strips HTML tags from src, inserting newlines at block boundaries,
+// then unescapes HTML entities and normalises whitespace.
+func htmlToPlainText(src []byte) []byte {
+	var buf bytes.Buffer
+	i := 0
+	for i < len(src) {
+		if src[i] != '<' {
+			buf.WriteByte(src[i])
+			i++
+			continue
+		}
+		end := bytes.IndexByte(src[i:], '>')
+		if end == -1 {
+			buf.Write(src[i:])
+			break
+		}
+		inner := src[i+1 : i+end] // everything between < and >
+		if len(inner) > 0 && inner[0] == '/' {
+			inner = inner[1:] // strip leading /
+		}
+		tagName := strings.ToLower(string(inner))
+		if sp := strings.IndexByte(tagName, ' '); sp != -1 {
+			tagName = tagName[:sp]
+		}
+		for _, bt := range blockElements {
+			if tagName == bt {
+				buf.WriteByte('\n')
+				break
+			}
+		}
+		i += end + 1
+	}
+	text := stdhtml.UnescapeString(buf.String())
+	// Collapse runs of 3+ newlines to a single blank line.
+	for strings.Contains(text, "\n\n\n") {
+		text = strings.ReplaceAll(text, "\n\n\n", "\n\n")
+	}
+	return []byte(strings.TrimSpace(text))
 }
 
 // extractFrontmatter parses --- delimited YAML front matter from raw markdown.
