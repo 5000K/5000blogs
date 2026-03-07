@@ -15,6 +15,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid config: %v", err)
+	}
 
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(cfg.LogLevel)); err != nil {
