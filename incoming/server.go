@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 	"os/signal"
@@ -59,6 +60,15 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 }
 
 func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) chi.Router {
+	renderer.SetFooter(func() template.HTML {
+		if post := repo.GetBySlug("footer"); post != nil {
+			if data := post.Data(); len(data.Content) > 0 {
+				return template.HTML(data.Content) //nolint:gosec
+			}
+		}
+		return ""
+	})
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
