@@ -32,15 +32,16 @@ func (r *stubRepo) GetBySlug(slug string) *service.Post {
 	return nil
 }
 
-func (r *stubRepo) List() []*service.Post           { return r.posts }
-func (r *stubRepo) Count() int                      { return len(r.posts) }
-func (r *stubRepo) GetPage(int) service.PageResult  { return service.PageResult{} }
-func (r *stubRepo) RSSFeed() ([]byte, error)        { return nil, nil }
-func (r *stubRepo) AtomFeed() ([]byte, error)       { return nil, nil }
-func (r *stubRepo) LastModified() time.Time         { return time.Time{} }
-func (r *stubRepo) Sitemap() []service.SitemapEntry { return nil }
-func (r *stubRepo) Start() error                    { return nil }
-func (r *stubRepo) Stop()                           {}
+func (r *stubRepo) List() []*service.Post                    { return r.posts }
+func (r *stubRepo) Count() int                               { return len(r.posts) }
+func (r *stubRepo) GetPage(int, []string) service.PageResult { return service.PageResult{} }
+func (r *stubRepo) AllTags() []string                        { return nil }
+func (r *stubRepo) RSSFeed() ([]byte, error)                 { return nil, nil }
+func (r *stubRepo) AtomFeed() ([]byte, error)                { return nil, nil }
+func (r *stubRepo) LastModified() time.Time                  { return time.Time{} }
+func (r *stubRepo) Sitemap() []service.SitemapEntry          { return nil }
+func (r *stubRepo) Start() error                             { return nil }
+func (r *stubRepo) Stop()                                    {}
 
 func newPost(slug, title, description string) *service.Post {
 	return service.NewPost(slug+".md", &service.Metadata{
@@ -302,5 +303,67 @@ func TestAPIStats_ContentType(t *testing.T) {
 	ct := w.Header().Get("Content-Type")
 	if ct != "application/json; charset=utf-8" {
 		t.Errorf("Content-Type: got %q", ct)
+	}
+}
+
+// --- GET /posts/tags ---
+
+func newPostWithTags(slug string, tags []string) *service.Post {
+	return service.NewPost(slug+".md", &service.Metadata{
+		Title: slug,
+		Tags:  tags,
+	}, []byte("<p>content</p>"))
+}
+
+func TestAPIListTags_Empty(t *testing.T) {
+	repo := &stubRepo{}
+	w := doRequest(t, repo, http.MethodGet, "/posts/tags")
+
+	if w.Code != http.StatusOK {
+		t.Errorf("want 200, got %d", w.Code)
+	}
+}
+
+func TestAPIGetPost_IncludesTags(t *testing.T) {
+	repo := &stubRepo{posts: []*service.Post{
+		newPostWithTags("hello", []string{"go", "web"}),
+	}}
+	w := doRequest(t, repo, http.MethodGet, "/post/hello")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", w.Code)
+	}
+	var result map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &result)
+	tags, ok := result["tags"]
+	if !ok {
+		t.Fatal("want 'tags' field in response")
+	}
+	tagList, ok := tags.([]interface{})
+	if !ok || len(tagList) != 2 {
+		t.Errorf("want 2 tags, got %v", tags)
+	}
+}
+
+func TestAPIListPosts_TagFilter(t *testing.T) {
+	repo := &stubRepo{posts: []*service.Post{
+		newPostWithTags("alpha", []string{"go"}),
+		newPostWithTags("beta", []string{"rust"}),
+		newPostWithTags("gamma", []string{"go", "web"}),
+	}}
+	w := doRequest(t, repo, http.MethodGet, "/posts?tags=go")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", w.Code)
+	}
+	var slugs []string
+	_ = json.Unmarshal(w.Body.Bytes(), &slugs)
+	if len(slugs) != 2 {
+		t.Errorf("want 2 posts tagged 'go', got %d: %v", len(slugs), slugs)
+	}
+	for _, s := range slugs {
+		if s == "beta" {
+			t.Error("'beta' (rust only) should be excluded from 'go' filter")
+		}
 	}
 }

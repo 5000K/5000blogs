@@ -26,11 +26,13 @@ type templateData struct {
 	DateStr string
 	DateISO string // RFC 3339, for <time datetime>
 	Author  string
+	Tags    []string
 	Content template.HTML
 	NoIndex bool
 
 	// List view
 	IsListPage bool
+	FilterTags []string
 	Posts      []postListItem
 	Pagination paginationData
 }
@@ -41,6 +43,7 @@ type postListItem struct {
 	Description string
 	DateStr     string
 	Author      string
+	Tags        []string
 }
 
 type paginationData struct {
@@ -51,6 +54,7 @@ type paginationData struct {
 	HasNext    bool
 	PrevPage   int
 	NextPage   int
+	TagParam   string // "&tags=foo,bar" when tag filter is active; empty otherwise
 }
 
 // Renderer loads an HTML template from disk and renders posts through it.
@@ -141,6 +145,7 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL 
 		OGImageURL:  ogImageURL,
 		OGLogoURL:   r.ogLogoURL(),
 		Author:      data.Author,
+		Tags:        data.Tags,
 		Content:     template.HTML(data.Content), //nolint:gosec // content is markdown-rendered HTML
 		DateISO:     data.DateISO,
 		NoIndex:     data.NoIndex,
@@ -162,6 +167,7 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, p
 			Title:       p.Title,
 			Description: p.Description,
 			Author:      p.Author,
+			Tags:        p.Tags,
 		}
 		if !p.Date.IsZero() {
 			item.DateStr = p.Date.Format("January 2, 2006")
@@ -177,6 +183,7 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, p
 		URL:        pageURL,
 		OGLogoURL:  r.ogLogoURL(),
 		IsListPage: true,
+		FilterTags: pr.FilterTags,
 		Posts:      items,
 		Plugins:    r.cfg.Plugins,
 		Pagination: paginationData{
@@ -187,6 +194,7 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, p
 			HasNext:    pr.HasNext,
 			PrevPage:   pr.PrevPage,
 			NextPage:   pr.NextPage,
+			TagParam:   pr.TagParam,
 		},
 	}
 

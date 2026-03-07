@@ -10,6 +10,7 @@ type Metadata struct {
 	Description string    `yaml:"description"`
 	Date        time.Time `yaml:"date"`
 	Author      string    `yaml:"author"`
+	Tags        []string  `yaml:"tags"`
 	Visible     *bool     `yaml:"visible"`
 	RSSVisible  *bool     `yaml:"rss-visible"`
 	NoIndex     *bool     `yaml:"noindex"`
@@ -35,6 +36,7 @@ type PostData struct {
 	Date        time.Time
 	DateISO     string // RFC 3339, empty when no date
 	Author      string
+	Tags        []string
 	Content     []byte // rendered HTML
 	Visible     bool
 	RSSVisible  bool
@@ -53,6 +55,7 @@ func (p *Post) Data() PostData {
 		d.Description = p.metadata.Description
 		d.Date = p.metadata.Date
 		d.Author = p.metadata.Author
+		d.Tags = p.metadata.Tags
 		if p.metadata.NoIndex != nil {
 			d.NoIndex = *p.metadata.NoIndex
 		}
@@ -107,6 +110,7 @@ type PostSummary struct {
 	Description string
 	Date        time.Time
 	Author      string
+	Tags        []string
 }
 
 // PageResult is the output of GetPage.
@@ -120,6 +124,8 @@ type PageResult struct {
 	HasNext    bool
 	PrevPage   int
 	NextPage   int
+	FilterTags []string // active tag filter; nil when unfiltered
+	TagParam   string   // e.g. "&tags=foo,bar" for use in pagination links; empty when no filter
 }
 
 // slugFromPath derives URL slug from file path

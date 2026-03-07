@@ -3,6 +3,9 @@ title: Customizing your blog
 description: How the templating system works and what you can change to make the site your own.
 date: 2026-03-04
 author: 5000k
+tags:
+  - customization
+  - about
 ---
 
 # Customizing your blog

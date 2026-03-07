@@ -160,7 +160,7 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		if checkLastModified(w, r, repo.LastModified()) {
 			return
 		}
-		renderer.ServePostList(repo.GetPage(1), w, cfg.SiteURL+"/posts")
+		renderer.ServePostList(repo.GetPage(1, nil), w, cfg.SiteURL+"/posts")
 	})
 
 	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +173,11 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 				page = n
 			}
 		}
-		renderer.ServePostList(repo.GetPage(page), w, cfg.SiteURL+r.URL.RequestURI())
+		var tags []string
+		if t := r.URL.Query().Get("tags"); t != "" {
+			tags = strings.Split(t, ",")
+		}
+		renderer.ServePostList(repo.GetPage(page, tags), w, cfg.SiteURL+r.URL.RequestURI())
 	})
 
 	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {

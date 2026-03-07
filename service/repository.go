@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,7 +17,8 @@ type PostRepository interface {
 	GetBySlug(slug string) *Post
 	List() []*Post
 	Count() int
-	GetPage(page int) PageResult
+	GetPage(page int, tags []string) PageResult
+	AllTags() []string
 	RSSFeed() ([]byte, error)
 	AtomFeed() ([]byte, error)
 	LastModified() time.Time
@@ -128,7 +130,7 @@ func (r *MemoryPostRepository) Stop() {
 	}
 }
 
-func (r *MemoryPostRepository) GetPage(page int) PageResult {
+func (r *MemoryPostRepository) GetPage(page int, tags []string) PageResult {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 
@@ -139,9 +141,13 @@ func (r *MemoryPostRepository) GetPage(page int) PageResult {
 
 	filtered := make([]*Post, 0, len(r.posts))
 	for _, p := range r.posts {
-		if p.IsVisible() {
-			filtered = append(filtered, p)
+		if !p.IsVisible() {
+			continue
 		}
+		if len(tags) > 0 && !hasAnyTag(p, tags) {
+			continue
+		}
+		filtered = append(filtered, p)
 	}
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
@@ -185,7 +191,13 @@ func (r *MemoryPostRepository) GetPage(page int) PageResult {
 			Description: d.Description,
 			Date:        d.Date,
 			Author:      d.Author,
+			Tags:        d.Tags,
 		})
+	}
+
+	tagParam := ""
+	if len(tags) > 0 {
+		tagParam = "&tags=" + strings.Join(tags, ",")
 	}
 
 	return PageResult{
@@ -198,7 +210,45 @@ func (r *MemoryPostRepository) GetPage(page int) PageResult {
 		HasNext:    page < totalPages,
 		PrevPage:   page - 1,
 		NextPage:   page + 1,
+		FilterTags: tags,
+		TagParam:   tagParam,
 	}
+}
+
+// hasAnyTag reports whether p has at least one of the given tags.
+func hasAnyTag(p *Post, tags []string) bool {
+	if p.metadata == nil {
+		return false
+	}
+	for _, want := range tags {
+		for _, have := range p.metadata.Tags {
+			if strings.EqualFold(have, want) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// AllTags returns a sorted, deduplicated list of all tags across visible posts.
+func (r *MemoryPostRepository) AllTags() []string {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	seen := make(map[string]struct{})
+	for _, p := range r.posts {
+		if !p.IsVisible() || p.metadata == nil {
+			continue
+		}
+		for _, t := range p.metadata.Tags {
+			seen[t] = struct{}{}
+		}
+	}
+	tags := make([]string, 0, len(seen))
+	for t := range seen {
+		tags = append(tags, t)
+	}
+	sort.Strings(tags)
+	return tags
 }
 
 // LastModified returns the most recent file-modtime across all visible posts.

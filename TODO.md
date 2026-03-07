@@ -10,8 +10,6 @@
 
 ## Features
 
-- **Tag / category metadata**: `Metadata.Raw` already captures unknown YAML keys but nothing consumes them. Add first-class `tags []string` field in `Metadata`, expose it through `PostData`, and thread it into the template data contract and sitemap. Add the option to filter for tags /posts?tags=[allowed-tag(s)] - still also supporting pagination. Also add/modify corresponding endpoints in the /api/v1. Show tags at the bottom of a post, with the tags linking to /posts?tags=clicked-tag
-
 ## Configuration / documentation
 
 - **Configuration reference doc**: no `docs/config.md`. Document every config key (env var name, YAML key, default, description) — especially `rescan_cron`, `skip_unchanged_mod_time`, `template-url`, `plugins`.

@@ -143,7 +143,7 @@ func TestGetPage_SortedByDateDescending(t *testing.T) {
 		NewPost("posts/old.md", &Metadata{Title: "Old", Date: older}, []byte("x")),
 		NewPost("posts/new.md", &Metadata{Title: "New", Date: newer}, []byte("x")),
 	}
-	page := repo.GetPage(1)
+	page := repo.GetPage(1, nil)
 
 	if len(page.Posts) != 2 {
 		t.Fatalf("want 2 posts, got %d", len(page.Posts))
@@ -159,7 +159,7 @@ func TestGetPage_HiddenPostsExcluded(t *testing.T) {
 		NewPost("posts/visible.md", &Metadata{Title: "Visible"}, []byte("x")),
 		NewPost("posts/hidden.md", &Metadata{Title: "Hidden", Visible: boolPtr(false)}, []byte("x")),
 	}
-	page := repo.GetPage(1)
+	page := repo.GetPage(1, nil)
 
 	if page.TotalPosts != 1 {
 		t.Errorf("want 1 visible post, got %d", page.TotalPosts)
@@ -176,7 +176,7 @@ func TestGetPage_Pagination(t *testing.T) {
 		repo.posts = append(repo.posts, NewPost("posts/"+s+".md", &Metadata{}, []byte("x")))
 	}
 
-	p1 := repo.GetPage(1)
+	p1 := repo.GetPage(1, nil)
 	if p1.TotalPages != 3 {
 		t.Errorf("want 3 total pages, got %d", p1.TotalPages)
 	}
@@ -190,7 +190,7 @@ func TestGetPage_Pagination(t *testing.T) {
 		t.Errorf("want 2 posts on page 1, got %d", len(p1.Posts))
 	}
 
-	p3 := repo.GetPage(3)
+	p3 := repo.GetPage(3, nil)
 	if p3.HasNext {
 		t.Error("last page should not have next")
 	}
@@ -204,7 +204,7 @@ func TestGetPage_Pagination(t *testing.T) {
 
 func TestGetPage_EmptyRepo(t *testing.T) {
 	repo := newTestRepo(newTestConf(10), newStubSource(nil))
-	page := repo.GetPage(1)
+	page := repo.GetPage(1, nil)
 
 	if page.TotalPosts != 0 {
 		t.Errorf("want 0 total posts, got %d", page.TotalPosts)
@@ -219,7 +219,7 @@ func TestGetPage_OutOfBoundsClampsToLastPage(t *testing.T) {
 	repo.posts = []*Post{
 		NewPost("posts/a.md", &Metadata{}, []byte("x")),
 	}
-	page := repo.GetPage(99)
+	page := repo.GetPage(99, nil)
 	if page.Page != 1 {
 		t.Errorf("want page clamped to 1, got %d", page.Page)
 	}
@@ -390,5 +390,142 @@ func TestModTime(t *testing.T) {
 	p := &Post{path: "posts/x.md", modTime: mod}
 	if !p.ModTime().Equal(mod) {
 		t.Errorf("ModTime: want %v, got %v", mod, p.ModTime())
+	}
+}
+
+// --- Tags ---
+
+func TestGetPage_TagFilter_MatchingPosts(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", Tags: []string{"go", "web"}}, []byte("x")),
+		NewPost("posts/b.md", &Metadata{Title: "B", Tags: []string{"go"}}, []byte("x")),
+		NewPost("posts/c.md", &Metadata{Title: "C", Tags: []string{"rust"}}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, []string{"go"})
+
+	if page.TotalPosts != 2 {
+		t.Errorf("want 2 posts with tag 'go', got %d", page.TotalPosts)
+	}
+	for _, p := range page.Posts {
+		if p.Slug == "c" {
+			t.Error("post 'c' (rust only) should not appear in 'go' filter")
+		}
+	}
+}
+
+func TestGetPage_TagFilter_ORLogic(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", Tags: []string{"go"}}, []byte("x")),
+		NewPost("posts/b.md", &Metadata{Title: "B", Tags: []string{"rust"}}, []byte("x")),
+		NewPost("posts/c.md", &Metadata{Title: "C", Tags: []string{"java"}}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, []string{"go", "rust"})
+
+	if page.TotalPosts != 2 {
+		t.Errorf("want 2 posts (OR filter), got %d", page.TotalPosts)
+	}
+}
+
+func TestGetPage_TagFilter_CaseInsensitive(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", Tags: []string{"Go"}}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, []string{"go"})
+	if page.TotalPosts != 1 {
+		t.Errorf("tag filter should be case-insensitive, got %d posts", page.TotalPosts)
+	}
+}
+
+func TestGetPage_TagFilter_TagParam(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", Tags: []string{"go"}}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, []string{"go", "web"})
+	if page.TagParam != "&tags=go,web" {
+		t.Errorf("TagParam: want \"&tags=go,web\", got %q", page.TagParam)
+	}
+	if len(page.FilterTags) != 2 {
+		t.Errorf("FilterTags: want 2, got %d", len(page.FilterTags))
+	}
+}
+
+func TestGetPage_NoTagFilter_EmptyTagParam(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A"}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, nil)
+	if page.TagParam != "" {
+		t.Errorf("TagParam should be empty without filter, got %q", page.TagParam)
+	}
+}
+
+func TestAllTags_ReturnsSortedUnique(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Tags: []string{"go", "web"}}, []byte("x")),
+		NewPost("posts/b.md", &Metadata{Tags: []string{"go", "rust"}}, []byte("x")),
+		NewPost("posts/c.md", &Metadata{Tags: []string{"java"}}, []byte("x")),
+	}
+
+	tags := repo.AllTags()
+	if len(tags) != 4 {
+		t.Fatalf("want 4 unique tags, got %d: %v", len(tags), tags)
+	}
+	// Should be sorted alphabetically
+	expected := []string{"go", "java", "rust", "web"}
+	for i, want := range expected {
+		if tags[i] != want {
+			t.Errorf("tags[%d]: want %q, got %q", i, want, tags[i])
+		}
+	}
+}
+
+func TestAllTags_IgnoresHiddenPosts(t *testing.T) {
+	hiddenBool := false
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Tags: []string{"visible-tag"}}, []byte("x")),
+		NewPost("posts/b.md", &Metadata{Tags: []string{"hidden-tag"}, Visible: &hiddenBool}, []byte("x")),
+	}
+
+	tags := repo.AllTags()
+	if len(tags) != 1 || tags[0] != "visible-tag" {
+		t.Errorf("AllTags should only return tags from visible posts, got %v", tags)
+	}
+}
+
+func TestAllTags_Empty(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	tags := repo.AllTags()
+	if tags == nil {
+		t.Error("AllTags should return empty slice, not nil")
+	}
+	if len(tags) != 0 {
+		t.Errorf("want 0 tags, got %d", len(tags))
+	}
+}
+
+func TestPostSummary_IncludesTags(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", Tags: []string{"go", "test"}}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, nil)
+	if len(page.Posts) != 1 {
+		t.Fatal("want 1 post")
+	}
+	if len(page.Posts[0].Tags) != 2 {
+		t.Errorf("want 2 tags in PostSummary, got %v", page.Posts[0].Tags)
 	}
 }

@@ -89,7 +89,7 @@
       <!-- ── LIST VIEW (IsListPage = true) ── -->
       {{if .IsListPage}}
 
-      <h1 class="f2 fw6 lh-title mt0 mb5" style="color:#f0f0f0;">Posts</h1>
+      <h1 class="f2 fw6 lh-title mt0 mb5" style="color:#f0f0f0;">Posts{{if .FilterTags}} <span class="f5 fw4" style="color:#555;">tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}</span>{{end}}</h1>
 
       <!-- post list; each item: title, optional date, optional description -->
       {{if .Posts}}
@@ -100,6 +100,7 @@
           {{if .DateStr}}<time class="f6 ttu tracked db mb1" style="color:#444; letter-spacing:.1em;">{{.DateStr}}</time>{{end}}
           {{if .Author}}<p class="f6 mt0 mb1" style="color:#555;">by {{.Author}}</p>{{end}}
           {{if .Description}}<p class="f5 lh-copy mt0 mb0" style="color:#888;">{{.Description}}</p>{{end}}
+          {{if .Tags}}<p class="mt1 mb0">{{range .Tags}}<a href="/posts?tags={{.}}" class="no-underline f7 mr1 ph2 pv1" style="background:#1a1a2e;color:#7eb8f7;border-radius:3px;">{{.}}</a>{{end}}</p>{{end}}
         </li>
         {{end}}
       </ul>
@@ -112,13 +113,13 @@
       <nav class="flex justify-between mt5 pt4" style="border-top:1px solid #1e1e1e;">
         <span>
           {{if .Pagination.HasPrev}}
-          <a href="/posts?page={{.Pagination.PrevPage}}" class="no-underline f6 ttu tracked" style="color:#7eb8f7; letter-spacing:.1em;">← newer</a>
+          <a href="/posts?page={{.Pagination.PrevPage}}{{.Pagination.TagParam}}" class="no-underline f6 ttu tracked" style="color:#7eb8f7; letter-spacing:.1em;">← newer</a>
           {{end}}
         </span>
         <span class="f6" style="color:#444;">page {{.Pagination.Page}} / {{.Pagination.TotalPages}}</span>
         <span>
           {{if .Pagination.HasNext}}
-          <a href="/posts?page={{.Pagination.NextPage}}" class="no-underline f6 ttu tracked" style="color:#7eb8f7; letter-spacing:.1em;">older →</a>
+          <a href="/posts?page={{.Pagination.NextPage}}{{.Pagination.TagParam}}" class="no-underline f6 ttu tracked" style="color:#7eb8f7; letter-spacing:.1em;">older →</a>
           {{end}}
         </span>
       </nav>
@@ -142,6 +143,13 @@
       <div class="post-body lh-copy f5">
         {{.Content}}
       </div>
+
+      {{if .Tags}}
+      <div class="mt4 pt3" style="border-top:1px solid #1e1e1e;">
+        <span class="f7 ttu tracked mr2" style="color:#444;">Tags</span>
+        {{range .Tags}}<a href="/posts?tags={{.}}" class="no-underline f7 mr1 ph2 pv1" style="background:#1a1a2e;color:#7eb8f7;border-radius:3px;">{{.}}</a>{{end}}
+      </div>
+      {{end}}
 
       {{end}}
     </article>

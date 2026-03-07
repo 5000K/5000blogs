@@ -2,8 +2,9 @@
 title: Welcome to 5000blogs
 description: A tiny, file-backed blogging engine in Go.
 date: 2026-03-04
-visible: false
 author: 5000k
+tags:
+  - about
 ---
 
 5000blogs is a lightweight blogging platform built as a simple Go monolith.
