@@ -51,7 +51,7 @@ func apiGetPost(repo service.PostRepository) http.HandlerFunc {
 	}
 }
 
-// GET /api/v1/posts/search?q={query} — title/description substring match.
+// GET /api/v1/posts/search?q={query} — title/description substring match on visible posts.
 func apiSearchPosts(repo service.PostRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := strings.ToLower(r.URL.Query().Get("q"))
@@ -64,6 +64,9 @@ func apiSearchPosts(repo service.PostRepository) http.HandlerFunc {
 		results := make([]result, 0)
 		for _, p := range posts {
 			d := p.Data()
+			if !d.Visible {
+				continue
+			}
 			if strings.Contains(strings.ToLower(d.Title), q) ||
 				strings.Contains(strings.ToLower(d.Description), q) {
 				results = append(results, result{

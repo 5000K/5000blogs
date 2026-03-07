@@ -217,6 +217,24 @@ func TestAPISearch_NoMatch(t *testing.T) {
 	}
 }
 
+func TestAPISearch_ExcludesHiddenPosts(t *testing.T) {
+	f := false
+	repo := &stubRepo{posts: []*service.Post{
+		newPost("visible-post", "Visible Post", ""),
+		service.NewPost("hidden-post.md", &service.Metadata{Title: "Hidden Post", Visible: &f}, []byte("<p>x</p>")),
+	}}
+	w := doRequest(t, repo, http.MethodGet, "/posts/search?q=post")
+
+	var results []map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &results)
+	if len(results) != 1 {
+		t.Fatalf("want 1 result (hidden post excluded), got %d: %v", len(results), results)
+	}
+	if results[0]["slug"] != "visible-post" {
+		t.Errorf("unexpected result: %v", results[0])
+	}
+}
+
 func TestAPISearch_EmptyQuery(t *testing.T) {
 	repo := &stubRepo{posts: []*service.Post{
 		newPost("a", "Alpha", ""),

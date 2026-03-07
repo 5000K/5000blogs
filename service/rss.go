@@ -69,6 +69,7 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 		size = 10
 	}
 
+	r.postsMu.RLock()
 	// Collect RSS-visible posts, sort by date descending.
 	filtered := make([]*Post, 0, len(r.posts))
 	for _, p := range r.posts {
@@ -76,6 +77,7 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 			filtered = append(filtered, p)
 		}
 	}
+	r.postsMu.RUnlock()
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
 		if filtered[i].metadata != nil {

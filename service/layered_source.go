@@ -40,10 +40,6 @@ func (b *BuiltinSource) StatPost(path string) (time.Time, error) {
 	return time.Time{}, nil
 }
 
-func (b *BuiltinSource) WritePost(path string, metadata *Metadata, content string) error {
-	return fmt.Errorf("builtin source is read-only")
-}
-
 func (b *BuiltinSource) has(path string) bool {
 	for _, p := range b.paths {
 		if p == path {
@@ -56,7 +52,7 @@ func (b *BuiltinSource) has(path string) bool {
 // LayeredSource combines multiple PostSources into one. Earlier sources take
 // priority: if two sources expose a post with the same slug, only the first
 // one's path is returned from ListPosts. ReadPost/StatPost are routed to the
-// source that owns the path. WritePost always targets the first source.
+// source that owns the path.
 type LayeredSource struct {
 	sources []PostSource
 }
@@ -103,11 +99,4 @@ func (l *LayeredSource) StatPost(path string) (time.Time, error) {
 		}
 	}
 	return time.Time{}, fmt.Errorf("layered source: no source has path %q", path)
-}
-
-func (l *LayeredSource) WritePost(path string, metadata *Metadata, content string) error {
-	if len(l.sources) == 0 {
-		return fmt.Errorf("layered source: no sources configured")
-	}
-	return l.sources[0].WritePost(path, metadata, content)
 }

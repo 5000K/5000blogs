@@ -32,12 +32,17 @@ type SitemapEntry struct {
 // MemoryPostRepository is an in-memory implementation of PostRepository.
 type MemoryPostRepository struct {
 	conf      *config.Config
-	posts     []*Post
 	source    PostSource
 	converter Converter
 	log       *slog.Logger
 
 	scheduler *cron.Cron
+
+	// postsMu guards posts. All public reads take RLock; rescan takes Lock for
+	// its entire duration, which also serializes it against concurrent rescan
+	// calls because a second rescan will block on Lock until the first finishes.
+	postsMu sync.RWMutex
+	posts   []*Post
 
 	feedMu    sync.RWMutex
 	feedCache []byte
@@ -53,6 +58,13 @@ func NewMemoryPostRepository(conf *config.Config, source PostSource, converter C
 }
 
 func (r *MemoryPostRepository) Get(path string) *Post {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	return r.get(path)
+}
+
+// get is the unlocked version of Get; callers must hold at least postsMu.RLock.
+func (r *MemoryPostRepository) get(path string) *Post {
 	for _, p := range r.posts {
 		if p.path == path {
 			return p
@@ -62,6 +74,13 @@ func (r *MemoryPostRepository) Get(path string) *Post {
 }
 
 func (r *MemoryPostRepository) GetBySlug(slug string) *Post {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	return r.getBySlug(slug)
+}
+
+// getBySlug is the unlocked version of GetBySlug.
+func (r *MemoryPostRepository) getBySlug(slug string) *Post {
 	for _, p := range r.posts {
 		if slugFromPath(p.path) == slug {
 			return p
@@ -71,10 +90,16 @@ func (r *MemoryPostRepository) GetBySlug(slug string) *Post {
 }
 
 func (r *MemoryPostRepository) List() []*Post {
-	return r.posts
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	cp := make([]*Post, len(r.posts))
+	copy(cp, r.posts)
+	return cp
 }
 
 func (r *MemoryPostRepository) Count() int {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
 	return len(r.posts)
 }
 
@@ -99,6 +124,9 @@ func (r *MemoryPostRepository) Stop() {
 }
 
 func (r *MemoryPostRepository) GetPage(page int) PageResult {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+
 	size := r.conf.PageSize
 	if size <= 0 {
 		size = 10
@@ -128,6 +156,9 @@ func (r *MemoryPostRepository) GetPage(page int) PageResult {
 	}
 	if page < 1 {
 		page = 1
+	}
+	if page > totalPages {
+		page = totalPages
 	}
 
 	start := (page - 1) * size
@@ -179,6 +210,11 @@ func (r *MemoryPostRepository) rescan() {
 		return
 	}
 
+	// Hold the write lock for the entire mutation phase. This serializes
+	// concurrent rescan calls and protects r.posts from concurrent readers.
+	r.postsMu.Lock()
+	defer r.postsMu.Unlock()
+
 	changed := false
 	found := make(map[string]bool, len(paths))
 	for _, path := range paths {
@@ -213,7 +249,7 @@ func (r *MemoryPostRepository) rescan() {
 }
 
 func (r *MemoryPostRepository) has(path string) bool {
-	return r.Get(path) != nil
+	return r.get(path) != nil
 }
 
 func (r *MemoryPostRepository) addPost(path string) bool {
@@ -241,7 +277,7 @@ func (r *MemoryPostRepository) addPost(path string) bool {
 }
 
 func (r *MemoryPostRepository) updatePost(path string) bool {
-	post := r.Get(path)
+	post := r.get(path)
 	if post == nil {
 		return false
 	}
@@ -285,6 +321,9 @@ func (r *MemoryPostRepository) remove(path string) {
 // Sitemap returns one entry per visible post for use in sitemap.xml.
 // LastMod is the post's date when set, otherwise its file modification time.
 func (r *MemoryPostRepository) Sitemap() []SitemapEntry {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+
 	entries := make([]SitemapEntry, 0, len(r.posts))
 	for _, p := range r.posts {
 		if !p.IsVisible() {

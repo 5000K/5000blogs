@@ -31,7 +31,7 @@ Returns `404` when the slug does not exist. `description`, `author`, and `noinde
 
 ## GET /api/v1/posts/search?q={query}
 
-Returns posts whose `title` or `description` contain `query` (case-insensitive). Returns an empty array when nothing matches.
+Returns **visible** posts whose `title` or `description` contain `query` (case-insensitive). Returns an empty array when nothing matches. Posts with `visible: false` are excluded.
 
 ```json
 [

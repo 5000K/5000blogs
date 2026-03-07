@@ -38,10 +38,6 @@ func (s *stubSource) StatPost(path string) (time.Time, error) {
 	return time.Time{}, nil
 }
 
-func (s *stubSource) WritePost(path string, metadata *Metadata, content string) error {
-	return nil
-}
-
 type notFoundError struct{ path string }
 
 func (e *notFoundError) Error() string { return "not found: " + e.path }
@@ -95,14 +91,6 @@ func TestBuiltinSource_StatPost_Unknown(t *testing.T) {
 	_, err := b.StatPost("builtin/unknown.md")
 	if err == nil {
 		t.Error("expected error for unknown builtin path")
-	}
-}
-
-func TestBuiltinSource_WritePost_ReadOnly(t *testing.T) {
-	b := NewBuiltinSource()
-	err := b.WritePost("builtin/home.md", nil, "content")
-	if err == nil {
-		t.Error("expected error: builtin source should be read-only")
 	}
 }
 
@@ -196,33 +184,4 @@ func TestLayeredSource_ReadPost_UnknownPath(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for unknown path")
 	}
-}
-
-func TestLayeredSource_WritePost_DelegatesToFirst(t *testing.T) {
-	written := map[string]string{}
-	s1 := &capturingSource{written: written}
-	s2 := newStubSource(map[string][]byte{})
-	l := NewLayeredSource(s1, s2)
-
-	if err := l.WritePost("/posts/new.md", nil, "hello"); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if written["/posts/new.md"] != "hello" {
-		t.Errorf("expected write to first source, got %v", written)
-	}
-}
-
-// capturingSource records WritePost calls for assertions.
-type capturingSource struct {
-	written map[string]string
-}
-
-func (c *capturingSource) ListPosts() ([]string, error)         { return nil, nil }
-func (c *capturingSource) ReadPost(path string) ([]byte, error) { return nil, &notFoundError{path} }
-func (c *capturingSource) StatPost(path string) (time.Time, error) {
-	return time.Time{}, &notFoundError{path}
-}
-func (c *capturingSource) WritePost(path string, _ *Metadata, content string) error {
-	c.written[path] = content
-	return nil
 }

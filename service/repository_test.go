@@ -214,14 +214,17 @@ func TestGetPage_EmptyRepo(t *testing.T) {
 	}
 }
 
-func TestGetPage_OutOfBoundsReturnsEmpty(t *testing.T) {
+func TestGetPage_OutOfBoundsClampsToLastPage(t *testing.T) {
 	repo := newTestRepo(newTestConf(10), newStubSource(nil))
 	repo.posts = []*Post{
 		NewPost("posts/a.md", &Metadata{}, []byte("x")),
 	}
 	page := repo.GetPage(99)
-	if len(page.Posts) != 0 {
-		t.Errorf("want empty posts slice for out-of-bounds page, got %d", len(page.Posts))
+	if page.Page != 1 {
+		t.Errorf("want page clamped to 1, got %d", page.Page)
+	}
+	if len(page.Posts) != 1 {
+		t.Errorf("want 1 post on clamped last page, got %d", len(page.Posts))
 	}
 }
 

@@ -1,10 +1,3 @@
-## Bugs / correctness
-
-- **Data race in `MemoryPostRepository`**: `r.posts` is read by HTTP handlers and written by `rescan()` without any mutex. Under load this is a concurrent map/slice race. Guard `r.posts` with a `sync.RWMutex`.
-- **Concurrent rescan runs**: no lock prevents two overlapping `rescan()` calls if the cron fires while a previous scan is still running.
-- **API returns hidden posts**: `apiListPosts` and `apiSearchPosts` include posts with `visible: false`. Decide whether that is intentional and document it, or filter them out.
-- **Out-of-bounds page**: `GetPage` with a page number beyond the last page silently returns an empty result. Return the last valid page instead.
-
 ## Testing gaps
 
 - `incoming/server.go`: no integration tests for routing, 404 handling, pagination, feed, sitemap.
@@ -18,13 +11,10 @@
 ## Features
 
 - **Graceful shutdown**: `incoming.Serve` does not handle OS signals. Wrap `http.Server` and call `Shutdown` on `SIGINT`/`SIGTERM` so in-flight requests finish cleanly.
-- **Health check endpoint**: add `/healthz` (or `/health`) returning `200 OK` for container/load-balancer probes.
-- **Template hot-reload**: `view.Renderer` parses the template once at startup; any edit needs a process restart. Support reloading on `SIGHUP` or via an admin API endpoint.
-- **Tag / category metadata**: `Metadata.Raw` already captures unknown YAML keys but nothing consumes them. Add first-class `tags []string` field in `Metadata`, expose it through `PostData`, and thread it into the template data contract and sitemap.
+- **Health check endpoint**: add `/health` returning `200 OK` for container/load-balancer probes.
+- **Tag / category metadata**: `Metadata.Raw` already captures unknown YAML keys but nothing consumes them. Add first-class `tags []string` field in `Metadata`, expose it through `PostData`, and thread it into the template data contract and sitemap. Add the option to filter for tags /posts?tags=[allowed-tag(s)] - still also supporting pagination. Also add/modify corresponding endpoints in the /api/v1. Show tags at the bottom of a post, with the tags linking to /posts?tags=clicked-tag
 - **Atom feed**: provide `/feed.atom` (Atom 1.0) alongside the existing RSS 2.0 feed.
-- **RSS full content**: current RSS items only include `description`. Support an opt-in `rss-full-content: true` metadata flag (or global config) to include the full rendered HTML in `<content:encoded>`.
-- **API write endpoints**: `WritePost` exists on `PostSource` but is never exposed over HTTP. Add `POST /api/v1/posts` and `PUT /api/v1/post/{name}` so posts can be created/updated without direct file access.
-- **`TemplateURL` direct download**: setup only handles zip archives. Support a plain `.html` URL as well.
+- **RSS full content**: current RSS items only include `description`. Support an opt-in `rss-full-content: true` global config flag to include the full rendered HTML in `<content:encoded>`.
 
 ## Configuration / documentation
 
