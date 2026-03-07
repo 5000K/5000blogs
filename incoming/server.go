@@ -27,6 +27,8 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 	filesDir := http.Dir(filepath.Join(workDir, cfg.Paths.Static))
 	FileServer(r, "/static", filesDir)
 
+	r.Mount("/api/v1", apiRouter(repo))
+
 	r.Get("/og-logo.png", func(w http.ResponseWriter, r *http.Request) {
 		if cfg.OGImage.BlogIcon == "" {
 			http.NotFound(w, r)
