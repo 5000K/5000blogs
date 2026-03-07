@@ -39,6 +39,7 @@ type OGImageConfig struct {
 	TextColor   string `env:"OG_IMAGE_TEXT_COLOR" env-default:"#f0f0f0" yaml:"text_color"`
 	SubColor    string `env:"OG_IMAGE_SUB_COLOR" env-default:"#999999" yaml:"sub_color"`
 	AccentColor string `env:"OG_IMAGE_ACCENT_COLOR" env-default:"#7eb8f7" yaml:"accent_color"`
+	CacheSize   int    `env:"OG_IMAGE_CACHE_SIZE" env-default:"128" yaml:"cache_size"`
 }
 
 func (c *Config) Validate() error {
@@ -48,6 +49,9 @@ func (c *Config) Validate() error {
 	u, err := url.Parse(c.SiteURL)
 	if err != nil || !u.IsAbs() {
 		return fmt.Errorf("site_url must be an absolute URL, got %q", c.SiteURL)
+	}
+	if c.OGImage.CacheSize <= 0 {
+		return fmt.Errorf("og_image.cache_size must be > 0, got %d", c.OGImage.CacheSize)
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"5000blogs/config"
 	"bytes"
+	"container/list"
 	"fmt"
 	"image"
 	"image/color"
@@ -27,6 +28,79 @@ const (
 	ogHeight = 630
 )
 
+// ogLRUCache is a fixed-capacity LRU cache keyed by post hash.
+type ogLRUCache struct {
+	mu    sync.Mutex
+	cap   int
+	items map[uint64]*list.Element
+	list  *list.List
+}
+
+type ogLRUEntry struct {
+	key  uint64
+	data []byte
+}
+
+func newOGLRUCache(cap int) *ogLRUCache {
+	return &ogLRUCache{
+		cap:   cap,
+		items: make(map[uint64]*list.Element, cap),
+		list:  list.New(),
+	}
+}
+
+func (c *ogLRUCache) get(key uint64) ([]byte, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	el, ok := c.items[key]
+	if !ok {
+		return nil, false
+	}
+	c.list.MoveToFront(el)
+	return el.Value.(*ogLRUEntry).data, true
+}
+
+func (c *ogLRUCache) set(key uint64, data []byte) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if el, ok := c.items[key]; ok {
+		c.list.MoveToFront(el)
+		el.Value.(*ogLRUEntry).data = data
+		return
+	}
+	if c.list.Len() >= c.cap {
+		oldest := c.list.Back()
+		if oldest != nil {
+			c.list.Remove(oldest)
+			delete(c.items, oldest.Value.(*ogLRUEntry).key)
+		}
+	}
+	el := c.list.PushFront(&ogLRUEntry{key: key, data: data})
+	c.items[key] = el
+}
+
+func (c *ogLRUCache) delete(key uint64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if el, ok := c.items[key]; ok {
+		c.list.Remove(el)
+		delete(c.items, key)
+	}
+}
+
+func (c *ogLRUCache) has(key uint64) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, ok := c.items[key]
+	return ok
+}
+
+func (c *ogLRUCache) len() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.list.Len()
+}
+
 // OGImageGenerator generates og:image PNGs for posts and caches them by post hash.
 type OGImageGenerator struct {
 	cfg         config.OGImageConfig
@@ -35,8 +109,7 @@ type OGImageGenerator struct {
 	smallFace   font.Face
 	icon        image.Image // optional, pre-loaded
 
-	mu    sync.RWMutex
-	cache map[uint64][]byte
+	cache *ogLRUCache
 }
 
 // NewOGImageGenerator creates a generator from the given config.
@@ -68,7 +141,7 @@ func NewOGImageGenerator(cfg config.OGImageConfig) (*OGImageGenerator, error) {
 		boldFace:    boldFace,
 		regularFace: regularFace,
 		smallFace:   smallFace,
-		cache:       make(map[uint64][]byte),
+		cache:       newOGLRUCache(cfg.CacheSize),
 	}
 
 	if cfg.BlogIcon != "" {
@@ -81,24 +154,16 @@ func NewOGImageGenerator(cfg config.OGImageConfig) (*OGImageGenerator, error) {
 // Generate returns a PNG for the post, using a cache keyed by post hash.
 // The cache is invalidated automatically when the post's content hash changes.
 func (g *OGImageGenerator) Generate(post *Post) ([]byte, error) {
-	key := post.hash
-
-	g.mu.RLock()
-	if data, ok := g.cache[key]; ok {
-		g.mu.RUnlock()
+	if data, ok := g.cache.get(post.hash); ok {
 		return data, nil
 	}
-	g.mu.RUnlock()
 
 	data, err := g.generate(post)
 	if err != nil {
 		return nil, err
 	}
 
-	g.mu.Lock()
-	g.cache[key] = data
-	g.mu.Unlock()
-
+	g.cache.set(post.hash, data)
 	return data, nil
 }
 
@@ -212,11 +277,9 @@ func (g *OGImageGenerator) generate(post *Post) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Invalidate removes cached images for the given post path, called on post change/removal.
+// Invalidate removes the cached image for the given post hash, called on post change/removal.
 func (g *OGImageGenerator) Invalidate(hash uint64) {
-	g.mu.Lock()
-	delete(g.cache, hash)
-	g.mu.Unlock()
+	g.cache.delete(hash)
 }
 
 func wrapText(face font.Face, text string, maxWidth int) []string {

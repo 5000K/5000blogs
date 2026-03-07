@@ -42,9 +42,12 @@ type MemoryPostRepository struct {
 
 	scheduler *cron.Cron
 
-	// postsMu guards posts. All public reads take RLock; rescan takes Lock for
-	// its entire duration, which also serializes it against concurrent rescan
-	// calls because a second rescan will block on Lock until the first finishes.
+	// rescanMu serializes concurrent rescan calls so that file I/O and the
+	// subsequent write-lock phase are never interleaved by two goroutines.
+	rescanMu sync.Mutex
+
+	// postsMu guards posts. Readers take RLock; rescan takes Lock only for the
+	// short mutation phase (slice append/replace/remove), not during file I/O.
 	postsMu sync.RWMutex
 	posts   []*Post
 
@@ -274,111 +277,143 @@ func (r *MemoryPostRepository) invalidateFeedCache() {
 	r.atomFeedMu.Unlock()
 }
 
+// pendingChange describes a single mutation to apply to r.posts.
+type pendingChange struct {
+	path string
+	post *Post // non-nil: add or replace; nil: remove
+}
+
 func (r *MemoryPostRepository) rescan() {
 	r.log.Debug("rescanning posts")
+	r.rescanMu.Lock()
+	defer r.rescanMu.Unlock()
+
 	paths, err := r.source.ListPosts()
 	if err != nil {
 		r.log.Error("failed to list posts", "err", err)
 		return
 	}
 
-	// Hold the write lock for the entire mutation phase. This serializes
-	// concurrent rescan calls and protects r.posts from concurrent readers.
-	r.postsMu.Lock()
-	defer r.postsMu.Unlock()
+	// Snapshot current state under read lock — no file I/O yet.
+	r.postsMu.RLock()
+	snapshot := make(map[string]*Post, len(r.posts))
+	for _, p := range r.posts {
+		snapshot[p.path] = p
+	}
+	r.postsMu.RUnlock()
 
-	changed := false
+	// Compute all changes outside the write lock.
 	found := make(map[string]bool, len(paths))
+	var changes []pendingChange
+
 	for _, path := range paths {
 		found[path] = true
-		if r.has(path) {
-			if r.updatePost(path) {
-				changed = true
+		if existing, ok := snapshot[path]; ok {
+			if p, updated := r.checkPostChanged(path, existing); updated {
+				changes = append(changes, pendingChange{path: path, post: p})
+				r.log.Info("updated post", "path", path)
 			}
 		} else {
-			if r.addPost(path) {
-				changed = true
+			if p, ok := r.preparePost(path); ok {
+				changes = append(changes, pendingChange{path: path, post: p})
+				r.log.Info("added post", "path", path)
 			}
 		}
 	}
 
-	var toRemove []string
-	for _, post := range r.posts {
-		if !found[post.path] {
-			toRemove = append(toRemove, post.path)
+	for path := range snapshot {
+		if !found[path] {
+			changes = append(changes, pendingChange{path: path, post: nil})
+			r.log.Info("removed post", "path", path)
 		}
 	}
-	for _, path := range toRemove {
-		r.log.Info("removed post", "path", path)
-		r.remove(path)
-		changed = true
+
+	if len(changes) == 0 {
+		r.log.Debug("rescan complete, no changes", "total", len(paths))
+		return
 	}
 
-	if changed {
-		r.invalidateFeedCache()
+	// Apply all mutations under write lock.
+	r.postsMu.Lock()
+	for _, ch := range changes {
+		if ch.post == nil {
+			r.remove(ch.path)
+		} else if _, exists := snapshot[ch.path]; exists {
+			for i, p := range r.posts {
+				if p.path == ch.path {
+					r.posts[i] = ch.post
+					break
+				}
+			}
+		} else {
+			r.posts = append(r.posts, ch.post)
+		}
 	}
+	r.postsMu.Unlock()
+
+	r.invalidateFeedCache()
 	r.log.Debug("rescan complete", "total", len(paths))
 }
 
-func (r *MemoryPostRepository) has(path string) bool {
-	return r.get(path) != nil
-}
-
-func (r *MemoryPostRepository) addPost(path string) bool {
-	post := &Post{path: path}
-
+// preparePost reads, stats, and converts a brand-new post. No lock needed.
+func (r *MemoryPostRepository) preparePost(path string) (*Post, bool) {
 	modTime, err := r.source.StatPost(path)
 	if err != nil {
 		r.log.Error("failed to stat post", "path", path, "err", err)
-		return false
+		return nil, false
 	}
 	buf, err := r.source.ReadPost(path)
 	if err != nil {
 		r.log.Error("failed to read post", "path", path, "err", err)
-		return false
+		return nil, false
 	}
-	post.modTime = modTime
+	post := &Post{path: path, modTime: modTime}
 	if err := r.converter.Convert(post, buf); err != nil {
 		r.log.Error("failed to convert post", "path", path, "err", err)
-		return false
+		return nil, false
 	}
-
-	r.log.Info("added post", "path", path)
-	r.posts = append(r.posts, post)
-	return true
+	return post, true
 }
 
-func (r *MemoryPostRepository) updatePost(path string) bool {
-	post := r.get(path)
-	if post == nil {
-		return false
-	}
-
+// checkPostChanged determines whether the on-disk post differs from existing.
+// Returns a freshly prepared Post and true when content has changed.
+// When SkipUnchangedModTime is true, an unchanged mod-time is an early exit.
+// No lock needed; operates on a snapshot copy of existing.
+func (r *MemoryPostRepository) checkPostChanged(path string, existing *Post) (*Post, bool) {
+	var modTime time.Time
 	if r.conf.SkipUnchangedModTime {
-		modTime, err := r.source.StatPost(path)
+		var err error
+		modTime, err = r.source.StatPost(path)
 		if err != nil {
 			r.log.Error("failed to stat post", "path", path, "err", err)
-			return false
+			return nil, false
 		}
-		if modTime.Equal(post.modTime) {
-			return false
+		if modTime.Equal(existing.modTime) {
+			return nil, false
 		}
-		post.modTime = modTime
 	}
-
 	buf, err := r.source.ReadPost(path)
 	if err != nil {
 		r.log.Error("failed to read post", "path", path, "err", err)
-		return false
+		return nil, false
 	}
-	if hashBytes(buf) == post.hash {
-		return false
+	if hashBytes(buf) == existing.hash {
+		return nil, false
 	}
+	// Stat for a fresh mod-time if we haven't done so yet.
+	if modTime.IsZero() {
+		modTime, err = r.source.StatPost(path)
+		if err != nil {
+			r.log.Error("failed to stat post", "path", path, "err", err)
+			return nil, false
+		}
+	}
+	post := &Post{path: path, modTime: modTime}
 	if err := r.converter.Convert(post, buf); err != nil {
 		r.log.Error("failed to convert post", "path", path, "err", err)
-		return false
+		return nil, false
 	}
-	return true
+	return post, true
 }
 
 func (r *MemoryPostRepository) remove(path string) {

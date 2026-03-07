@@ -30,6 +30,7 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | `og_image.text_color` | `OG_IMAGE_TEXT_COLOR` | `#f0f0f0` | Title text colour (hex). |
 | `og_image.sub_color` | `OG_IMAGE_SUB_COLOR` | `#999999` | Subtitle/secondary text colour (hex). |
 | `og_image.accent_color` | `OG_IMAGE_ACCENT_COLOR` | `#7eb8f7` | Accent colour used for decorative elements (hex). |
+| `og_image.cache_size` | `OG_IMAGE_CACHE_SIZE` | `128` | Maximum number of generated `og:image` PNGs to keep in the in-memory LRU cache. |
 
 ## Well-known posts
 

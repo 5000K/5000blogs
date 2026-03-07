@@ -15,6 +15,7 @@ func defaultOGConfig() config.OGImageConfig {
 		TextColor:   "#f0f0f0",
 		SubColor:    "#999999",
 		AccentColor: "#7eb8f7",
+		CacheSize:   64,
 	}
 }
 
@@ -79,19 +80,13 @@ func TestOGImageGenerator_Invalidate(t *testing.T) {
 		t.Fatalf("Generate: %v", err)
 	}
 
-	gen.mu.RLock()
-	_, inCache := gen.cache[post.hash]
-	gen.mu.RUnlock()
-	if !inCache {
+	if !gen.cache.has(post.hash) {
 		t.Fatal("expected entry in cache after generate")
 	}
 
 	gen.Invalidate(post.hash)
 
-	gen.mu.RLock()
-	_, inCache = gen.cache[post.hash]
-	gen.mu.RUnlock()
-	if inCache {
+	if gen.cache.has(post.hash) {
 		t.Fatal("expected cache entry removed after Invalidate")
 	}
 }
@@ -109,6 +104,29 @@ func TestOGImageGenerator_NoTitle(t *testing.T) {
 	}
 	if _, err := png.Decode(bytes.NewReader(data)); err != nil {
 		t.Fatalf("result is not valid PNG: %v", err)
+	}
+}
+
+func TestOGImageGenerator_CacheEviction(t *testing.T) {
+	cap := 5
+	cfg := defaultOGConfig()
+	cfg.CacheSize = cap
+	gen, err := NewOGImageGenerator(cfg)
+	if err != nil {
+		t.Fatalf("NewOGImageGenerator: %v", err)
+	}
+
+	// Fill the cache beyond capacity to trigger eviction.
+	for i := 0; i < cap+10; i++ {
+		post := NewPost("p.md", &Metadata{Title: "T"}, []byte("<p>x</p>"))
+		post.hash = uint64(i)
+		if _, err := gen.Generate(post); err != nil {
+			t.Fatalf("Generate(%d): %v", i, err)
+		}
+	}
+
+	if got := gen.cache.len(); got > cap {
+		t.Errorf("cache size %d exceeds cap %d", got, cap)
 	}
 }
 
