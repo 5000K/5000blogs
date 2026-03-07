@@ -87,19 +87,38 @@ func (r *Renderer) reload() error {
 	return nil
 }
 
+// Serve404 renders a 404 page with HTTP 404 status. If post is provided and
+// has content it is rendered; otherwise a placeholder title is used.
+func (r *Renderer) Serve404(post *service.Post, w http.ResponseWriter) {
+	td := templateData{
+		Title:   "404 - Page Not Found",
+		Plugins: r.cfg.Plugins,
+	}
+	if post != nil {
+		data := post.Data()
+		if len(data.Content) > 0 {
+			td.Title = data.Title
+			td.Description = data.Description
+			td.Author = data.Author
+			td.Content = template.HTML(data.Content) //nolint:gosec
+		}
+	}
+	r.executeStatus(w, td, http.StatusNotFound)
+}
+
 // ServePost renders the given post through the HTML template and writes the
 // response. Responds with 404 when the post is nil or has no rendered content.
 func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL string) {
 	if post == nil {
 		r.log.Debug("post not found")
-		http.NotFound(w, nil)
+		r.Serve404(nil, w)
 		return
 	}
 
 	data := post.Data()
 	if len(data.Content) == 0 {
 		r.log.Debug("post has no rendered content", "title", data.Title)
-		http.NotFound(w, nil)
+		r.Serve404(nil, w)
 		return
 	}
 
@@ -160,7 +179,12 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, p
 }
 
 func (r *Renderer) execute(w http.ResponseWriter, td templateData) {
+	r.executeStatus(w, td, http.StatusOK)
+}
+
+func (r *Renderer) executeStatus(w http.ResponseWriter, td templateData, status int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
 	if err := r.tmpl.Execute(w, td); err != nil {
 		r.log.Error("failed to execute template", "title", td.Title, "err", err)
 	}

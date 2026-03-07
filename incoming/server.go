@@ -27,10 +27,22 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 	filesDir := http.Dir(filepath.Join(workDir, cfg.Paths.Static))
 	FileServer(r, "/static", filesDir)
 
+	notFoundPath := filepath.Join(cfg.Paths.Posts, "404.md")
+	serve404 := func(w http.ResponseWriter, r *http.Request) {
+		renderer.Serve404(repo.Get(notFoundPath), w)
+	}
+
+	r.NotFound(serve404)
+
 	r.Get("/posts/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "slug")
 		path := filepath.Join(cfg.Paths.Posts, slug+".md")
-		renderer.ServePost(repo.Get(path), w, cfg.SiteURL+r.URL.RequestURI())
+		post := repo.Get(path)
+		if post == nil {
+			serve404(w, r)
+			return
+		}
+		renderer.ServePost(post, w, cfg.SiteURL+r.URL.RequestURI())
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {

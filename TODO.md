@@ -1,7 +1,10 @@
- - Optional custom 404 page with 404.md - and placeholder 404 content using normal template
- - Generate og:Image
+  - Generate og:Image
    - use `golang.org/x/image`
    - let user configure styling (blog-icon, blog-name, colors)
  - Cleanup post frontmatter:
    - use enclosing --- instead of codeblock
    - support full timestamps (if not already)
+ - Multi layer source: Meta-source that checks multiple sources for a post before returning that it didn't find it.
+   - Idea: built-in default 404 and home post that are just compiled right into the binary -> also implement this.
+     - home -> with a simple "welcome to your new blog"
+     - 404 -> take the one from `demo/posts`
