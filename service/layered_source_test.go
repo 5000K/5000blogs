@@ -1,0 +1,228 @@
+package service
+
+import (
+	"strings"
+	"testing"
+	"time"
+)
+
+// stubSource is a minimal in-memory PostSource for testing.
+type stubSource struct {
+	posts map[string][]byte
+}
+
+func newStubSource(posts map[string][]byte) *stubSource {
+	return &stubSource{posts: posts}
+}
+
+func (s *stubSource) ListPosts() ([]string, error) {
+	paths := make([]string, 0, len(s.posts))
+	for p := range s.posts {
+		paths = append(paths, p)
+	}
+	return paths, nil
+}
+
+func (s *stubSource) ReadPost(path string) ([]byte, error) {
+	data, ok := s.posts[path]
+	if !ok {
+		return nil, &notFoundError{path}
+	}
+	return data, nil
+}
+
+func (s *stubSource) StatPost(path string) (time.Time, error) {
+	if _, ok := s.posts[path]; !ok {
+		return time.Time{}, &notFoundError{path}
+	}
+	return time.Time{}, nil
+}
+
+func (s *stubSource) WritePost(path string, metadata *Metadata, content string) error {
+	return nil
+}
+
+type notFoundError struct{ path string }
+
+func (e *notFoundError) Error() string { return "not found: " + e.path }
+
+// --- BuiltinSource tests ---
+
+func TestBuiltinSource_ListPosts(t *testing.T) {
+	b := NewBuiltinSource()
+	paths, err := b.ListPosts()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(paths) != 2 {
+		t.Fatalf("expected 2 builtin posts, got %d", len(paths))
+	}
+	slugs := map[string]bool{}
+	for _, p := range paths {
+		slugs[slugFromPath(p)] = true
+	}
+	for _, want := range []string{"home", "404"} {
+		if !slugs[want] {
+			t.Errorf("expected builtin slug %q", want)
+		}
+	}
+}
+
+func TestBuiltinSource_ReadPost(t *testing.T) {
+	b := NewBuiltinSource()
+	paths, _ := b.ListPosts()
+	for _, p := range paths {
+		data, err := b.ReadPost(p)
+		if err != nil {
+			t.Errorf("ReadPost(%q) unexpected error: %v", p, err)
+		}
+		if len(data) == 0 {
+			t.Errorf("ReadPost(%q) returned empty content", p)
+		}
+	}
+}
+
+func TestBuiltinSource_ReadPost_Unknown(t *testing.T) {
+	b := NewBuiltinSource()
+	_, err := b.ReadPost("builtin/unknown.md")
+	if err == nil {
+		t.Error("expected error for unknown builtin path")
+	}
+}
+
+func TestBuiltinSource_StatPost_Unknown(t *testing.T) {
+	b := NewBuiltinSource()
+	_, err := b.StatPost("builtin/unknown.md")
+	if err == nil {
+		t.Error("expected error for unknown builtin path")
+	}
+}
+
+func TestBuiltinSource_WritePost_ReadOnly(t *testing.T) {
+	b := NewBuiltinSource()
+	err := b.WritePost("builtin/home.md", nil, "content")
+	if err == nil {
+		t.Error("expected error: builtin source should be read-only")
+	}
+}
+
+func TestBuiltinSource_HomeContent(t *testing.T) {
+	b := NewBuiltinSource()
+	data, err := b.ReadPost("builtin/home.md")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(string(data), "title:") {
+		t.Error("home.md should contain front matter with title")
+	}
+}
+
+// --- LayeredSource tests ---
+
+func TestLayeredSource_ListPosts_Priority(t *testing.T) {
+	// First source has home.md; second also has home.md — first wins.
+	s1 := newStubSource(map[string][]byte{
+		"/user/posts/home.md": []byte("---\ntitle: User Home\n---\n"),
+	})
+	s2 := newStubSource(map[string][]byte{
+		"builtin/home.md": []byte("---\ntitle: Builtin Home\n---\n"),
+		"builtin/404.md":  []byte("---\ntitle: 404\n---\n"),
+	})
+	l := NewLayeredSource(s1, s2)
+
+	paths, err := l.ListPosts()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	slugs := map[string]bool{}
+	for _, p := range paths {
+		slugs[slugFromPath(p)] = true
+	}
+	if !slugs["home"] {
+		t.Error("expected slug 'home' in result")
+	}
+	if !slugs["404"] {
+		t.Error("expected slug '404' from fallback source")
+	}
+	if len(paths) != 2 {
+		t.Errorf("expected 2 paths, got %d: %v", len(paths), paths)
+	}
+	// The user's home.md should be used, not the builtin one.
+	if paths[0] != "/user/posts/home.md" {
+		t.Errorf("expected user's home path first, got %q", paths[0])
+	}
+}
+
+func TestLayeredSource_ListPosts_FallbackOnly(t *testing.T) {
+	// Primary source is empty; all posts come from fallback.
+	s1 := newStubSource(map[string][]byte{})
+	s2 := newStubSource(map[string][]byte{
+		"builtin/home.md": []byte("---\ntitle: Home\n---\n"),
+	})
+	l := NewLayeredSource(s1, s2)
+
+	paths, err := l.ListPosts()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(paths) != 1 || slugFromPath(paths[0]) != "home" {
+		t.Errorf("expected fallback home post, got %v", paths)
+	}
+}
+
+func TestLayeredSource_ReadPost_Routing(t *testing.T) {
+	s1 := newStubSource(map[string][]byte{
+		"/posts/mine.md": []byte("user content"),
+	})
+	s2 := newStubSource(map[string][]byte{
+		"builtin/home.md": []byte("builtin content"),
+	})
+	l := NewLayeredSource(s1, s2)
+
+	data, err := l.ReadPost("/posts/mine.md")
+	if err != nil || string(data) != "user content" {
+		t.Errorf("expected user content, got %q err=%v", data, err)
+	}
+
+	data, err = l.ReadPost("builtin/home.md")
+	if err != nil || string(data) != "builtin content" {
+		t.Errorf("expected builtin content, got %q err=%v", data, err)
+	}
+}
+
+func TestLayeredSource_ReadPost_UnknownPath(t *testing.T) {
+	l := NewLayeredSource(newStubSource(map[string][]byte{}))
+	_, err := l.ReadPost("/nonexistent.md")
+	if err == nil {
+		t.Error("expected error for unknown path")
+	}
+}
+
+func TestLayeredSource_WritePost_DelegatesToFirst(t *testing.T) {
+	written := map[string]string{}
+	s1 := &capturingSource{written: written}
+	s2 := newStubSource(map[string][]byte{})
+	l := NewLayeredSource(s1, s2)
+
+	if err := l.WritePost("/posts/new.md", nil, "hello"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if written["/posts/new.md"] != "hello" {
+		t.Errorf("expected write to first source, got %v", written)
+	}
+}
+
+// capturingSource records WritePost calls for assertions.
+type capturingSource struct {
+	written map[string]string
+}
+
+func (c *capturingSource) ListPosts() ([]string, error)         { return nil, nil }
+func (c *capturingSource) ReadPost(path string) ([]byte, error) { return nil, &notFoundError{path} }
+func (c *capturingSource) StatPost(path string) (time.Time, error) {
+	return time.Time{}, &notFoundError{path}
+}
+func (c *capturingSource) WritePost(path string, _ *Metadata, content string) error {
+	c.written[path] = content
+	return nil
+}

@@ -2,7 +2,7 @@
 
 Automatically generates a `og:image` PNG for each post at `/posts/{slug}/og-image.png`.
 
-## Configuration
+## Configuration (in your main config.yml)
 
 ```yaml
 og_image:
@@ -15,7 +15,7 @@ og_image:
   accent_color: '#7eb8f7'    # bottom accent line color
 ```
 
-Defaults match the built-in template's color scheme.
+These defaults match the built-in template's color scheme.
 
 ## Template
 
@@ -25,7 +25,7 @@ When enabled, `.OGImageURL` is set to the absolute image URL for single-post pag
 {{if .OGImageURL}}<meta property="og:image" content="{{.OGImageURL}}">{{end}}
 ```
 
-The built-in `template.html` already includes this.
+If you are using the built-in `template.html`, you don't need to do anything.
 
 ## Caching
 

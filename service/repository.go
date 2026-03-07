@@ -13,6 +13,7 @@ import (
 
 type PostRepository interface {
 	Get(path string) *Post
+	GetBySlug(slug string) *Post
 	List() []*Post
 	Count() int
 	GetPage(page int) PageResult
@@ -54,6 +55,15 @@ func NewMemoryPostRepository(conf *config.Config, source PostSource, converter C
 func (r *MemoryPostRepository) Get(path string) *Post {
 	for _, p := range r.posts {
 		if p.path == path {
+			return p
+		}
+	}
+	return nil
+}
+
+func (r *MemoryPostRepository) GetBySlug(slug string) *Post {
+	for _, p := range r.posts {
+		if slugFromPath(p.path) == slug {
 			return p
 		}
 	}

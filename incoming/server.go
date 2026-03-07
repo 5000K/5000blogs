@@ -35,17 +35,15 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 		http.ServeFile(w, r, cfg.OGImage.BlogIcon)
 	})
 
-	notFoundPath := filepath.Join(cfg.Paths.Posts, "404.md")
 	serve404 := func(w http.ResponseWriter, r *http.Request) {
-		renderer.Serve404(repo.Get(notFoundPath), w)
+		renderer.Serve404(repo.GetBySlug("404"), w)
 	}
 
 	r.NotFound(serve404)
 
 	r.Get("/posts/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "slug")
-		path := filepath.Join(cfg.Paths.Posts, slug+".md")
-		post := repo.Get(path)
+		post := repo.GetBySlug(slug)
 		if post == nil {
 			serve404(w, r)
 			return
@@ -63,8 +61,7 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 			return
 		}
 		slug := chi.URLParam(r, "slug")
-		path := filepath.Join(cfg.Paths.Posts, slug+".md")
-		post := repo.Get(path)
+		post := repo.GetBySlug(slug)
 		if post == nil {
 			http.NotFound(w, r)
 			return
@@ -80,8 +77,7 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		homePath := filepath.Join(cfg.Paths.Posts, "home.md")
-		if home := repo.Get(homePath); home != nil {
+		if home := repo.GetBySlug("home"); home != nil {
 			if data := home.Data(); len(data.Content) > 0 {
 				renderer.ServePost(home, w, cfg.SiteURL+"/", "")
 				return

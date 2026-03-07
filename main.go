@@ -26,7 +26,8 @@ func main() {
 		log.Fatalf("initial setup failed: %v", err)
 	}
 
-	source := service.NewFileSystemSource(cfg.Paths.Posts, logger)
+	fsSource := service.NewFileSystemSource(cfg.Paths.Posts, logger)
+	source := service.NewLayeredSource(fsSource, service.NewBuiltinSource())
 	converter := &service.GoMarkdownConverter{}
 	repo := service.NewMemoryPostRepository(cfg, source, converter, logger)
 	if err := repo.Start(); err != nil {

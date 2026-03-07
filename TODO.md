@@ -1,12 +1,7 @@
-  - Multi layer source: Meta-source that checks multiple sources for a post before returning that it didn't find it. When getting a post list, should do the same (for collisions, prioritize the first of the sources)
-   - Why? Using multiple source folders (or later maybe also e.g. external git repos, databases, ...)
-   - This also enables: built-in default 404 and home post that are just compiled right into the binary -> also implement this.
-     - home -> with a simple "welcome to your new blog"
-     - 404 -> take the one from `demo/posts`
- - Extended API
-   - This will be helpful for more complex templates. They can hook into the API to show additonal things.
-   - For now, the following routes should be available under the prefix /api/v1:
-     - GET /posts: returns a simple array of all posts by name, without any kind of sorting.
-     - GET /post/{name}: returns all metadata of the post
-     - GET /posts/search?q={query}: returns posts whose title or description contain the query string (case-insensitive); useful for client-side search widgets in templates
-     - GET /stats: returns aggregate blog stats (total visible post count, date of latest post); useful for hero/dashboard sections in templates
+- Extended API
+  - This will be helpful for more complex templates. They can hook into the API to show additonal things.
+  - For now, the following routes should be available under the prefix /api/v1:
+    - GET /posts: returns a simple array of all posts by name, without any kind of sorting.
+    - GET /post/{name}: returns all metadata of the post
+    - GET /posts/search?q={query}: returns posts whose title or description contain the query string (case-insensitive); useful for client-side search widgets in templates
+    - GET /stats: returns aggregate blog stats (total visible post count, date of latest post); useful for hero/dashboard sections in templates
