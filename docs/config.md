@@ -17,6 +17,9 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | `feed_title` | `FEED_TITLE` | `Blog` | Title of the RSS/Atom feed. |
 | `feed_description` | `FEED_DESCRIPTION` | _(empty)_ | Description of the RSS/Atom feed. |
 | `rss_full_content` | `RSS_FULL_CONTENT` | `false` | Include full rendered HTML in feed entries instead of description only. |
+| `blog_name` | `BLOG_NAME` | `Blog` | Site name shown in the header and used as a fallback title. |
+| `icon` | `ICON` | _(empty)_ | Path to a PNG file served as `/favicon.ico` and `/og-logo.png`. Also used as the logo in generated `og:image` PNGs. |
+| `nav_links` | — | _(none)_ | List of header navigation links. Each entry has `name` (display text) and `url`. YAML array only; no env var equivalent. |
 | `plugins` | — | _(none)_ | List of JavaScript URLs injected as `<script>` tags via `.Plugins` in the template. YAML array only; no env var equivalent. |
 
 ### og_image
@@ -24,8 +27,6 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | YAML key | Env var | Default | Description |
 |---|---|---|---|
 | `og_image.enabled` | `OG_IMAGE_ENABLED` | `true` | Enable dynamic `og:image` generation. |
-| `og_image.blog_name` | `OG_IMAGE_BLOG_NAME` | _(empty)_ | Blog name rendered in the top-left corner of each `og:image`. |
-| `og_image.blog_icon` | `OG_IMAGE_BLOG_ICON` | _(empty)_ | Path to a PNG file used as a logo in `og:image`. |
 | `og_image.bg_color` | `OG_IMAGE_BG_COLOR` | `#111111` | Background colour (hex). |
 | `og_image.text_color` | `OG_IMAGE_TEXT_COLOR` | `#f0f0f0` | Title text colour (hex). |
 | `og_image.sub_color` | `OG_IMAGE_SUB_COLOR` | `#999999` | Subtitle/secondary text colour (hex). |

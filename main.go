@@ -40,7 +40,7 @@ func main() {
 
 	var ogGen *service.OGImageGenerator
 	if cfg.OGImage.Enabled {
-		ogGen, err = service.NewOGImageGenerator(cfg.OGImage)
+		ogGen, err = service.NewOGImageGenerator(cfg.OGImage, cfg.BlogName, cfg.Icon)
 		if err != nil {
 			log.Fatalf("failed to create og:image generator: %v", err)
 		}

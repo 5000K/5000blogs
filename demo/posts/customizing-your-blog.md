@@ -60,21 +60,6 @@ date: 2026-03-04
 
 Place it at the very start of the file, enclosed by `---` delimiters. The parser extracts and removes it from the rendered output automatically.
 
-## Partials via fetch
-
-Static files in the `static` folder are served at `/static/`. You can use this to load reusable HTML fragments client-side — the brand bar on this site works that way:
-
-```html
-<div id="brand"></div>
-<script>
-  fetch('/static/brand.html')
-    .then(r => r.ok ? r.text() : '')
-    .then(html => { document.getElementById('brand').innerHTML = html; });
-</script>
-```
-
-Edit `brand.html` to change the header across every page without touching the template.
-
 ## Styling
 
 The demo uses [Tachyons](https://tachyons.io) for layout and spacing utilities, plus a small `<style>` block in the template for prose typography (headings, code blocks, blockquotes). Swap in any CSS framework or roll your own — the template is yours.

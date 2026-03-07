@@ -26,15 +26,22 @@ type Config struct {
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`
 	RSSFullContent  bool   `env:"RSS_FULL_CONTENT" env-default:"false" yaml:"rss_full_content"`
 
-	Plugins []string `yaml:"plugins"`
+	BlogName string    `env:"BLOG_NAME" env-default:"Blog" yaml:"blog_name"`
+	Icon     string    `env:"ICON" env-default:"./static/icon.png" yaml:"icon"` // path to PNG file served as favicon and og:logo
+	NavLinks []NavLink `yaml:"nav_links"`
+	Plugins  []string  `yaml:"plugins"`
 
 	OGImage OGImageConfig `yaml:"og_image"`
 }
 
+// NavLink is a navigation entry rendered in the site header.
+type NavLink struct {
+	Name string `yaml:"name"`
+	URL  string `yaml:"url"`
+}
+
 type OGImageConfig struct {
 	Enabled     bool   `env:"OG_IMAGE_ENABLED" env-default:"true" yaml:"enabled"`
-	BlogName    string `env:"OG_IMAGE_BLOG_NAME" env-default:"" yaml:"blog_name"`
-	BlogIcon    string `env:"OG_IMAGE_BLOG_ICON" env-default:"" yaml:"blog_icon"` // path to PNG file
 	BgColor     string `env:"OG_IMAGE_BG_COLOR" env-default:"#111111" yaml:"bg_color"`
 	TextColor   string `env:"OG_IMAGE_TEXT_COLOR" env-default:"#f0f0f0" yaml:"text_color"`
 	SubColor    string `env:"OG_IMAGE_SUB_COLOR" env-default:"#999999" yaml:"sub_color"`

@@ -11,6 +11,11 @@ import (
 	"path/filepath"
 )
 
+type navLink struct {
+	Name string
+	URL  string
+}
+
 // templateData is the data passed to the HTML template for every page type.
 // IsListPage selects the list view; all other fields are for the post view.
 type templateData struct {
@@ -21,6 +26,8 @@ type templateData struct {
 	OGImageURL  string // absolute URL for og:image; empty when not available
 	OGLogoURL   string // absolute URL for og:logo; empty when not configured
 	Plugins     []string
+	BlogName    string
+	NavLinks    []navLink
 
 	// Post view
 	DateStr string
@@ -93,9 +100,17 @@ func (r *Renderer) reload() error {
 	return nil
 }
 
-// ogLogoURL returns the absolute URL of the logo if a blog_icon is configured.
+func (r *Renderer) navLinks() []navLink {
+	links := make([]navLink, len(r.cfg.NavLinks))
+	for i, l := range r.cfg.NavLinks {
+		links[i] = navLink{Name: l.Name, URL: l.URL}
+	}
+	return links
+}
+
+// ogLogoURL returns the absolute URL of the logo if an icon is configured.
 func (r *Renderer) ogLogoURL() string {
-	if r.cfg.OGImage.BlogIcon == "" {
+	if r.cfg.Icon == "" {
 		return ""
 	}
 	return r.cfg.SiteURL + "/og-logo.png"
@@ -108,6 +123,8 @@ func (r *Renderer) Serve404(post *service.Post, w http.ResponseWriter) {
 		Title:     "404 - Page Not Found",
 		OGLogoURL: r.ogLogoURL(),
 		Plugins:   r.cfg.Plugins,
+		BlogName:  r.cfg.BlogName,
+		NavLinks:  r.navLinks(),
 	}
 	if post != nil {
 		data := post.Data()
@@ -150,6 +167,8 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL 
 		DateISO:     data.DateISO,
 		NoIndex:     data.NoIndex,
 		Plugins:     r.cfg.Plugins,
+		BlogName:    r.cfg.BlogName,
+		NavLinks:    r.navLinks(),
 	}
 	if !data.Date.IsZero() {
 		td.DateStr = data.Date.Format("January 2, 2006")
@@ -186,6 +205,8 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, p
 		FilterTags: pr.FilterTags,
 		Posts:      items,
 		Plugins:    r.cfg.Plugins,
+		BlogName:   r.cfg.BlogName,
+		NavLinks:   r.navLinks(),
 		Pagination: paginationData{
 			Page:       pr.Page,
 			TotalPages: pr.TotalPages,

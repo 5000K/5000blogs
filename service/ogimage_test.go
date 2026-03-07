@@ -10,7 +10,6 @@ import (
 func defaultOGConfig() config.OGImageConfig {
 	return config.OGImageConfig{
 		Enabled:     true,
-		BlogName:    "Test Blog",
 		BgColor:     "#111111",
 		TextColor:   "#f0f0f0",
 		SubColor:    "#999999",
@@ -20,7 +19,7 @@ func defaultOGConfig() config.OGImageConfig {
 }
 
 func TestOGImageGenerator_GeneratesPNG(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig())
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", "")
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -44,7 +43,7 @@ func TestOGImageGenerator_GeneratesPNG(t *testing.T) {
 }
 
 func TestOGImageGenerator_Cache(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig())
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", "")
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -68,7 +67,7 @@ func TestOGImageGenerator_Cache(t *testing.T) {
 }
 
 func TestOGImageGenerator_Invalidate(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig())
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", "")
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -92,7 +91,7 @@ func TestOGImageGenerator_Invalidate(t *testing.T) {
 }
 
 func TestOGImageGenerator_NoTitle(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig())
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", "")
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -111,7 +110,7 @@ func TestOGImageGenerator_CacheEviction(t *testing.T) {
 	cap := 5
 	cfg := defaultOGConfig()
 	cfg.CacheSize = cap
-	gen, err := NewOGImageGenerator(cfg)
+	gen, err := NewOGImageGenerator(cfg, "", "")
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -162,7 +161,7 @@ func TestParseHexColor(t *testing.T) {
 }
 
 func TestWrapText(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig())
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "", "")
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}

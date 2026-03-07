@@ -104,6 +104,7 @@ func (c *ogLRUCache) len() int {
 // OGImageGenerator generates og:image PNGs for posts and caches them by post hash.
 type OGImageGenerator struct {
 	cfg         config.OGImageConfig
+	blogName    string
 	boldFace    font.Face
 	regularFace font.Face
 	smallFace   font.Face
@@ -113,7 +114,7 @@ type OGImageGenerator struct {
 }
 
 // NewOGImageGenerator creates a generator from the given config.
-func NewOGImageGenerator(cfg config.OGImageConfig) (*OGImageGenerator, error) {
+func NewOGImageGenerator(cfg config.OGImageConfig, blogName, iconPath string) (*OGImageGenerator, error) {
 	boldFont, err := opentype.Parse(gobold.TTF)
 	if err != nil {
 		return nil, fmt.Errorf("ogimage: parse bold font: %w", err)
@@ -138,14 +139,15 @@ func NewOGImageGenerator(cfg config.OGImageConfig) (*OGImageGenerator, error) {
 
 	g := &OGImageGenerator{
 		cfg:         cfg,
+		blogName:    blogName,
 		boldFace:    boldFace,
 		regularFace: regularFace,
 		smallFace:   smallFace,
 		cache:       newOGLRUCache(cfg.CacheSize),
 	}
 
-	if cfg.BlogIcon != "" {
-		g.icon = loadIcon(cfg.BlogIcon)
+	if iconPath != "" {
+		g.icon = loadIcon(iconPath)
 	}
 
 	return g, nil
@@ -215,8 +217,8 @@ func (g *OGImageGenerator) generate(post *Post) ([]byte, error) {
 		draw.Draw(img, image.Rect(iconX, nameY-iconSize+8, iconX+iconSize, nameY+8), dst, image.Point{}, draw.Over)
 		iconX += iconSize + 16
 	}
-	if g.cfg.BlogName != "" {
-		drawText(img, g.smallFace, g.cfg.BlogName, iconX, nameY, subColor)
+	if g.blogName != "" {
+		drawText(img, g.smallFace, g.blogName, iconX, nameY, subColor)
 	}
 
 	// Compute title + description lines, then vertically centre in body area [110, 550]

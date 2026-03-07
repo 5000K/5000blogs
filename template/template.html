@@ -11,6 +11,7 @@
   {{if .Author}}<meta name="author" content="{{.Author}}">{{end}}
 
   {{if .URL}}<link rel="canonical" href="{{.URL}}">{{end}}
+  {{if .OGLogoURL}}<link rel="icon" type="image/png" href="/favicon.ico">{{end}}
 
   <!-- Open Graph -->
   <meta property="og:type" content="{{if .IsListPage}}website{{else}}article{{end}}">
@@ -78,8 +79,18 @@
 </head>
 <body class="sans-serif near-white">
 
-  <!-- brand banner — injected from /static/brand.html via JS below -->
-  <div id="brand"></div>
+  <!-- brand banner -->
+  <header style="border-bottom:1px solid #1e1e1e;">
+    <div class="mw7 center ph3 ph4-ns pv3 flex items-center justify-between">
+      <a href="/" class="no-underline flex items-center" style="gap:.5rem;">
+        <span class="f5 fw6 tracked-tight" style="color:#f0f0f0;">{{.BlogName}}</span>
+        <span class="f6" style="color:#444;">&#x2F;</span>
+      </a>
+      <nav class="flex items-center" style="gap:1.5rem;">
+        {{range .NavLinks}}<a href="{{.URL}}" class="no-underline f6" style="color:#555;">{{.Name}}</a>{{end}}
+      </nav>
+    </div>
+  </header>
 
   <!-- main content column — max-width constrained, centred -->
   <div class="mw7 center ph3 ph4-ns pv5 pv6-ns">
@@ -165,14 +176,6 @@
       <a href="/feed.atom" class="no-underline" style="color:#555;">Atom Feed</a>
     </p>
   </footer>
-
-  <!-- async branding injection -->
-  <!-- it's mostly irrelevant for SEO and easier to modify for users this way, so we'll do it like this-->
-  <script>
-    fetch('/static/brand.html')
-      .then(function(r) { return r.ok ? r.text() : ''; })
-      .then(function(html) { document.getElementById('brand').innerHTML = html; });
-  </script>
 
   <!-- plugins from config.plugins -->
   {{range .Plugins}}

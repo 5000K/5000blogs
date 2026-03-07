@@ -17,12 +17,14 @@ A single value of the following shape is passed to the template on every request
 .Description  string        — meta description; empty string if unset
 .URL          string        — canonical absolute URL of the current page
 .OGImageURL   string        — absolute URL of the generated og:image PNG; empty when og_image.enabled is false
-.OGLogoURL    string        — absolute URL of the site logo (/og-logo.png); empty when og_image.blog_icon is not configured
+.OGLogoURL    string        — absolute URL of the site logo (/og-logo.png); empty when `icon` is not configured
 .NoIndex      bool          — true when the post has `noindex: true` in its YAML metadata
 
 .IsListPage   bool          — true on /posts list pages, false on single-post pages
 
 .Plugins      []string      — list of JavaScript URLs from config `plugins`; empty slice if unset
+.BlogName     string        — site name from config `blog_name`
+.NavLinks     []navLink     — navigation links from config `nav_links`; each has .Name and .URL
 ```
 
 ### Single-post view (`IsListPage = false`)
@@ -67,4 +69,3 @@ A single value of the following shape is passed to the template on every request
 - `.Pagination` is present on every list render; guard nav rendering with `{{if or .Pagination.HasPrev .Pagination.HasNext}}`.
 - `.Pagination.TagParam` is non-empty when a tag filter is active; append it to pagination `href` attributes: `/posts?page={{.Pagination.NextPage}}{{.Pagination.TagParam}}`.
 - `.Plugins` holds the URLs configured in `plugins` (YAML array). Render them as `<script>` tags with `{{range .Plugins}}<script src="{{.}}"></script>{{end}}`. The list is empty when no plugins are configured.
-- The `brand.html` file in the same static directory is not injected server-side; the demo template fetches it client-side via `fetch('/static/brand.html')`.

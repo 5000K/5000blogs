@@ -76,12 +76,20 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	r.Get("/og-logo.png", func(w http.ResponseWriter, r *http.Request) {
-		if cfg.OGImage.BlogIcon == "" {
+	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		if cfg.Icon == "" {
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeFile(w, r, cfg.OGImage.BlogIcon)
+		http.ServeFile(w, r, cfg.Icon)
+	})
+
+	r.Get("/og-logo.png", func(w http.ResponseWriter, r *http.Request) {
+		if cfg.Icon == "" {
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeFile(w, r, cfg.Icon)
 	})
 
 	serve404 := func(w http.ResponseWriter, r *http.Request) {

@@ -3,14 +3,19 @@ address: ":8080"
 log_level: 'info'
 page_size: 10
 
+blog_name: 'My Blog'
+# icon: './static/icon.png'  # path to a PNG file served as favicon and og:logo
+
+nav_links:
+  - name: 'Posts'
+    url: '/posts'
+
 site_url: 'http://localhost:8080'
 feed_title: 'My Blog'
 feed_description: 'Latest posts from My Blog'
 
 og_image:
   enabled: true
-  blog_name: 'My Blog'       # shown in the top-left of each og:image
-  # blog_icon: './static/icon.png'  # optional path to a PNG icon
   bg_color: '#111111'
   text_color: '#f0f0f0'
   sub_color: '#999999'
