@@ -206,3 +206,28 @@ func TestCheckLastModified_ZeroTimeIsNoop(t *testing.T) {
 		t.Errorf("Last-Modified should not be set for zero time, got %q", lm)
 	}
 }
+
+// --- /health ---
+
+func TestHealthEndpoint(t *testing.T) {
+	r := chi.NewRouter()
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("want 200, got %d", w.Code)
+	}
+	if body := w.Body.String(); body != "ok" {
+		t.Errorf("want body 'ok', got %q", body)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/plain") {
+		t.Errorf("want text/plain content type, got %q", ct)
+	}
+}

@@ -4,13 +4,16 @@ import (
 	"5000blogs/config"
 	"5000blogs/service"
 	"5000blogs/view"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -35,8 +38,24 @@ func checkLastModified(w http.ResponseWriter, r *http.Request, t time.Time) bool
 }
 
 func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) {
-	r := buildRouter(cfg, repo, renderer, ogGen)
-	_ = http.ListenAndServe(cfg.ServerAddress, r)
+	srv := &http.Server{
+		Addr:    cfg.ServerAddress,
+		Handler: buildRouter(cfg, repo, renderer, ogGen),
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-quit
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		fmt.Fprintf(os.Stderr, "server error: %v\n", err)
+	}
 }
 
 func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) chi.Router {
@@ -50,6 +69,12 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	FileServer(r, "/static", filesDir)
 
 	r.Mount("/api/v1", apiRouter(repo))
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 
 	r.Get("/og-logo.png", func(w http.ResponseWriter, r *http.Request) {
 		if cfg.OGImage.BlogIcon == "" {

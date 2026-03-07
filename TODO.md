@@ -10,8 +10,6 @@
 
 ## Features
 
-- **Graceful shutdown**: `incoming.Serve` does not handle OS signals. Wrap `http.Server` and call `Shutdown` on `SIGINT`/`SIGTERM` so in-flight requests finish cleanly.
-- **Health check endpoint**: add `/health` returning `200 OK` for container/load-balancer probes.
 - **Tag / category metadata**: `Metadata.Raw` already captures unknown YAML keys but nothing consumes them. Add first-class `tags []string` field in `Metadata`, expose it through `PostData`, and thread it into the template data contract and sitemap. Add the option to filter for tags /posts?tags=[allowed-tag(s)] - still also supporting pagination. Also add/modify corresponding endpoints in the /api/v1. Show tags at the bottom of a post, with the tags linking to /posts?tags=clicked-tag
 
 ## Configuration / documentation
