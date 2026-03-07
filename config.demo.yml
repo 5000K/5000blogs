@@ -18,12 +18,11 @@ nav_links:
 
 # Custom page routes: map URL paths to post slugs.
 # The / path defaults to slug 'home' if not listed.
-# pages:
-#   - path: /about
-#     slug: about
+pages:
+  - path: /about
+    slug: about
 
 site_url: 'http://localhost:8080'
-feed_title: 'My Blog'
 feed_description: 'Latest posts from My Blog'
 
 og_image:

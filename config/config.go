@@ -23,7 +23,6 @@ type Config struct {
 	PageSize             int    `env:"PAGE_SIZE" env-default:"10" yaml:"page_size"`
 
 	SiteURL         string `env:"SITE_URL" env-default:"http://localhost:8080" yaml:"site_url"`
-	FeedTitle       string `env:"FEED_TITLE" env-default:"Blog" yaml:"feed_title"`
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`
 	RSSFullContent  bool   `env:"RSS_FULL_CONTENT" env-default:"false" yaml:"rss_full_content"`
 

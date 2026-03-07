@@ -41,7 +41,6 @@ services:
 And here is a simple config.yml that you can tweak:
 ```yml
 blog_name: Blog
-feed_title: Blog # this might be removed in favour of just using blog_name in the future
 
 site_url: http://localhost:8080 # the URL your blog will be available under. Very relevant for a functional RSS-feed!
 

@@ -14,10 +14,9 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | `log_level` | `LOG_LEVEL` | `info` | Log verbosity. Accepted values: `debug`, `info`, `warn`, `error`. |
 | `page_size` | `PAGE_SIZE` | `10` | Number of posts per page on the `/posts` list. Must be > 0. |
 | `site_url` | `SITE_URL` | `http://localhost:8080` | Absolute base URL of the site. Used in feed links and canonical URLs. Must be an absolute URL. |
-| `feed_title` | `FEED_TITLE` | `Blog` | Title of the RSS/Atom feed. |
 | `feed_description` | `FEED_DESCRIPTION` | _(empty)_ | Description of the RSS/Atom feed. |
 | `rss_full_content` | `RSS_FULL_CONTENT` | `false` | Include full rendered HTML in feed entries instead of description only. |
-| `blog_name` | `BLOG_NAME` | `Blog` | Site name shown in the header and used as a fallback title. |
+| `blog_name` | `BLOG_NAME` | `Blog` | Site name shown in the header, used as the RSS/Atom feed title, and used as a fallback page title. |
 | `icon` | `ICON` | _(empty)_ | Path to a PNG file served as `/favicon.ico` and `/og-logo.png`. Also used as the logo in generated `og:image` PNGs. |
 | `nav_links` | — | _(none)_ | List of header navigation links. Each entry has `name` (display text) and `url`. YAML array only; no env var equivalent. |
 | `plugins` | — | _(none)_ | List of JavaScript URLs injected as `<script>` tags via `.Plugins` in the template to quickly extend the client. YAML array only; no env var equivalent. |

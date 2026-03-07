@@ -14,7 +14,6 @@ func newTestConf(pageSize int) *config.Config {
 	cfg.RescanCron = "* * * * *"
 	cfg.PageSize = pageSize
 	cfg.SiteURL = "http://example.com"
-	cfg.FeedTitle = "Test Feed"
 	return cfg
 }
 
