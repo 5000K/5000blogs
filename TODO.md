@@ -1,0 +1,7 @@
+ - Optional custom 404 page with 404.md - and placeholder 404 content using normal template
+ - Generate og:Image
+   - use `golang.org/x/image`
+   - let user configure styling (blog-icon, blog-name, colors)
+ - Cleanup post frontmatter:
+   - use enclosing --- instead of codeblock
+   - support full timestamps (if not already)

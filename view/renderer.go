@@ -17,12 +17,15 @@ type templateData struct {
 	// Shared
 	Title       string
 	Description string
+	URL         string // canonical page URL
 	Plugins     []string
 
 	// Post view
 	DateStr string
+	DateISO string // RFC 3339, for <time datetime>
 	Author  string
 	Content template.HTML
+	NoIndex bool
 
 	// List view
 	IsListPage bool
@@ -86,7 +89,7 @@ func (r *Renderer) reload() error {
 
 // ServePost renders the given post through the HTML template and writes the
 // response. Responds with 404 when the post is nil or has no rendered content.
-func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter) {
+func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL string) {
 	if post == nil {
 		r.log.Debug("post not found")
 		http.NotFound(w, nil)
@@ -103,8 +106,11 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter) {
 	td := templateData{
 		Title:       data.Title,
 		Description: data.Description,
+		URL:         pageURL,
 		Author:      data.Author,
 		Content:     template.HTML(data.Content), //nolint:gosec // content is markdown-rendered HTML
+		DateISO:     data.DateISO,
+		NoIndex:     data.NoIndex,
 		Plugins:     r.cfg.Plugins,
 	}
 	if !data.Date.IsZero() {
@@ -115,7 +121,7 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter) {
 }
 
 // ServePostList renders a paginated post list through the HTML template.
-func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter) {
+func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, pageURL string) {
 	items := make([]postListItem, 0, len(pr.Posts))
 	for _, p := range pr.Posts {
 		item := postListItem{
@@ -135,6 +141,7 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter) {
 
 	td := templateData{
 		Title:      "Posts",
+		URL:        pageURL,
 		IsListPage: true,
 		Posts:      items,
 		Plugins:    r.cfg.Plugins,

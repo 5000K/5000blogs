@@ -4,6 +4,8 @@ import (
 	"5000blogs/config"
 	"5000blogs/service"
 	"5000blogs/view"
+	"encoding/xml"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -28,18 +30,18 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 	r.Get("/posts/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "slug")
 		path := filepath.Join(cfg.Paths.Posts, slug+".md")
-		renderer.ServePost(repo.Get(path), w)
+		renderer.ServePost(repo.Get(path), w, cfg.SiteURL+r.URL.RequestURI())
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		homePath := filepath.Join(cfg.Paths.Posts, "home.md")
 		if home := repo.Get(homePath); home != nil {
 			if data := home.Data(); len(data.Content) > 0 {
-				renderer.ServePost(home, w)
+				renderer.ServePost(home, w, cfg.SiteURL+"/")
 				return
 			}
 		}
-		renderer.ServePostList(repo.GetPage(1), w)
+		renderer.ServePostList(repo.GetPage(1), w, cfg.SiteURL+"/posts")
 	})
 
 	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +51,7 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 				page = n
 			}
 		}
-		renderer.ServePostList(repo.GetPage(page), w)
+		renderer.ServePostList(repo.GetPage(page), w, cfg.SiteURL+r.URL.RequestURI())
 	})
 
 	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +62,39 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 		}
 		w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
 		_, _ = w.Write(data)
+	})
+
+	r.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", cfg.SiteURL)
+	})
+
+	r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
+		entries := repo.Sitemap()
+		type url struct {
+			Loc     string `xml:"loc"`
+			LastMod string `xml:"lastmod,omitempty"`
+		}
+		type urlset struct {
+			XMLName xml.Name `xml:"urlset"`
+			Xmlns   string   `xml:"xmlns,attr"`
+			URLs    []url    `xml:"url"`
+		}
+		urls := make([]url, 0, len(entries)+1)
+		urls = append(urls, url{Loc: cfg.SiteURL + "/posts"})
+		for _, e := range entries {
+			u := url{Loc: cfg.SiteURL + "/posts/" + e.Slug}
+			if !e.LastMod.IsZero() {
+				u.LastMod = e.LastMod.UTC().Format(time.RFC3339)
+			}
+			urls = append(urls, u)
+		}
+		set := urlset{Xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9", URLs: urls}
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		_, _ = w.Write([]byte(xml.Header))
+		enc := xml.NewEncoder(w)
+		enc.Indent("", "  ")
+		_ = enc.Encode(set)
 	})
 
 	_ = http.ListenAndServe(cfg.ServerAddress, r)

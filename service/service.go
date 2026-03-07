@@ -12,6 +12,7 @@ type Metadata struct {
 	Author      string    `yaml:"author"`
 	Visible     *bool     `yaml:"visible"`
 	RSSVisible  *bool     `yaml:"rss-visible"`
+	NoIndex     *bool     `yaml:"noindex"`
 
 	Raw map[string]interface{} `yaml:",inline"`
 }
@@ -31,10 +32,12 @@ type PostData struct {
 	Title       string
 	Description string
 	Date        time.Time
+	DateISO     string // RFC 3339, empty when no date
 	Author      string
 	Content     []byte // rendered HTML
 	Visible     bool
 	RSSVisible  bool
+	NoIndex     bool
 }
 
 // Data returns a PostData view of the post.
@@ -49,10 +52,16 @@ func (p *Post) Data() PostData {
 		d.Description = p.metadata.Description
 		d.Date = p.metadata.Date
 		d.Author = p.metadata.Author
+		if p.metadata.NoIndex != nil {
+			d.NoIndex = *p.metadata.NoIndex
+		}
 	}
 	// Fall back to file modification time when no date is set in metadata.
 	if d.Date.IsZero() {
 		d.Date = p.modTime
+	}
+	if !d.Date.IsZero() {
+		d.DateISO = d.Date.Format(time.RFC3339)
 	}
 	if p.contents != nil {
 		d.Content = *p.contents

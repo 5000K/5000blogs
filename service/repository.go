@@ -17,8 +17,15 @@ type PostRepository interface {
 	Count() int
 	GetPage(page int) PageResult
 	RSSFeed() ([]byte, error)
+	Sitemap() []SitemapEntry
 	Start() error
 	Stop()
+}
+
+// SitemapEntry holds the data for a single sitemap URL.
+type SitemapEntry struct {
+	Slug    string
+	LastMod time.Time
 }
 
 // MemoryPostRepository is an in-memory implementation of PostRepository.
@@ -263,4 +270,22 @@ func (r *MemoryPostRepository) remove(path string) {
 			return
 		}
 	}
+}
+
+// Sitemap returns one entry per visible post for use in sitemap.xml.
+// LastMod is the post's date when set, otherwise its file modification time.
+func (r *MemoryPostRepository) Sitemap() []SitemapEntry {
+	entries := make([]SitemapEntry, 0, len(r.posts))
+	for _, p := range r.posts {
+		if !p.IsVisible() {
+			continue
+		}
+		d := p.Data()
+		lastMod := d.Date
+		if lastMod.IsZero() {
+			lastMod = p.modTime
+		}
+		entries = append(entries, SitemapEntry{Slug: d.Slug, LastMod: lastMod})
+	}
+	return entries
 }
