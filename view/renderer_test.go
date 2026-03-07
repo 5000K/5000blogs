@@ -66,7 +66,7 @@ func TestServe404_CustomPost(t *testing.T) {
 func TestServePost_Nil(t *testing.T) {
 	r := newTestRenderer(t)
 	w := httptest.NewRecorder()
-	r.ServePost(nil, w, "http://example.com/posts/x")
+	r.ServePost(nil, w, "http://example.com/posts/x", "")
 	if w.Code != http.StatusNotFound {
 		t.Errorf("status: want 404 got %d", w.Code)
 	}
@@ -76,7 +76,7 @@ func TestServePost_Valid(t *testing.T) {
 	r := newTestRenderer(t)
 	w := httptest.NewRecorder()
 	post := service.NewPost("hello.md", &service.Metadata{Title: "Hello"}, []byte("<p>world</p>"))
-	r.ServePost(post, w, "http://example.com/posts/hello")
+	r.ServePost(post, w, "http://example.com/posts/hello", "")
 	if w.Code != http.StatusOK {
 		t.Errorf("status: want 200 got %d", w.Code)
 	}

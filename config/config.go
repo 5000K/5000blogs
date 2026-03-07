@@ -24,6 +24,18 @@ type Config struct {
 
 	TemplateURL string   `env:"TEMPLATE_URL" env-default:"" yaml:"template-url"`
 	Plugins     []string `env:"PLUGINS" yaml:"plugins"`
+
+	OGImage OGImageConfig `yaml:"og_image"`
+}
+
+type OGImageConfig struct {
+	Enabled     bool   `env:"OG_IMAGE_ENABLED" env-default:"true" yaml:"enabled"`
+	BlogName    string `env:"OG_IMAGE_BLOG_NAME" env-default:"" yaml:"blog_name"`
+	BlogIcon    string `env:"OG_IMAGE_BLOG_ICON" env-default:"" yaml:"blog_icon"` // path to PNG file
+	BgColor     string `env:"OG_IMAGE_BG_COLOR" env-default:"#111111" yaml:"bg_color"`
+	TextColor   string `env:"OG_IMAGE_TEXT_COLOR" env-default:"#f0f0f0" yaml:"text_color"`
+	SubColor    string `env:"OG_IMAGE_SUB_COLOR" env-default:"#999999" yaml:"sub_color"`
+	AccentColor string `env:"OG_IMAGE_ACCENT_COLOR" env-default:"#7eb8f7" yaml:"accent_color"`
 }
 
 func Get() (*Config, error) {

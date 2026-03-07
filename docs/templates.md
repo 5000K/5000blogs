@@ -16,6 +16,8 @@ A single value of the following shape is passed to the template on every request
 .Title        string        — page or post title
 .Description  string        — meta description; empty string if unset
 .URL          string        — canonical absolute URL of the current page
+.OGImageURL   string        — absolute URL of the generated og:image PNG; empty when og_image.enabled is false
+.OGLogoURL    string        — absolute URL of the site logo (/og-logo.png); empty when og_image.blog_icon is not configured
 .NoIndex      bool          — true when the post has `noindex: true` in its YAML metadata
 
 .IsListPage   bool          — true on /posts list pages, false on single-post pages

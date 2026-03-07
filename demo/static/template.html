@@ -17,11 +17,14 @@
   {{if .Title}}<meta property="og:title" content="{{.Title}}">{{end}}
   {{if .Description}}<meta property="og:description" content="{{.Description}}">{{end}}
   {{if .URL}}<meta property="og:url" content="{{.URL}}">{{end}}
+  {{if .OGImageURL}}<meta property="og:image" content="{{.OGImageURL}}">{{end}}
+  {{if .OGLogoURL}}<meta property="og:logo" content="{{.OGLogoURL}}">{{end}}
 
   <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="{{if .OGImageURL}}summary_large_image{{else}}summary{{end}}">
   {{if .Title}}<meta name="twitter:title" content="{{.Title}}">{{end}}
   {{if .Description}}<meta name="twitter:description" content="{{.Description}}">{{end}}
+  {{if .OGImageURL}}<meta name="twitter:image" content="{{.OGImageURL}}">{{end}}
 
   {{if not .IsListPage}}
   <!-- JSON-LD structured data -->

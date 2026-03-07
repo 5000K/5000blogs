@@ -18,6 +18,8 @@ type templateData struct {
 	Title       string
 	Description string
 	URL         string // canonical page URL
+	OGImageURL  string // absolute URL for og:image; empty when not available
+	OGLogoURL   string // absolute URL for og:logo; empty when not configured
 	Plugins     []string
 
 	// Post view
@@ -87,12 +89,21 @@ func (r *Renderer) reload() error {
 	return nil
 }
 
+// ogLogoURL returns the absolute URL of the logo if a blog_icon is configured.
+func (r *Renderer) ogLogoURL() string {
+	if r.cfg.OGImage.BlogIcon == "" {
+		return ""
+	}
+	return r.cfg.SiteURL + "/og-logo.png"
+}
+
 // Serve404 renders a 404 page with HTTP 404 status. If post is provided and
 // has content it is rendered; otherwise a placeholder title is used.
 func (r *Renderer) Serve404(post *service.Post, w http.ResponseWriter) {
 	td := templateData{
-		Title:   "404 - Page Not Found",
-		Plugins: r.cfg.Plugins,
+		Title:     "404 - Page Not Found",
+		OGLogoURL: r.ogLogoURL(),
+		Plugins:   r.cfg.Plugins,
 	}
 	if post != nil {
 		data := post.Data()
@@ -108,7 +119,8 @@ func (r *Renderer) Serve404(post *service.Post, w http.ResponseWriter) {
 
 // ServePost renders the given post through the HTML template and writes the
 // response. Responds with 404 when the post is nil or has no rendered content.
-func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL string) {
+// ogImageURL is the absolute URL of the og:image for this post; pass empty string to omit.
+func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL string, ogImageURL string) {
 	if post == nil {
 		r.log.Debug("post not found")
 		r.Serve404(nil, w)
@@ -126,6 +138,8 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL 
 		Title:       data.Title,
 		Description: data.Description,
 		URL:         pageURL,
+		OGImageURL:  ogImageURL,
+		OGLogoURL:   r.ogLogoURL(),
 		Author:      data.Author,
 		Content:     template.HTML(data.Content), //nolint:gosec // content is markdown-rendered HTML
 		DateISO:     data.DateISO,
@@ -161,6 +175,7 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, p
 	td := templateData{
 		Title:      "Posts",
 		URL:        pageURL,
+		OGLogoURL:  r.ogLogoURL(),
 		IsListPage: true,
 		Posts:      items,
 		Plugins:    r.cfg.Plugins,

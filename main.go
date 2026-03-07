@@ -39,5 +39,13 @@ func main() {
 		log.Fatalf("failed to create renderer: %v", err)
 	}
 
-	incoming.Serve(cfg, repo, renderer)
+	var ogGen *service.OGImageGenerator
+	if cfg.OGImage.Enabled {
+		ogGen, err = service.NewOGImageGenerator(cfg.OGImage)
+		if err != nil {
+			log.Fatalf("failed to create og:image generator: %v", err)
+		}
+	}
+
+	incoming.Serve(cfg, repo, renderer, ogGen)
 }
