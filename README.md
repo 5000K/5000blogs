@@ -130,3 +130,13 @@ There are a few posts that are kind of *special*. They are called *well-known po
  - footer.md - The content of the footer shown on every page.
 
 There are defaults for these pages, but if you want to fill them with your own content, just add a file with the correct name in your posts folder.
+
+# Roadmap
+ - Better image support
+ - CLI-version allowing pre-rendering a full blog into a static webpage
+ - Write additional templates to cater towards different styles of blogs
+ - Rework post indexing to be more performant (probably by utilizing bleve)
+ - Write a few basic client-plugins:
+   - Make table-columns sortable
+   - Mermaid-support using codeblocks
+   - Code-highlighting
