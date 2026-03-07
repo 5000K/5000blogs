@@ -8,13 +8,7 @@
 
 ## Testing gaps
 
-- `MemoryPostRepository`: no tests for `rescan`, `GetPage`, `RSSFeed` (cache invalidation), `Sitemap`.
-- `Post.Data()`, `IsVisible()`, `IsRSSVisible()`, `slugFromPath`: no unit tests.
-- `FileSystemSource`: no tests (list, read, stat, write).
-- `service/setup.go` (`RunInitialSetup`, `ensureTemplate`, `extractZip`): no tests.
-- `incoming/api.go`: no HTTP handler tests for list, get, search, stats.
 - `incoming/server.go`: no integration tests for routing, 404 handling, pagination, feed, sitemap.
-- `buildFeed` / RSS sorting / item trimming: no tests.
 
 ## Performance / reliability
 
