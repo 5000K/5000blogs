@@ -10,4 +10,6 @@
    - This will be helpful for more complex templates. They can hook into the API to show additonal things.
    - For now, the following routes should be available under the prefix /api/v1:
      - GET /posts: returns a simple array of all posts by name, without any kind of sorting.
-     - GET /post/{name} : returns all metadata of the post
+     - GET /post/{name}: returns all metadata of the post
+     - GET /posts/search?q={query}: returns posts whose title or description contain the query string (case-insensitive); useful for client-side search widgets in templates
+     - GET /stats: returns aggregate blog stats (total visible post count, date of latest post); useful for hero/dashboard sections in templates
