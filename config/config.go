@@ -23,7 +23,7 @@ type Config struct {
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`
 	RSSFullContent  bool   `env:"RSS_FULL_CONTENT" env-default:"false" yaml:"rss_full_content"`
 
-	Plugins []string `env:"PLUGINS" yaml:"plugins"`
+	Plugins []string `yaml:"plugins"`
 
 	OGImage OGImageConfig `yaml:"og_image"`
 }
