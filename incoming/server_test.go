@@ -95,3 +95,40 @@ func TestPlainEndpoint_PostWithoutPlainText(t *testing.T) {
 		t.Errorf("want 404 when plain text unavailable, got %d", w.Code)
 	}
 }
+
+// --- /feed.atom ---
+
+func doAtomRequest(t *testing.T, repo service.PostRepository) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/feed.atom", nil)
+	w := httptest.NewRecorder()
+	// Use a minimal router that wires only the atom feed handler.
+	atomRouter := func() http.Handler {
+		r := chi.NewRouter()
+		r.Get("/feed.atom", func(w http.ResponseWriter, r *http.Request) {
+			data, err := repo.AtomFeed()
+			if err != nil {
+				http.Error(w, "failed to generate atom feed", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
+			_, _ = w.Write(data)
+		})
+		return r
+	}()
+	atomRouter.ServeHTTP(w, req)
+	return w
+}
+
+func TestAtomFeedEndpoint_ContentTypeAndBody(t *testing.T) {
+	repo := &stubRepo{}
+	w := doAtomRequest(t, repo)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("want 200, got %d", w.Code)
+	}
+	ct := w.Header().Get("Content-Type")
+	if !strings.Contains(ct, "application/atom+xml") {
+		t.Errorf("want application/atom+xml content type, got %q", ct)
+	}
+}

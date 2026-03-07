@@ -21,6 +21,7 @@ type Config struct {
 	SiteURL         string `env:"SITE_URL" env-default:"http://localhost:8080" yaml:"site_url"`
 	FeedTitle       string `env:"FEED_TITLE" env-default:"Blog" yaml:"feed_title"`
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`
+	RSSFullContent  bool   `env:"RSS_FULL_CONTENT" env-default:"false" yaml:"rss_full_content"`
 
 	Plugins []string `env:"PLUGINS" yaml:"plugins"`
 

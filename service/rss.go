@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -18,12 +19,13 @@ func (t rssTime) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 }
 
 type rssItem struct {
-	XMLName     xml.Name `xml:"item"`
-	Title       string   `xml:"title"`
-	Link        string   `xml:"link"`
-	Description string   `xml:"description"`
-	PubDate     rssTime  `xml:"pubDate"`
-	GUID        string   `xml:"guid"`
+	XMLName        xml.Name `xml:"item"`
+	Title          string   `xml:"title"`
+	Link           string   `xml:"link"`
+	Description    string   `xml:"description"`
+	PubDate        rssTime  `xml:"pubDate"`
+	GUID           string   `xml:"guid"`
+	ContentEncoded string   `xml:",innerxml"`
 }
 
 type rssChannel struct {
@@ -36,9 +38,10 @@ type rssChannel struct {
 }
 
 type rssFeed struct {
-	XMLName xml.Name `xml:"rss"`
-	Version string   `xml:"version,attr"`
-	Channel rssChannel
+	XMLName   xml.Name `xml:"rss"`
+	Version   string   `xml:"version,attr"`
+	ContentNS string   `xml:"xmlns:content,attr,omitempty"`
+	Channel   rssChannel
 }
 
 // RSSFeed returns a RSS 2.0 feed document, cached (invalidated on rescan changes).
@@ -102,6 +105,11 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 			Description: d.Description,
 			GUID:        link,
 		}
+		if r.conf.RSSFullContent {
+			if plain := p.PlainText(); plain != nil {
+				item.ContentEncoded = "<content:encoded><![CDATA[" + escapeCDATA(string(plain)) + "]]></content:encoded>"
+			}
+		}
 		if !d.Date.IsZero() {
 			item.PubDate = rssTime{d.Date}
 		}
@@ -118,10 +126,19 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 			Items:         items,
 		},
 	}
+	if r.conf.RSSFullContent {
+		feed.ContentNS = "http://purl.org/rss/1.0/modules/content/"
+	}
 
 	out, err := xml.MarshalIndent(feed, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("repository.RSSFeed: marshal: %w", err)
 	}
 	return append([]byte(xml.Header), out...), nil
+}
+
+// escapeCDATA escapes the CDATA end sequence "]]>" so the content can be
+// safely embedded inside a <![CDATA[...]]> section.
+func escapeCDATA(s string) string {
+	return strings.ReplaceAll(s, "]]>", "]]]]><![CDATA[>")
 }

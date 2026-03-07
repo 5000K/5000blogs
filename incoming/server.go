@@ -129,6 +129,16 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		_, _ = w.Write(data)
 	})
 
+	r.Get("/feed.atom", func(w http.ResponseWriter, r *http.Request) {
+		data, err := repo.AtomFeed()
+		if err != nil {
+			http.Error(w, "failed to generate atom feed", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
+		_, _ = w.Write(data)
+	})
+
 	r.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", cfg.SiteURL)

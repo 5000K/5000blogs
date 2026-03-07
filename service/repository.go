@@ -18,6 +18,7 @@ type PostRepository interface {
 	Count() int
 	GetPage(page int) PageResult
 	RSSFeed() ([]byte, error)
+	AtomFeed() ([]byte, error)
 	Sitemap() []SitemapEntry
 	Start() error
 	Stop()
@@ -46,6 +47,9 @@ type MemoryPostRepository struct {
 
 	feedMu    sync.RWMutex
 	feedCache []byte
+
+	atomFeedMu    sync.RWMutex
+	atomFeedCache []byte
 }
 
 func NewMemoryPostRepository(conf *config.Config, source PostSource, converter Converter, logger *slog.Logger) *MemoryPostRepository {
@@ -200,6 +204,9 @@ func (r *MemoryPostRepository) invalidateFeedCache() {
 	r.feedMu.Lock()
 	r.feedCache = nil
 	r.feedMu.Unlock()
+	r.atomFeedMu.Lock()
+	r.atomFeedCache = nil
+	r.atomFeedMu.Unlock()
 }
 
 func (r *MemoryPostRepository) rescan() {
