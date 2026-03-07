@@ -55,6 +55,9 @@ nav_links:
 
 All other defaults should work for the vast majority of blogs, but you can take a look at everything you can configure [here](./docs/config.md).
 
+<img width="931" height="602" alt="image" src="https://github.com/user-attachments/assets/4318ea7e-b160-4b03-9411-ec699383c9ad" />
+
+
 # Writing posts
 
 A post is a single markdown file dropped into the posts directory. The filename becomes the URL slug: `my-post.md` is served at `/posts/my-post`.
