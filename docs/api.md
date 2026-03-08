@@ -41,6 +41,16 @@ Returns **visible** posts whose `title` or `description` contain `query` (case-i
 
 `description` is omitted when empty.
 
+## GET /api/v1/search?q={query}
+
+Full-text search across all indexed post content (title, description, body). Returns a JSON array of matching slugs ordered by relevance. Returns an empty array for an empty query. Hidden posts are excluded.
+
+```json
+["introduction", "writing-posts"]
+```
+
+This endpoint leverages the bleve index when `BlevePostRepository` is in use, falling back to a plain-text scan on `MemoryPostRepository`.
+
 ## GET /api/v1/stats
 
 Returns aggregate stats for visible posts only.

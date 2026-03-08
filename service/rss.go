@@ -1,6 +1,7 @@
 package service
 
 import (
+	"5000blogs/config"
 	"encoding/xml"
 	"fmt"
 	"sort"
@@ -67,13 +68,7 @@ func (r *MemoryPostRepository) RSSFeed() ([]byte, error) {
 
 // buildFeed constructs the RSS 2.0 document without consulting the cache.
 func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
-	size := r.conf.PageSize
-	if size <= 0 {
-		size = 10
-	}
-
 	r.postsMu.RLock()
-	// Collect RSS-visible posts, sort by date descending.
 	filtered := make([]*Post, 0, len(r.posts))
 	for _, p := range r.posts {
 		if p.IsRSSVisible() {
@@ -81,6 +76,17 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 		}
 	}
 	r.postsMu.RUnlock()
+	return buildRSSXML(r.conf, filtered)
+}
+
+// buildRSSXML constructs a RSS 2.0 feed document from the given posts.
+// posts need not be pre-sorted; sorting and truncation are applied internally.
+func buildRSSXML(conf *config.Config, posts []*Post) ([]byte, error) {
+	filtered := posts
+	size := conf.PageSize
+	if size <= 0 {
+		size = 10
+	}
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
 		if filtered[i].metadata != nil {
@@ -98,14 +104,14 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 	items := make([]rssItem, 0, len(filtered))
 	for _, p := range filtered {
 		d := p.Data()
-		link := fmt.Sprintf("%s/posts/%s", r.conf.SiteURL, d.Slug)
+		link := fmt.Sprintf("%s/posts/%s", conf.SiteURL, d.Slug)
 		item := rssItem{
 			Title:       d.Title,
 			Link:        link,
 			Description: d.Description,
 			GUID:        link,
 		}
-		if r.conf.RSSFullContent {
+		if conf.RSSFullContent {
 			if plain := p.PlainText(); plain != nil {
 				item.ContentEncoded = "<content:encoded><![CDATA[" + escapeCDATA(string(plain)) + "]]></content:encoded>"
 			}
@@ -119,14 +125,14 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 	feed := rssFeed{
 		Version: "2.0",
 		Channel: rssChannel{
-			Title:         r.conf.BlogName,
-			Link:          r.conf.SiteURL,
-			Description:   r.conf.FeedDescription,
+			Title:         conf.BlogName,
+			Link:          conf.SiteURL,
+			Description:   conf.FeedDescription,
 			LastBuildDate: rssTime{time.Now()},
 			Items:         items,
 		},
 	}
-	if r.conf.RSSFullContent {
+	if conf.RSSFullContent {
 		feed.ContentNS = "http://purl.org/rss/1.0/modules/content/"
 	}
 

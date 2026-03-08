@@ -64,6 +64,7 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 var reservedPaths = map[string]bool{
 	"/":            true,
 	"/posts":       true,
+	"/search":      true,
 	"/feed.xml":    true,
 	"/feed.atom":   true,
 	"/health":      true,
@@ -232,6 +233,16 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 			tags = strings.Split(t, ",")
 		}
 		renderer.ServePostList(repo.GetPage(page, tags), w, cfg.SiteURL+r.URL.RequestURI())
+	})
+
+	r.Get("/search", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query().Get("q")
+		if q == "" {
+			renderer.ServePostList(repo.GetPage(1, nil), w, cfg.SiteURL+"/posts")
+			return
+		}
+		results := repo.Search(q)
+		renderer.ServeSearchResults(q, results, w, cfg.SiteURL+r.URL.RequestURI())
 	})
 
 	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {

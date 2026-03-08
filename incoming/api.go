@@ -16,6 +16,7 @@ func apiRouter(repo service.PostRepository) chi.Router {
 	r.Get("/posts/search", apiSearchPosts(repo))
 	r.Get("/posts/tags", apiListTags(repo))
 	r.Get("/post/{name}", apiGetPost(repo))
+	r.Get("/search", apiSearch(repo))
 	r.Get("/stats", apiStats(repo))
 	return r
 }
@@ -78,6 +79,19 @@ func apiGetPost(repo service.PostRepository) http.HandlerFunc {
 		}
 		d := post.Data()
 		writeJSON(w, http.StatusOK, toPostMeta(d))
+	}
+}
+
+// GET /api/v1/search?q={query} — full-text search; returns matching slugs.
+func apiSearch(repo service.PostRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query().Get("q")
+		results := repo.Search(q)
+		slugs := make([]string, 0, len(results))
+		for _, s := range results {
+			slugs = append(slugs, s.Slug)
+		}
+		writeJSON(w, http.StatusOK, slugs)
 	}
 }
 

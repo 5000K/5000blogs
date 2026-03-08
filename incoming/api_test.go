@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -42,6 +43,24 @@ func (r *stubRepo) LastModified() time.Time                  { return time.Time{
 func (r *stubRepo) Sitemap() []service.SitemapEntry          { return nil }
 func (r *stubRepo) Start() error                             { return nil }
 func (r *stubRepo) Stop()                                    {}
+func (r *stubRepo) Search(query string) []service.PostSummary {
+	if query == "" {
+		return []service.PostSummary{}
+	}
+	q := strings.ToLower(query)
+	var out []service.PostSummary
+	for _, p := range r.posts {
+		if !p.IsVisible() {
+			continue
+		}
+		d := p.Data()
+		if strings.Contains(strings.ToLower(d.Title), q) ||
+			strings.Contains(strings.ToLower(d.Description), q) {
+			out = append(out, service.PostSummary{Slug: d.Slug, Title: d.Title, Description: d.Description})
+		}
+	}
+	return out
+}
 
 func newPost(slug, title, description string) *service.Post {
 	return service.NewPost(slug+".md", &service.Metadata{
@@ -365,5 +384,56 @@ func TestAPIListPosts_TagFilter(t *testing.T) {
 		if s == "beta" {
 			t.Error("'beta' (rust only) should be excluded from 'go' filter")
 		}
+	}
+}
+
+// --- GET /search ---
+
+func TestAPISearch_ReturnsMatchingSlugs(t *testing.T) {
+	repo := &stubRepo{posts: []*service.Post{
+		newPost("hello", "Hello World", ""),
+		newPost("goodbye", "Goodbye World", ""),
+		newPost("other", "Unrelated", ""),
+	}}
+	w := doRequest(t, repo, http.MethodGet, "/search?q=world")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", w.Code)
+	}
+	var slugs []string
+	_ = json.Unmarshal(w.Body.Bytes(), &slugs)
+	if len(slugs) != 2 {
+		t.Errorf("want 2 results for 'world', got %d: %v", len(slugs), slugs)
+	}
+	for _, s := range slugs {
+		if s == "other" {
+			t.Error("'other' should not appear in results")
+		}
+	}
+}
+
+func TestAPISearch_EmptyQueryReturnsEmptySlice(t *testing.T) {
+	repo := &stubRepo{posts: []*service.Post{
+		newPost("a", "Alpha", ""),
+	}}
+	w := doRequest(t, repo, http.MethodGet, "/search?q=")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", w.Code)
+	}
+	var slugs []string
+	_ = json.Unmarshal(w.Body.Bytes(), &slugs)
+	if len(slugs) != 0 {
+		t.Errorf("empty query should return no results, got %v", slugs)
+	}
+}
+
+func TestAPISearch_ContentType(t *testing.T) {
+	repo := &stubRepo{}
+	w := doRequest(t, repo, http.MethodGet, "/search?q=anything")
+
+	ct := w.Header().Get("Content-Type")
+	if ct != "application/json; charset=utf-8" {
+		t.Errorf("Content-Type: got %q", ct)
 	}
 }

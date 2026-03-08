@@ -1,6 +1,7 @@
 package service
 
 import (
+	"5000blogs/config"
 	"encoding/xml"
 	"fmt"
 	"sort"
@@ -58,11 +59,6 @@ func (r *MemoryPostRepository) AtomFeed() ([]byte, error) {
 
 // buildAtomFeed constructs the Atom 1.0 document without consulting the cache.
 func (r *MemoryPostRepository) buildAtomFeed() ([]byte, error) {
-	size := r.conf.PageSize
-	if size <= 0 {
-		size = 10
-	}
-
 	r.postsMu.RLock()
 	filtered := make([]*Post, 0, len(r.posts))
 	for _, p := range r.posts {
@@ -71,6 +67,17 @@ func (r *MemoryPostRepository) buildAtomFeed() ([]byte, error) {
 		}
 	}
 	r.postsMu.RUnlock()
+	return buildAtomXML(r.conf, filtered)
+}
+
+// buildAtomXML constructs an Atom 1.0 feed document from the given posts.
+// posts need not be pre-sorted; sorting and truncation are applied internally.
+func buildAtomXML(conf *config.Config, posts []*Post) ([]byte, error) {
+	filtered := posts
+	size := conf.PageSize
+	if size <= 0 {
+		size = 10
+	}
 
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
@@ -90,7 +97,7 @@ func (r *MemoryPostRepository) buildAtomFeed() ([]byte, error) {
 	entries := make([]atomEntry, 0, len(filtered))
 	for _, p := range filtered {
 		d := p.Data()
-		link := fmt.Sprintf("%s/posts/%s", r.conf.SiteURL, d.Slug)
+		link := fmt.Sprintf("%s/posts/%s", conf.SiteURL, d.Slug)
 		entry := atomEntry{
 			Title:   d.Title,
 			Link:    atomLink{Href: link, Rel: "alternate", Type: "text/html"},
@@ -108,16 +115,16 @@ func (r *MemoryPostRepository) buildAtomFeed() ([]byte, error) {
 		entries = append(entries, entry)
 	}
 
-	selfURL := fmt.Sprintf("%s/feed.atom", r.conf.SiteURL)
+	selfURL := fmt.Sprintf("%s/feed.atom", conf.SiteURL)
 	feed := atomFeedDoc{
 		Xmlns: "http://www.w3.org/2005/Atom",
-		Title: r.conf.BlogName,
+		Title: conf.BlogName,
 		Links: []atomLink{
-			{Href: r.conf.SiteURL, Rel: "alternate", Type: "text/html"},
+			{Href: conf.SiteURL, Rel: "alternate", Type: "text/html"},
 			{Href: selfURL, Rel: "self", Type: "application/atom+xml"},
 		},
 		Updated: feedUpdated.UTC().Format(time.RFC3339),
-		ID:      r.conf.SiteURL + "/",
+		ID:      conf.SiteURL + "/",
 		Entries: entries,
 	}
 

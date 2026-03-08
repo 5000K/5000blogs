@@ -41,10 +41,11 @@ type templateData struct {
 	FooterContent template.HTML
 
 	// List view
-	IsListPage bool
-	FilterTags []string
-	Posts      []postListItem
-	Pagination paginationData
+	IsListPage  bool
+	SearchQuery string // non-empty when rendering search results
+	FilterTags  []string
+	Posts       []postListItem
+	Pagination  paginationData
 }
 
 type postListItem struct {
@@ -193,6 +194,42 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL 
 		td.DateStr = data.Date.Format("January 2, 2006")
 	}
 
+	r.execute(w, td)
+}
+
+// ServeSearchResults renders a list of search results through the HTML template.
+// It reuses the list-page layout; SearchQuery is exposed to the template.
+func (r *Renderer) ServeSearchResults(query string, results []service.PostSummary, w http.ResponseWriter, pageURL string) {
+	items := make([]postListItem, 0, len(results))
+	for _, p := range results {
+		item := postListItem{
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Description: p.Description,
+			Author:      p.Author,
+			Tags:        p.Tags,
+		}
+		if !p.Date.IsZero() {
+			item.DateStr = p.Date.Format("January 2, 2006")
+		}
+		if item.Title == "" {
+			item.Title = p.Slug
+		}
+		items = append(items, item)
+	}
+
+	td := templateData{
+		Title:         "Search: " + query,
+		URL:           pageURL,
+		OGLogoURL:     r.ogLogoURL(),
+		IsListPage:    true,
+		SearchQuery:   query,
+		Posts:         items,
+		Plugins:       r.cfg.Plugins,
+		BlogName:      r.cfg.BlogName,
+		NavLinks:      r.navLinks(),
+		FooterContent: r.footer(),
+	}
 	r.execute(w, td)
 }
 

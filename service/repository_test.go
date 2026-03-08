@@ -528,3 +528,98 @@ func TestPostSummary_IncludesTags(t *testing.T) {
 		t.Errorf("want 2 tags in PostSummary, got %v", page.Posts[0].Tags)
 	}
 }
+
+// --- Search ---
+
+func TestSearch_MatchesTitle(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/go.md":   []byte("---\ntitle: Learning Go\n---\nsome content"),
+		"posts/rust.md": []byte("---\ntitle: Learning Rust\n---\nother content"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("rust")
+	if len(results) != 1 {
+		t.Fatalf("want 1 result, got %d", len(results))
+	}
+	if results[0].Slug != "rust" {
+		t.Errorf("want slug 'rust', got %q", results[0].Slug)
+	}
+}
+
+func TestSearch_MatchesPlainTextBody(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/a.md": []byte("---\ntitle: A\n---\nThis post mentions gophers"),
+		"posts/b.md": []byte("---\ntitle: B\n---\nNothing interesting here"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("gophers")
+	if len(results) != 1 {
+		t.Fatalf("want 1 result, got %d", len(results))
+	}
+	if results[0].Slug != "a" {
+		t.Errorf("want slug 'a', got %q", results[0].Slug)
+	}
+}
+
+func TestSearch_CaseInsensitive(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/a.md": []byte("---\ntitle: Hello World\n---\n# body"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("HELLO")
+	if len(results) != 1 {
+		t.Fatalf("want 1 result, got %d", len(results))
+	}
+}
+
+func TestSearch_EmptyQueryReturnsEmpty(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/a.md": []byte("---\ntitle: A\n---\n# body"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("")
+	if len(results) != 0 {
+		t.Errorf("empty query should return no results, got %d", len(results))
+	}
+}
+
+func TestSearch_ExcludesHiddenPosts(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/visible.md": []byte("---\ntitle: Visible Post\n---\n# body"),
+		"posts/hidden.md":  []byte("---\ntitle: Hidden Post\nvisible: false\n---\n# body"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("post")
+	if len(results) != 1 {
+		t.Fatalf("want 1 result (only visible), got %d", len(results))
+	}
+	if results[0].Slug != "visible" {
+		t.Errorf("want slug 'visible', got %q", results[0].Slug)
+	}
+}
+
+func TestSearch_NoMatchReturnsEmptySlice(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/a.md": []byte("---\ntitle: A\n---\n# body"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("zzznomatch")
+	if results == nil {
+		t.Error("Search should return empty slice, not nil")
+	}
+	if len(results) != 0 {
+		t.Errorf("want 0 results, got %d", len(results))
+	}
+}
