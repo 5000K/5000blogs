@@ -8,9 +8,11 @@ It is intended to be
  - Easy to host - up and running without in-depth configuring
  - Minimal - only includes what you need to host a blog driven by a bunch of markdown-files
  - Modern - uses features of the modern web (e.g. social media previews, intelligent caching, automatic atom and rss feeds)
- - Customizable - uses a powerful template to allow you to make your blog look however you like. Extend, script and style your blog to fit what you want.
+ - Customizable - the powerful template allows you to make your blog look however you like. Extend, script and style your blog to fit what you want.
 
 # Run a demo
+
+> assumes a terminal opened within the cloned repository, with go or docker set up
 
 ## Run the demo locally
 ```bash
@@ -21,7 +23,6 @@ CONFIG_PATH=./config.demo.yml go run .
 ```bash
 docker compose up --build
 ```
-
 
 # Deploy your own blog
 5000blogs does not have any runtime dependencies, so you could also just use a binary build. But it is highly recommended to use docker-compose for this, to keep things clean and reproducible.
@@ -54,12 +55,58 @@ nav_links:
 
 All other defaults should work for the vast majority of blogs, but you can take a look at everything you can configure [here](./docs/config.md).
 
+## Post sources
+
+By default, 5000blogs reads posts from the `paths.posts` directory (or the `POSTS_PATH` env var).
+
+You can instead — or in combination — pull posts from one or more **sources** declared in your config. Sources are layered in order: if two sources expose a post with the same slug, the first one wins.
+
+**Posts from a local directory:**
+```yml
+sources:
+  - type: filesystem
+    path: ./posts
+```
+
+**Posts from a public git repository** (cloned in-memory, no checkout written to disk):
+```yml
+sources:
+  - type: git
+    url: https://github.com/yourname/blog-posts
+    dir: posts  # subdirectory within the repo; omit for repo root
+```
+
+**Private repo via HTTPS token** (e.g. a GitHub personal access token):
+```yml
+sources:
+  - type: git
+    url: https://github.com/yourname/private-blog
+    auth_token: ghp_yourpersonalaccesstoken
+```
+
+**Private repo via SSH key:**
+```yml
+sources:
+  - type: git
+    url: git@github.com:yourname/private-blog.git
+    ssh_key_path: /home/user/.ssh/id_ed25519
+    ssh_key_passphrase: optional-passphrase  # omit if key is unencrypted
+```
+
+The git source is re-pulled on every rescan, so new commits are picked up automatically without restarting 5000blogs.
+
 <img width="931" height="602" alt="image" src="https://github.com/user-attachments/assets/4318ea7e-b160-4b03-9411-ec699383c9ad" />
 
 
 # Writing posts
 
 A post is a single markdown file dropped into the posts directory. The filename becomes the URL slug: `my-post.md` is served at `/posts/my-post`.
+
+## Slugs
+
+The slug is always derived from the **filename** only — the directory path is ignored. `posts/hello-world.md` and `subdir/hello-world.md` both produce the slug `hello-world` and are served at `/posts/hello-world`.
+
+When multiple sources are configured, the first source that provides a given slug wins. This lets you override individual posts from a git source by placing a file with the same name in a local filesystem source listed earlier.
 
 Simply add a new file in your posts folder ending in `.md`. 5000blogs rescans your folder every minute, so it will automatically update changes and detect new posts without you needing to restart it!
 
