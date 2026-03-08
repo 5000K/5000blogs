@@ -1,0 +1,117 @@
+<!-- A raw template, for you to style. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>{{if .Title}}{{.Title}}{{else}}Blog{{end}}</title>
+  {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
+  {{if .NoIndex}}<meta name="robots" content="noindex, follow">{{end}}
+  {{if .Author}}<meta name="author" content="{{.Author}}">{{end}}
+
+  {{if .URL}}<link rel="canonical" href="{{.URL}}">{{end}}
+  {{if .OGLogoURL}}<link rel="icon" type="image/png" href="/favicon.ico">{{end}}
+
+  <meta property="og:type" content="{{if .IsListPage}}website{{else}}article{{end}}">
+  {{if .Title}}<meta property="og:title" content="{{.Title}}">{{end}}
+  {{if .Description}}<meta property="og:description" content="{{.Description}}">{{end}}
+  {{if .URL}}<meta property="og:url" content="{{.URL}}">{{end}}
+  {{if .OGImageURL}}<meta property="og:image" content="{{.OGImageURL}}">{{end}}
+  {{if .OGLogoURL}}<meta property="og:logo" content="{{.OGLogoURL}}">{{end}}
+
+  <meta name="twitter:card" content="{{if .OGImageURL}}summary_large_image{{else}}summary{{end}}">
+  {{if .Title}}<meta name="twitter:title" content="{{.Title}}">{{end}}
+  {{if .Description}}<meta name="twitter:description" content="{{.Description}}">{{end}}
+  {{if .OGImageURL}}<meta name="twitter:image" content="{{.OGImageURL}}">{{end}}
+
+  {{if not .IsListPage}}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    {{if .Title}}"headline": {{.Title | js}},{{end}}
+    {{if .Description}}"description": {{.Description | js}},{{end}}
+    {{if .DateISO}}"datePublished": "{{.DateISO}}",{{end}}
+    {{if .Author}}"author": {"@type": "Person", "name": {{.Author | js}}},{{end}}
+    "url": "{{.URL}}"
+  }
+  </script>
+  {{end}}
+
+  <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/feed.xml">
+</head>
+<body>
+
+  <header>
+    <a href="/">{{.BlogName}}</a>
+    <nav>
+      {{range .NavLinks}}<a href="{{.URL}}">{{.Name}}</a>{{end}}
+    </nav>
+  </header>
+
+  <main>
+    <article>
+
+      {{if .IsListPage}}
+
+      <h1>{{if .SearchQuery}}Search{{else}}Posts{{end}}{{if .FilterTags}} — tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}{{end}}</h1>
+
+      <form action="/search" method="GET">
+        <input type="search" name="q" value="{{.SearchQuery}}" placeholder="Search posts…">
+        <button type="submit">Search</button>
+      </form>
+
+      {{if .SearchQuery}}<p>Results for <em>{{.SearchQuery}}</em></p>{{end}}
+
+      {{if .Posts}}
+      <ul>
+        {{range .Posts}}
+        <li>
+          <a href="/posts/{{.Slug}}">{{.Title}}</a>
+          {{if .DateStr}}<time>{{.DateStr}}</time>{{end}}
+          {{if .Author}}<p>by {{.Author}}</p>{{end}}
+          {{if .Description}}<p>{{.Description}}</p>{{end}}
+          {{if .Tags}}{{range .Tags}}<a href="/posts?tags={{.}}">{{.}}</a>{{end}}{{end}}
+        </li>
+        {{end}}
+      </ul>
+      {{else}}
+      <p>No posts yet.</p>
+      {{end}}
+
+      {{if or .Pagination.HasPrev .Pagination.HasNext}}
+      <nav>
+        {{if .Pagination.HasPrev}}<a href="/posts?page={{.Pagination.PrevPage}}{{.Pagination.TagParam}}">← newer</a>{{end}}
+        <span>page {{.Pagination.Page}} / {{.Pagination.TotalPages}}</span>
+        {{if .Pagination.HasNext}}<a href="/posts?page={{.Pagination.NextPage}}{{.Pagination.TagParam}}">older →</a>{{end}}
+      </nav>
+      {{end}}
+
+      {{else}}
+
+      {{if .Title}}<h1>{{.Title}}</h1>{{end}}
+      {{if .DateStr}}<time datetime="{{.DateISO}}">{{.DateStr}}</time>{{end}}
+      {{if .Author}}<p>by {{.Author}}</p>{{end}}
+
+      <div class="post-body">{{.Content}}</div>
+
+      {{if .Tags}}
+      <div>
+        <span>Tags</span>
+        {{range .Tags}}<a href="/posts?tags={{.}}">{{.}}</a>{{end}}
+      </div>
+      {{end}}
+
+      {{end}}
+    </article>
+  </main>
+
+  {{if .FooterContent}}
+  <footer class="post-body">{{.FooterContent}}</footer>
+  {{end}}
+
+  {{range .Plugins}}<script src="{{.}}"></script>{{end}}
+
+</body>
+</html>
