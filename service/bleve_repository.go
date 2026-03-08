@@ -291,6 +291,48 @@ func (r *BlevePostRepository) buildPageRequests(tags []string, size int) (*bleve
 	return countReq, pageReq
 }
 
+// Search returns summaries of visible posts matching query via full-text search.
+// Returns an empty slice when query is empty.
+func (r *BlevePostRepository) Search(query string) []PostSummary {
+	if query == "" {
+		return []PostSummary{}
+	}
+
+	visQ := bleve.NewTermQuery("true")
+	visQ.SetField("visible")
+	matchQ := bleve.NewMatchQuery(query)
+	conjQ := bleve.NewConjunctionQuery(visQ, matchQ)
+
+	req := bleve.NewSearchRequestOptions(conjQ, 200, 0, false)
+
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+
+	result, err := r.index.Search(req)
+	if err != nil {
+		r.log.Error("bleve search failed", "err", err)
+		return []PostSummary{}
+	}
+
+	summaries := make([]PostSummary, 0, len(result.Hits))
+	for _, hit := range result.Hits {
+		p, ok := r.posts[hit.ID]
+		if !ok {
+			continue
+		}
+		d := p.Data()
+		summaries = append(summaries, PostSummary{
+			Slug:        d.Slug,
+			Title:       d.Title,
+			Description: d.Description,
+			Date:        d.Date,
+			Author:      d.Author,
+			Tags:        d.Tags,
+		})
+	}
+	return summaries
+}
+
 // AllTags returns a sorted, deduplicated list of all tags across visible posts.
 func (r *BlevePostRepository) AllTags() []string {
 	r.postsMu.RLock()

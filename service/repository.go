@@ -19,6 +19,7 @@ type PostRepository interface {
 	Count() int
 	GetPage(page int, tags []string) PageResult
 	AllTags() []string
+	Search(query string) []PostSummary
 	RSSFeed() ([]byte, error)
 	AtomFeed() ([]byte, error)
 	LastModified() time.Time
@@ -216,6 +217,44 @@ func (r *MemoryPostRepository) GetPage(page int, tags []string) PageResult {
 		FilterTags: tags,
 		TagParam:   tagParam,
 	}
+}
+
+// Search returns summaries of all visible posts whose title, description, or
+// plain-text body contains query (case-insensitive). No pagination is applied.
+func (r *MemoryPostRepository) Search(query string) []PostSummary {
+	if query == "" {
+		return []PostSummary{}
+	}
+	q := strings.ToLower(query)
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	var results []PostSummary
+	for _, p := range r.posts {
+		if !p.IsVisible() {
+			continue
+		}
+		d := p.Data()
+		plain := ""
+		if pt := p.PlainText(); pt != nil {
+			plain = strings.ToLower(string(pt))
+		}
+		if strings.Contains(strings.ToLower(d.Title), q) ||
+			strings.Contains(strings.ToLower(d.Description), q) ||
+			strings.Contains(plain, q) {
+			results = append(results, PostSummary{
+				Slug:        d.Slug,
+				Title:       d.Title,
+				Description: d.Description,
+				Date:        d.Date,
+				Author:      d.Author,
+				Tags:        d.Tags,
+			})
+		}
+	}
+	if results == nil {
+		return []PostSummary{}
+	}
+	return results
 }
 
 // hasAnyTag reports whether p has at least one of the given tags.

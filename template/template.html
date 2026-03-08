@@ -102,7 +102,19 @@
       <!-- ── LIST VIEW (IsListPage = true) ── -->
       {{if .IsListPage}}
 
-      <h1 class="f2 fw6 lh-title mt0 mb5" style="color:#f0f0f0;">Posts{{if .FilterTags}} <span class="f5 fw4" style="color:#555;">tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}</span>{{end}}</h1>
+      <h1 class="f2 fw6 lh-title mt0 mb4" style="color:#f0f0f0;">{{if .SearchQuery}}Search{{else}}Posts{{end}}{{if .FilterTags}} <span class="f5 fw4" style="color:#555;">tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}</span>{{end}}</h1>
+
+      <form action="/search" method="GET" class="mb5">
+        <div class="flex" style="gap:.5rem;">
+          <input type="search" name="q" value="{{.SearchQuery}}" placeholder="Search posts…"
+            class="flex-auto f6 ph3 pv2"
+            style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;color:#d8d8d8;outline:none;">
+          <button type="submit" class="f6 ph3 pv2 pointer"
+            style="background:#1a1a2e;border:1px solid #2a2a2a;border-radius:4px;color:#7eb8f7;cursor:pointer;">Search</button>
+        </div>
+      </form>
+
+      {{if .SearchQuery}}<p class="f6 mb4" style="color:#555;">Results for <em style="color:#888;">{{.SearchQuery}}</em></p>{{end}}
 
       <!-- post list; each item: title, optional date, optional description -->
       {{if .Posts}}

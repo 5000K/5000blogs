@@ -340,3 +340,68 @@ func TestBleve_ImplementsInterface(t *testing.T) {
 	repo := newTestBleveRepo(t, newTestConf(10), newStubSource(nil))
 	var _ PostRepository = repo
 }
+
+// --- Search ---
+
+func TestBleve_Search_MatchesTitle(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/go.md":   []byte("---\ntitle: Learning Go\n---\nsome content"),
+		"posts/rust.md": []byte("---\ntitle: Learning Rust\n---\nother content"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("rust")
+	if len(results) != 1 {
+		t.Fatalf("want 1 result, got %d", len(results))
+	}
+	if results[0].Slug != "rust" {
+		t.Errorf("want slug 'rust', got %q", results[0].Slug)
+	}
+}
+
+func TestBleve_Search_EmptyQueryReturnsEmpty(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/a.md": []byte("---\ntitle: A\n---\n# body"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("")
+	if len(results) != 0 {
+		t.Errorf("empty query should return no results, got %d", len(results))
+	}
+}
+
+func TestBleve_Search_ExcludesHiddenPosts(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/visible.md": []byte("---\ntitle: Visible Post\n---\n# body"),
+		"posts/hidden.md":  []byte("---\ntitle: Hidden Post\nvisible: false\n---\n# body"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("post")
+	if len(results) != 1 {
+		t.Fatalf("want 1 result (only visible), got %d", len(results))
+	}
+	if results[0].Slug != "visible" {
+		t.Errorf("want slug 'visible', got %q", results[0].Slug)
+	}
+}
+
+func TestBleve_Search_NoMatchReturnsEmptySlice(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/a.md": []byte("---\ntitle: A\n---\n# body"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.Search("zzznomatch")
+	if results == nil {
+		t.Error("Search should return empty slice, not nil")
+	}
+	if len(results) != 0 {
+		t.Errorf("want 0 results, got %d", len(results))
+	}
+}
