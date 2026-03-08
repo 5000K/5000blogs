@@ -3,6 +3,7 @@ package service
 import (
 	"embed"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -20,6 +21,8 @@ func NewBuiltinSource() *BuiltinSource {
 		paths: []string{"builtin/home.md", "builtin/404.md", "builtin/footer.md"},
 	}
 }
+
+func (b *BuiltinSource) Sync() error { return nil }
 
 func (b *BuiltinSource) ListPosts() ([]string, error) {
 	return b.paths, nil
@@ -59,6 +62,19 @@ type LayeredSource struct {
 
 func NewLayeredSource(sources ...PostSource) *LayeredSource {
 	return &LayeredSource{sources: sources}
+}
+
+func (l *LayeredSource) Sync() error {
+	var errs []string
+	for _, s := range l.sources {
+		if err := s.Sync(); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("sync errors: %s", strings.Join(errs, "; "))
+	}
+	return nil
 }
 
 func (l *LayeredSource) ListPosts() ([]string, error) {

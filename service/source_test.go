@@ -130,3 +130,9 @@ func TestFileSystemSource_StatPost_NotFound(t *testing.T) {
 	}
 }
 
+func TestFileSystemSource_Sync_IsNoop(t *testing.T) {
+	fs, _ := newFSSource(t)
+	if err := fs.Sync(); err != nil {
+		t.Errorf("Sync() returned unexpected error: %v", err)
+	}
+}

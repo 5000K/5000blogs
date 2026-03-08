@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,8 @@ type stubSource struct {
 func newStubSource(posts map[string][]byte) *stubSource {
 	return &stubSource{posts: posts}
 }
+
+func (s *stubSource) Sync() error { return nil }
 
 func (s *stubSource) ListPosts() ([]string, error) {
 	paths := make([]string, 0, len(s.posts))
@@ -183,5 +186,43 @@ func TestLayeredSource_ReadPost_UnknownPath(t *testing.T) {
 	_, err := l.ReadPost("/nonexistent.md")
 	if err == nil {
 		t.Error("expected error for unknown path")
+	}
+}
+
+type syncTrackingSource struct {
+	*stubSource
+	synced  int
+	syncErr error
+}
+
+func (s *syncTrackingSource) Sync() error {
+	s.synced++
+	return s.syncErr
+}
+
+func TestLayeredSource_Sync_PropagatesAll(t *testing.T) {
+	s1 := &syncTrackingSource{stubSource: newStubSource(nil)}
+	s2 := &syncTrackingSource{stubSource: newStubSource(nil)}
+	l := NewLayeredSource(s1, s2)
+
+	if err := l.Sync(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s1.synced != 1 || s2.synced != 1 {
+		t.Errorf("expected both sources synced once, got s1=%d s2=%d", s1.synced, s2.synced)
+	}
+}
+
+func TestLayeredSource_Sync_CollectsErrors(t *testing.T) {
+	s1 := &syncTrackingSource{stubSource: newStubSource(nil), syncErr: errors.New("oops")}
+	s2 := &syncTrackingSource{stubSource: newStubSource(nil)}
+	l := NewLayeredSource(s1, s2)
+
+	err := l.Sync()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if s2.synced != 1 {
+		t.Errorf("expected s2 synced even after s1 error, got %d", s2.synced)
 	}
 }

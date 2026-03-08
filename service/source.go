@@ -9,6 +9,8 @@ import (
 )
 
 type PostSource interface {
+	// Sync updates the source's backing data (e.g. git pull). Called before each rescan.
+	Sync() error
 	// ListPosts returns the canonical paths of all available posts.
 	ListPosts() ([]string, error)
 	// ReadPost returns the raw bytes of the post at the given path.
@@ -26,6 +28,8 @@ type FileSystemSource struct {
 func NewFileSystemSource(dir string, logger *slog.Logger) *FileSystemSource {
 	return &FileSystemSource{dir: dir, log: logger.With("component", "FileSystemSource")}
 }
+
+func (fs *FileSystemSource) Sync() error { return nil }
 
 func (fs *FileSystemSource) ListPosts() ([]string, error) {
 	fs.log.Debug("listing posts", "dir", fs.dir)

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -20,6 +21,7 @@ import (
 type GitSource struct {
 	url  string
 	dir  string
+	auth transport.AuthMethod
 	repo *gogit.Repository
 	fs   billy.Filesystem
 	log  *slog.Logger
@@ -37,10 +39,27 @@ func NewGitSource(url, dir string, auth transport.AuthMethod, logger *slog.Logge
 	return &GitSource{
 		url:  url,
 		dir:  dir,
+		auth: auth,
 		repo: repo,
 		fs:   fs,
 		log:  logger.With("component", "GitSource"),
 	}, nil
+}
+
+func (g *GitSource) Sync() error {
+	g.log.Debug("pulling", "url", g.url)
+	wt, err := g.repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("git sync %s: %w", g.url, err)
+	}
+	err = wt.Pull(&gogit.PullOptions{Auth: g.auth})
+	if errors.Is(err, gogit.NoErrAlreadyUpToDate) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("git sync %s: %w", g.url, err)
+	}
+	return nil
 }
 
 func (g *GitSource) ListPosts() ([]string, error) {

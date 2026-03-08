@@ -327,6 +327,10 @@ func (r *MemoryPostRepository) rescan() {
 	r.rescanMu.Lock()
 	defer r.rescanMu.Unlock()
 
+	if err := r.source.Sync(); err != nil {
+		r.log.Error("failed to sync source", "err", err)
+	}
+
 	paths, err := r.source.ListPosts()
 	if err != nil {
 		r.log.Error("failed to list posts", "err", err)
