@@ -1,5 +1,5 @@
 ---
-title: Welcome to 5000blogs
+title: About - nested
 description: A tiny, file-backed blogging engine in Go.
 date: 2026-03-04T09:00:00Z
 author: 5000k

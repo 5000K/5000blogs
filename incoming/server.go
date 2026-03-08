@@ -147,6 +147,11 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	r.Get("/posts/*", func(w http.ResponseWriter, r *http.Request) {
 		rest := chi.URLParam(r, "*")
 
+		if strings.Contains(rest, "+") {
+			http.Redirect(w, r, "/posts/"+strings.ReplaceAll(rest, "+", "/"), http.StatusMovedPermanently)
+			return
+		}
+
 		if strings.HasSuffix(rest, "/og-image.png") {
 			if ogGen == nil {
 				http.NotFound(w, r)
