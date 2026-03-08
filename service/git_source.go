@@ -85,18 +85,29 @@ func (g *GitSource) SlugForPath(p string) string {
 
 func (g *GitSource) ListPosts() ([]string, error) {
 	g.log.Debug("listing posts", "url", g.url, "dir", g.dir)
-	entries, err := g.fs.ReadDir(g.dir)
-	if err != nil {
+	var paths []string
+	if err := g.walkDir(g.dir, &paths); err != nil {
 		return nil, fmt.Errorf("git list posts: %w", err)
 	}
-	var paths []string
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
-			continue
-		}
-		paths = append(paths, path.Join(g.dir, entry.Name()))
-	}
 	return paths, nil
+}
+
+func (g *GitSource) walkDir(dir string, paths *[]string) error {
+	entries, err := g.fs.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		p := path.Join(dir, entry.Name())
+		if entry.IsDir() {
+			if err := g.walkDir(p, paths); err != nil {
+				return err
+			}
+		} else if strings.HasSuffix(entry.Name(), ".md") {
+			*paths = append(*paths, p)
+		}
+	}
+	return nil
 }
 
 func (g *GitSource) ReadPost(p string) ([]byte, error) {

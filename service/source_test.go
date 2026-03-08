@@ -58,7 +58,7 @@ func TestFileSystemSource_ListPosts_OnlyMarkdown(t *testing.T) {
 	}
 }
 
-func TestFileSystemSource_ListPosts_SkipsSubdirectories(t *testing.T) {
+func TestFileSystemSource_ListPosts_RecursesSubdirectories(t *testing.T) {
 	fs, dir := newFSSource(t)
 	writeFile(t, dir, "post.md", "# Post")
 	if err := os.MkdirAll(filepath.Join(dir, "subdir"), 0755); err != nil {
@@ -70,8 +70,8 @@ func TestFileSystemSource_ListPosts_SkipsSubdirectories(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListPosts: %v", err)
 	}
-	if len(paths) != 1 {
-		t.Errorf("want 1 post (no subdirs), got %d: %v", len(paths), paths)
+	if len(paths) != 2 {
+		t.Errorf("want 2 posts (root + subdir), got %d: %v", len(paths), paths)
 	}
 }
 
@@ -134,5 +134,16 @@ func TestFileSystemSource_Sync_IsNoop(t *testing.T) {
 	fs, _ := newFSSource(t)
 	if err := fs.Sync(); err != nil {
 		t.Errorf("Sync() returned unexpected error: %v", err)
+	}
+}
+
+// --- SlugForPath (subdirectory) ---
+
+func TestFileSystemSource_SlugForPath_Subdir(t *testing.T) {
+	fs, dir := newFSSource(t)
+	p := filepath.Join(dir, "sub", "my-post.md")
+	slug := fs.SlugForPath(p)
+	if slug != "sub+my-post" {
+		t.Errorf("want %q, got %q", "sub+my-post", slug)
 	}
 }

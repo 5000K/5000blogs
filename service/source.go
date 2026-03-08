@@ -66,20 +66,18 @@ func (fs *FileSystemSource) SlugForPath(path string) string {
 
 func (fs *FileSystemSource) ListPosts() ([]string, error) {
 	fs.log.Debug("listing posts", "dir", fs.dir)
-	entries, err := os.ReadDir(fs.dir)
+	var paths []string
+	err := filepath.WalkDir(fs.dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(d.Name(), ".md") {
+			paths = append(paths, path)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	var paths []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		if !strings.HasSuffix(entry.Name(), ".md") {
-			continue
-		}
-		paths = append(paths, filepath.Join(fs.dir, entry.Name()))
 	}
 	return paths, nil
 }
