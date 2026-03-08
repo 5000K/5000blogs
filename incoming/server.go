@@ -88,6 +88,13 @@ func isReservedPath(path string) bool {
 	return false
 }
 
+// pathToSlug converts a URL sub-path to a post slug.
+// "hello" → "hello", "more/things/hello-world" → "more+things+hello-world"
+func pathToSlug(urlPath string) string {
+	parts := strings.FieldsFunc(urlPath, func(r rune) bool { return r == '/' })
+	return strings.Join(parts, "+")
+}
+
 func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) chi.Router {
 	renderer.SetFooter(func() template.HTML {
 		if post := repo.GetBySlug("footer"); post != nil {
@@ -137,8 +144,37 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 
 	r.NotFound(serve404)
 
-	r.Get("/posts/{slug}", func(w http.ResponseWriter, r *http.Request) {
-		slug := chi.URLParam(r, "slug")
+	r.Get("/posts/*", func(w http.ResponseWriter, r *http.Request) {
+		rest := chi.URLParam(r, "*")
+
+		if strings.Contains(rest, "+") {
+			http.Redirect(w, r, "/posts/"+strings.ReplaceAll(rest, "+", "/"), http.StatusMovedPermanently)
+			return
+		}
+
+		if strings.HasSuffix(rest, "/og-image.png") {
+			if ogGen == nil {
+				http.NotFound(w, r)
+				return
+			}
+			slug := pathToSlug(strings.TrimSuffix(rest, "/og-image.png"))
+			post := repo.GetBySlug(slug)
+			if post == nil {
+				http.NotFound(w, r)
+				return
+			}
+			data, err := ogGen.Generate(post)
+			if err != nil {
+				http.Error(w, "failed to generate og:image", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "image/png")
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			_, _ = w.Write(data)
+			return
+		}
+
+		slug := pathToSlug(rest)
 		post := repo.GetBySlug(slug)
 		if post == nil {
 			serve404(w, r)
@@ -149,34 +185,13 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		}
 		var ogImageURL string
 		if ogGen != nil {
-			ogImageURL = cfg.SiteURL + "/posts/" + slug + "/og-image.png"
+			ogImageURL = cfg.SiteURL + "/posts/" + rest + "/og-image.png"
 		}
 		renderer.ServePost(post, w, cfg.SiteURL+r.URL.RequestURI(), ogImageURL)
 	})
 
-	r.Get("/posts/{slug}/og-image.png", func(w http.ResponseWriter, r *http.Request) {
-		if ogGen == nil {
-			http.NotFound(w, r)
-			return
-		}
-		slug := chi.URLParam(r, "slug")
-		post := repo.GetBySlug(slug)
-		if post == nil {
-			http.NotFound(w, r)
-			return
-		}
-		data, err := ogGen.Generate(post)
-		if err != nil {
-			http.Error(w, "failed to generate og:image", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "image/png")
-		w.Header().Set("Cache-Control", "public, max-age=86400")
-		_, _ = w.Write(data)
-	})
-
-	r.Get("/plain/{slug}", func(w http.ResponseWriter, r *http.Request) {
-		slug := chi.URLParam(r, "slug")
+	r.Get("/plain/*", func(w http.ResponseWriter, r *http.Request) {
+		slug := pathToSlug(chi.URLParam(r, "*"))
 		post := repo.GetBySlug(slug)
 		if post == nil {
 			serve404(w, r)

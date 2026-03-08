@@ -5,9 +5,14 @@ import (
 	"5000blogs/incoming"
 	"5000blogs/service"
 	"5000blogs/view"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
+
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
 func main() {
@@ -24,8 +29,11 @@ func main() {
 		log.Fatalf("invalid log level %q: %v", cfg.LogLevel, err)
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
-	fsSource := service.NewFileSystemSource(cfg.Paths.Posts, logger)
-	source := service.NewLayeredSource(fsSource, service.NewBuiltinSource())
+	userSources, err := buildSources(cfg, logger)
+	if err != nil {
+		log.Fatalf("failed to build sources: %v", err)
+	}
+	source := service.NewLayeredSource(append(userSources, service.NewBuiltinSource())...)
 	converter := &service.GoMarkdownConverter{}
 	repo, err := service.NewBlevePostRepository(cfg, source, converter, logger)
 	if err != nil {
@@ -50,4 +58,50 @@ func main() {
 	}
 
 	incoming.Serve(cfg, repo, renderer, ogGen)
+}
+
+func buildSources(cfg *config.Config, logger *slog.Logger) ([]service.PostSource, error) {
+	if len(cfg.Sources) == 0 {
+		return []service.PostSource{service.NewFileSystemSource(cfg.Paths.Posts, logger)}, nil
+	}
+	sources := make([]service.PostSource, 0, len(cfg.Sources))
+	for _, sc := range cfg.Sources {
+		switch sc.Type {
+		case "filesystem":
+			sources = append(sources, service.NewFileSystemSource(sc.Path, logger))
+		case "git":
+			dir := sc.Dir
+			if dir == "" {
+				dir = "."
+			}
+			auth, err := gitAuth(sc)
+			if err != nil {
+				return nil, err
+			}
+			gs, err := service.NewGitSource(sc.URL, dir, auth, logger)
+			if err != nil {
+				return nil, err
+			}
+			sources = append(sources, gs)
+		}
+	}
+	return sources, nil
+}
+
+func gitAuth(sc config.SourceConfig) (transport.AuthMethod, error) {
+	if sc.SSHKeyPath != "" {
+		auth, err := gitssh.NewPublicKeysFromFile("git", sc.SSHKeyPath, sc.SSHKeyPassphrase)
+		if err != nil {
+			return nil, fmt.Errorf("git source %s: load SSH key: %w", sc.URL, err)
+		}
+		return auth, nil
+	}
+	if sc.AuthToken != "" {
+		user := sc.AuthUser
+		if user == "" {
+			user = "git"
+		}
+		return &githttp.BasicAuth{Username: user, Password: sc.AuthToken}, nil
+	}
+	return nil, nil
 }

@@ -20,6 +20,7 @@ type Metadata struct {
 
 type Post struct {
 	path    string
+	slug    string
 	hash    uint64
 	modTime time.Time
 
@@ -45,8 +46,12 @@ type PostData struct {
 
 // Data returns a PostData view of the post.
 func (p *Post) Data() PostData {
+	slug := p.slug
+	if slug == "" {
+		slug = slugFromPath(p.path)
+	}
 	d := PostData{
-		Slug:       slugFromPath(p.path),
+		Slug:       slug,
 		Visible:    p.IsVisible(),
 		RSSVisible: p.IsRSSVisible(),
 	}
@@ -128,7 +133,8 @@ type PageResult struct {
 	TagParam   string   // e.g. "&tags=foo,bar" for use in pagination links; empty when no filter
 }
 
-// slugFromPath derives URL slug from file path
+// slugFromPath derives URL slug from file path (basename without extension).
+// Used only as a fallback; sources should derive slugs via SlugForPath.
 func slugFromPath(path string) string {
 	base := filepath.Base(path)
 	if ext := filepath.Ext(base); ext != "" {

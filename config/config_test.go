@@ -24,8 +24,14 @@ func TestValidate(t *testing.T) {
 		{"cache_size negative", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: -1}}, true},
 		{"pages valid", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Pages: []PageRoute{{Path: "/about", Slug: "about"}}}, false},
 		{"pages path no slash", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Pages: []PageRoute{{Path: "about", Slug: "about"}}}, true},
-		{"pages slug empty", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Pages: []PageRoute{{Path: "/about", Slug: ""}}}, true},
-	}
+		{"pages slug empty", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Pages: []PageRoute{{Path: "/about", Slug: ""}}}, true}, {"source filesystem valid", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "filesystem", Path: "./posts"}}}, false},
+		{"source filesystem no path", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "filesystem"}}}, true},
+		{"source git valid", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "git", URL: "https://github.com/x/y"}}}, false},
+		{"source git no url", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "git"}}}, true},
+		{"source unknown type", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "s3"}}}, true},
+		{"source git token auth", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "git", URL: "https://github.com/x/y", AuthToken: "tok"}}}, false},
+		{"source git ssh auth", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "git", URL: "git@github.com:x/y", SSHKeyPath: "/id_rsa"}}}, false},
+		{"source git conflicting auth", Config{PageSize: 10, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "git", URL: "https://github.com/x/y", AuthToken: "tok", SSHKeyPath: "/id_rsa"}}}, true}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

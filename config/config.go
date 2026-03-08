@@ -26,11 +26,12 @@ type Config struct {
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`
 	RSSFullContent  bool   `env:"RSS_FULL_CONTENT" env-default:"false" yaml:"rss_full_content"`
 
-	BlogName string      `env:"BLOG_NAME" env-default:"Blog" yaml:"blog_name"`
-	Icon     string      `env:"ICON" env-default:"./static/icon.png" yaml:"icon"` // path to PNG file served as favicon and og:logo
-	NavLinks []NavLink   `yaml:"nav_links"`
-	Pages    []PageRoute `yaml:"pages"`
-	Plugins  []string    `yaml:"plugins"`
+	BlogName string         `env:"BLOG_NAME" env-default:"Blog" yaml:"blog_name"`
+	Icon     string         `env:"ICON" env-default:"./static/icon.png" yaml:"icon"` // path to PNG file served as favicon and og:logo
+	NavLinks []NavLink      `yaml:"nav_links"`
+	Pages    []PageRoute    `yaml:"pages"`
+	Plugins  []string       `yaml:"plugins"`
+	Sources  []SourceConfig `yaml:"sources"`
 
 	OGImage OGImageConfig `yaml:"og_image"`
 }
@@ -45,6 +46,21 @@ type NavLink struct {
 type PageRoute struct {
 	Path string `yaml:"path"`
 	Slug string `yaml:"slug"`
+}
+
+// SourceConfig defines a post source. Type is required: "filesystem" or "git".
+type SourceConfig struct {
+	Type string `yaml:"type"`
+	// filesystem
+	Path string `yaml:"path"`
+	// git
+	URL string `yaml:"url"`
+	Dir string `yaml:"dir"` // subdirectory within the repo (default: ".")
+	// git auth (mutually exclusive: use either token or SSH key, not both)
+	AuthUser         string `yaml:"auth_user"`          // HTTP basic auth username
+	AuthToken        string `yaml:"auth_token"`         // HTTP basic auth password or token
+	SSHKeyPath       string `yaml:"ssh_key_path"`       // path to SSH private key file
+	SSHKeyPassphrase string `yaml:"ssh_key_passphrase"` // passphrase for the SSH private key
 }
 
 type OGImageConfig struct {
@@ -73,6 +89,23 @@ func (c *Config) Validate() error {
 		}
 		if p.Slug == "" {
 			return fmt.Errorf("pages: slug for path %q must not be empty", p.Path)
+		}
+	}
+	for i, s := range c.Sources {
+		switch s.Type {
+		case "filesystem":
+			if s.Path == "" {
+				return fmt.Errorf("sources[%d]: filesystem source requires path", i)
+			}
+		case "git":
+			if s.URL == "" {
+				return fmt.Errorf("sources[%d]: git source requires url", i)
+			}
+			if s.AuthToken != "" && s.SSHKeyPath != "" {
+				return fmt.Errorf("sources[%d]: auth_token and ssh_key_path are mutually exclusive", i)
+			}
+		default:
+			return fmt.Errorf("sources[%d]: unknown type %q (must be \"filesystem\" or \"git\")", i, s.Type)
 		}
 	}
 	return nil

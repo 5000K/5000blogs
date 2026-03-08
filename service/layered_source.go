@@ -3,6 +3,8 @@ package service
 import (
 	"embed"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -19,6 +21,20 @@ func NewBuiltinSource() *BuiltinSource {
 	return &BuiltinSource{
 		paths: []string{"builtin/home.md", "builtin/404.md", "builtin/footer.md"},
 	}
+}
+
+func (b *BuiltinSource) Sync() error { return nil }
+
+// SlugForPath for builtin paths strips the "builtin/" prefix: "builtin/home.md" → "home".
+func (b *BuiltinSource) SlugForPath(p string) string {
+	base := p
+	if after, ok := strings.CutPrefix(p, "builtin/"); ok {
+		base = after
+	}
+	if ext := filepath.Ext(base); ext != "" {
+		base = base[:len(base)-len(ext)]
+	}
+	return base
 }
 
 func (b *BuiltinSource) ListPosts() ([]string, error) {
@@ -51,14 +67,27 @@ func (b *BuiltinSource) has(path string) bool {
 
 // LayeredSource combines multiple PostSources into one. Earlier sources take
 // priority: if two sources expose a post with the same slug, only the first
-// one's path is returned from ListPosts. ReadPost/StatPost are routed to the
-// source that owns the path.
+// one's path is returned from ListPosts. ReadPost/StatPost/SlugForPath are
+// routed to the source that owns the path.
 type LayeredSource struct {
 	sources []PostSource
 }
 
 func NewLayeredSource(sources ...PostSource) *LayeredSource {
 	return &LayeredSource{sources: sources}
+}
+
+func (l *LayeredSource) Sync() error {
+	var errs []string
+	for _, s := range l.sources {
+		if err := s.Sync(); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("sync errors: %s", strings.Join(errs, "; "))
+	}
+	return nil
 }
 
 func (l *LayeredSource) ListPosts() ([]string, error) {
@@ -70,7 +99,7 @@ func (l *LayeredSource) ListPosts() ([]string, error) {
 			return nil, err
 		}
 		for _, p := range paths {
-			slug := slugFromPath(p)
+			slug := s.SlugForPath(p)
 			if seen[slug] {
 				continue
 			}
@@ -79,6 +108,26 @@ func (l *LayeredSource) ListPosts() ([]string, error) {
 		}
 	}
 	return all, nil
+}
+
+func (l *LayeredSource) SlugForPath(p string) string {
+	for _, s := range l.sources {
+		paths, err := s.ListPosts()
+		if err != nil {
+			continue
+		}
+		for _, sp := range paths {
+			if sp == p {
+				return s.SlugForPath(p)
+			}
+		}
+	}
+	// fall back: treat p as a plain filename
+	base := filepath.Base(p)
+	if ext := filepath.Ext(base); ext != "" {
+		base = base[:len(base)-len(ext)]
+	}
+	return base
 }
 
 func (l *LayeredSource) ReadPost(path string) ([]byte, error) {

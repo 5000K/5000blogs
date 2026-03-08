@@ -93,7 +93,7 @@ func (r *MemoryPostRepository) GetBySlug(slug string) *Post {
 // getBySlug is the unlocked version of GetBySlug.
 func (r *MemoryPostRepository) getBySlug(slug string) *Post {
 	for _, p := range r.posts {
-		if slugFromPath(p.path) == slug {
+		if p.slug == slug {
 			return p
 		}
 	}
@@ -327,6 +327,10 @@ func (r *MemoryPostRepository) rescan() {
 	r.rescanMu.Lock()
 	defer r.rescanMu.Unlock()
 
+	if err := r.source.Sync(); err != nil {
+		r.log.Error("failed to sync source", "err", err)
+	}
+
 	paths, err := r.source.ListPosts()
 	if err != nil {
 		r.log.Error("failed to list posts", "err", err)
@@ -406,7 +410,7 @@ func (r *MemoryPostRepository) preparePost(path string) (*Post, bool) {
 		r.log.Error("failed to read post", "path", path, "err", err)
 		return nil, false
 	}
-	post := &Post{path: path, modTime: modTime}
+	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
 	if err := r.converter.Convert(post, buf); err != nil {
 		r.log.Error("failed to convert post", "path", path, "err", err)
 		return nil, false
@@ -447,7 +451,7 @@ func (r *MemoryPostRepository) checkPostChanged(path string, existing *Post) (*P
 			return nil, false
 		}
 	}
-	post := &Post{path: path, modTime: modTime}
+	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
 	if err := r.converter.Convert(post, buf); err != nil {
 		r.log.Error("failed to convert post", "path", path, "err", err)
 		return nil, false
