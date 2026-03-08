@@ -27,7 +27,10 @@ func main() {
 	fsSource := service.NewFileSystemSource(cfg.Paths.Posts, logger)
 	source := service.NewLayeredSource(fsSource, service.NewBuiltinSource())
 	converter := &service.GoMarkdownConverter{}
-	repo := service.NewMemoryPostRepository(cfg, source, converter, logger)
+	repo, err := service.NewBlevePostRepository(cfg, source, converter, logger)
+	if err != nil {
+		log.Fatalf("failed to create repository: %v", err)
+	}
 	if err := repo.Start(); err != nil {
 		log.Fatalf("failed to start repository: %v", err)
 	}
