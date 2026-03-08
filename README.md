@@ -104,7 +104,7 @@ A post is a single markdown file dropped into the posts directory. The filename 
 
 ## Slugs
 
-The slug is derived from the file path **relative to the source root**, with directory segments joined by `+`:
+The "slug" is a name for a file derived from the file path **relative to the source root**, with directory segments joined by `+`. The server supports paths like /posts/directory/hello but internally, it uses these slugs - and it's good to know how they work for some more in-depth configuration.
 
 | File path (relative to source root) | Slug | URL |
 |---|---|---|
