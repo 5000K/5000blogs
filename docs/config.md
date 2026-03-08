@@ -21,6 +21,7 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | `nav_links` | — | _(none)_ | List of header navigation links. Each entry has `name` (display text) and `url`. YAML array only; no env var equivalent. |
 | `pages` | — | _(none)_ | Custom page routes. Each entry has `path` (URL path, must start with `/`) and `slug` (post slug to serve at that path). The `/` path defaults to slug `home` if not listed here. Paths already owned by the static router (e.g. `/posts`, `/feed.xml`) are silently ignored. YAML array only; no env var equivalent. |
 | `plugins` | — | _(none)_ | List of JavaScript URLs injected as `<script>` tags via `.Plugins` in the template to quickly extend the client. YAML array only; no env var equivalent. |
+| `sources` | — | _(none)_ | List of post sources. If omitted, a single filesystem source using `paths.posts` is used. See [Sources](#sources) below. YAML array only; no env var equivalent. |
 
 ### og_image
 
@@ -32,6 +33,64 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | `og_image.sub_color` | `OG_IMAGE_SUB_COLOR` | `#999999` | Subtitle/secondary text colour (hex). |
 | `og_image.accent_color` | `OG_IMAGE_ACCENT_COLOR` | `#7eb8f7` | Accent colour used for decorative elements (hex). |
 | `og_image.cache_size` | `OG_IMAGE_CACHE_SIZE` | `128` | Maximum number of generated `og:image` PNGs to keep in the in-memory LRU cache. |
+
+## Sources
+
+`sources` is an optional list of post sources. When omitted, a single `filesystem` source pointing at `paths.posts` is used automatically.
+
+Each entry requires a `type` field:
+
+### `filesystem`
+
+| Field | Required | Description |
+|---|---|---|
+| `path` | yes | Directory path containing `.md` files. |
+
+```yaml
+sources:
+  - type: filesystem
+    path: ./posts
+```
+
+### `git`
+
+Clones the repository in-memory on startup. No local checkout is written to disk.
+
+| Field | Required | Description |
+|---|---|---|
+| `url` | yes | Repository URL (HTTPS or SSH). |
+| `dir` | no | Subdirectory within the repo containing posts. Defaults to the repo root (`.`). |
+| `auth_user` | no | Username for HTTP basic auth. Defaults to `git` when `auth_token` is set. |
+| `auth_token` | no | Password or personal access token for HTTP basic auth. Mutually exclusive with `ssh_key_path`. |
+| `ssh_key_path` | no | Path to a PEM-encoded SSH private key file. Mutually exclusive with `auth_token`. |
+| `ssh_key_passphrase` | no | Passphrase for the SSH private key. Leave empty for unencrypted keys. |
+
+```yaml
+# Public repo — no auth needed
+sources:
+  - type: git
+    url: https://github.com/yourname/blog-posts
+    dir: posts
+```
+
+```yaml
+# Private repo via HTTPS token (e.g. GitHub personal access token)
+sources:
+  - type: git
+    url: https://github.com/yourname/private-blog
+    auth_token: ghp_yourpersonalaccesstoken
+```
+
+```yaml
+# Private repo via SSH key
+sources:
+  - type: git
+    url: git@github.com:yourname/private-blog.git
+    ssh_key_path: /home/user/.ssh/id_ed25519
+    ssh_key_passphrase: optional-passphrase  # omit if key is unencrypted
+```
+
+Multiple sources can be combined. Earlier sources take priority: when two sources expose the same slug, only the first one's post is used.
 
 ## Well-known posts
 
