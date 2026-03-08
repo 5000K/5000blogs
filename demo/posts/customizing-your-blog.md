@@ -1,7 +1,7 @@
 ---
 title: Customizing your blog
 description: How the templating system works and what you can change to make the site your own.
-date: 2026-03-04
+date: 2026-03-04T11:00:00Z
 author: 5000k
 tags:
   - customization
@@ -54,7 +54,7 @@ Every markdown post can include a YAML front matter block at the top:
 ---
 title: My post title
 description: A short summary shown in the post list.
-date: 2026-03-04
+date: 2026-03-04T11:00:00Z
 ---
 ```
 

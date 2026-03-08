@@ -1,7 +1,7 @@
 ---
 title: Welcome to 5000blogs
 description: A tiny, file-backed blogging engine in Go.
-date: 2026-03-04
+date: 2026-03-04T09:00:00Z
 author: 5000k
 tags:
   - about
