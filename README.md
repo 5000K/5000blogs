@@ -104,7 +104,15 @@ A post is a single markdown file dropped into the posts directory. The filename 
 
 ## Slugs
 
-The slug is always derived from the **filename** only — the directory path is ignored. `posts/hello-world.md` and `subdir/hello-world.md` both produce the slug `hello-world` and are served at `/posts/hello-world`.
+The slug is derived from the file path **relative to the source root**, with directory segments joined by `+`:
+
+| File path (relative to source root) | Slug | URL |
+|---|---|---|
+| `hello.md` | `hello` | `/posts/hello` |
+| `more/hello.md` | `more+hello` | `/posts/more+hello` |
+| `more/things/hello-world.md` | `more+things+hello-world` | `/posts/more+things+hello-world` |
+
+Any literal `+` character in a filename or directory name is replaced with `-` to keep slugs unambiguous.
 
 When multiple sources are configured, the first source that provides a given slug wins. This lets you override individual posts from a git source by placing a file with the same name in a local filesystem source listed earlier.
 

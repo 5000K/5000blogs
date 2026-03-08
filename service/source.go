@@ -17,6 +17,35 @@ type PostSource interface {
 	ReadPost(path string) ([]byte, error)
 	// StatPost returns the modification time of the post at the given path.
 	StatPost(path string) (time.Time, error)
+	// SlugForPath derives the URL slug for a path returned by ListPosts.
+	SlugForPath(path string) string
+}
+
+// slugFromSegments builds a slug from path segments relative to a root:
+// segments are joined with "+" and any literal "+" in a segment is replaced
+// with "-" to keep slugs predictable.
+func slugFromSegments(root, fullPath string) string {
+	rel := fullPath
+	if root != "." && root != "" {
+		var err error
+		rel, err = filepath.Rel(root, fullPath)
+		if err != nil {
+			rel = fullPath
+		}
+	}
+	// Strip extension from the last segment.
+	ext := filepath.Ext(rel)
+	if ext != "" {
+		rel = rel[:len(rel)-len(ext)]
+	}
+	// Split on OS path separator and filter empty parts.
+	parts := strings.FieldsFunc(rel, func(r rune) bool {
+		return r == filepath.Separator || r == '/'
+	})
+	for i, p := range parts {
+		parts[i] = strings.ReplaceAll(p, "+", "-")
+	}
+	return strings.Join(parts, "+")
 }
 
 // FileSystemSource reads posts from a directory on disk.
@@ -30,6 +59,10 @@ func NewFileSystemSource(dir string, logger *slog.Logger) *FileSystemSource {
 }
 
 func (fs *FileSystemSource) Sync() error { return nil }
+
+func (fs *FileSystemSource) SlugForPath(path string) string {
+	return slugFromSegments(fs.dir, path)
+}
 
 func (fs *FileSystemSource) ListPosts() ([]string, error) {
 	fs.log.Debug("listing posts", "dir", fs.dir)

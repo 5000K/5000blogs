@@ -62,6 +62,27 @@ func (g *GitSource) Sync() error {
 	return nil
 }
 
+func (g *GitSource) SlugForPath(p string) string {
+	// git paths use forward slashes; root is g.dir
+	root := g.dir
+	if root == "." {
+		root = ""
+	}
+	rel := p
+	if root != "" && strings.HasPrefix(p, root+"/") {
+		rel = p[len(root)+1:]
+	}
+	ext := path.Ext(rel)
+	if ext != "" {
+		rel = rel[:len(rel)-len(ext)]
+	}
+	parts := strings.Split(rel, "/")
+	for i, seg := range parts {
+		parts[i] = strings.ReplaceAll(seg, "+", "-")
+	}
+	return strings.Join(parts, "+")
+}
+
 func (g *GitSource) ListPosts() ([]string, error) {
 	g.log.Debug("listing posts", "url", g.url, "dir", g.dir)
 	entries, err := g.fs.ReadDir(g.dir)

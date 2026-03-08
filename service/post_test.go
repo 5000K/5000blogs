@@ -7,22 +7,32 @@ import (
 
 func boolPtr(v bool) *bool { return &v }
 
-// --- slugFromPath ---
+// --- slugFromSegments ---
 
-func TestSlugFromPath(t *testing.T) {
+func TestSlugFromSegments(t *testing.T) {
 	cases := []struct {
+		root string
 		path string
 		want string
 	}{
-		{"posts/hello-world.md", "hello-world"},
-		{"/abs/path/my-post.md", "my-post"},
-		{"simple.md", "simple"},
-		{"no-extension", "no-extension"},
-		{"nested/dir/slug.md", "slug"},
+		// flat file at root
+		{"/posts", "/posts/hello.md", "hello"},
+		// one subdirectory
+		{"/posts", "/posts/more/hello.md", "more+hello"},
+		// two subdirectories
+		{"/posts", "/posts/more/things/hello-world.md", "more+things+hello-world"},
+		// + in filename becomes -
+		{"/posts", "/posts/a+b.md", "a-b"},
+		// + in directory segment also becomes -
+		{"/posts", "/posts/a+b/hello.md", "a-b+hello"},
+		// root "."
+		{".", "sub/hello.md", "sub+hello"},
+		// no subdir, root == dir
+		{"./demo/posts", "demo/posts/simple.md", "simple"},
 	}
 	for _, tc := range cases {
-		if got := slugFromPath(tc.path); got != tc.want {
-			t.Errorf("slugFromPath(%q) = %q, want %q", tc.path, got, tc.want)
+		if got := slugFromSegments(tc.root, tc.path); got != tc.want {
+			t.Errorf("slugFromSegments(%q, %q) = %q, want %q", tc.root, tc.path, got, tc.want)
 		}
 	}
 }

@@ -18,6 +18,9 @@ func newStubSource(posts map[string][]byte) *stubSource {
 
 func (s *stubSource) Sync() error { return nil }
 
+// SlugForPath uses the plain basename (no directory awareness needed for tests).
+func (s *stubSource) SlugForPath(p string) string { return slugFromPath(p) }
+
 func (s *stubSource) ListPosts() ([]string, error) {
 	paths := make([]string, 0, len(s.posts))
 	for p := range s.posts {

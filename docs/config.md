@@ -102,4 +102,6 @@ Three posts are built in and served automatically:
 | `footer` | Rendered as the page footer on every page. Override by placing `footer.md` in your `paths.posts` directory. |
 | `404` | Rendered for any unknown URL. |
 
-To override either, place a file with the matching name in your `paths.posts` directory (e.g. `home.md` or `404.md`). Your file takes precedence over the built-in version.
+To override any of these, place a file with the matching name in your posts source (e.g. `home.md` or `404.md`). Your file takes precedence over the built-in version.
+
+Slugs are derived from the file path relative to the source root, with directory segments joined by `+`: `more/hello.md` → `more+hello`, served at `/posts/more+hello`. See the [Writing posts](../README.md#slugs) section for the full rules.
