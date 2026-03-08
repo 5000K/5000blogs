@@ -567,7 +567,7 @@ func (r *BlevePostRepository) checkPostChanged(path string, existing *Post) (*Po
 			return nil, false
 		}
 	}
-	post := &Post{path: path, modTime: modTime}
+	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
 	if err := r.converter.Convert(post, buf); err != nil {
 		r.log.Error("failed to convert post", "path", path, "err", err)
 		return nil, false

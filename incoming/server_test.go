@@ -11,12 +11,12 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// plainRouter is a minimal router containing only the /plain/{slug} handler,
+// plainRouter is a minimal router containing only the /plain/* handler,
 // used to test that route in isolation without a full config/renderer setup.
 func plainRouter(repo service.PostRepository) chi.Router {
 	r := chi.NewRouter()
-	r.Get("/plain/{slug}", func(w http.ResponseWriter, r *http.Request) {
-		slug := chi.URLParam(r, "slug")
+	r.Get("/plain/*", func(w http.ResponseWriter, r *http.Request) {
+		slug := pathToSlug(chi.URLParam(r, "*"))
 		post := repo.GetBySlug(slug)
 		if post == nil {
 			http.NotFound(w, r)
@@ -83,6 +83,22 @@ func TestPlainEndpoint_NotFound(t *testing.T) {
 	w := doPlainRequest(t, repo, "missing")
 	if w.Code != http.StatusNotFound {
 		t.Errorf("want 404, got %d", w.Code)
+	}
+}
+
+func TestPlainEndpoint_NestedSlug(t *testing.T) {
+	raw := []byte("---\ntitle: Nested\n---\n\n# Nested\n\nContent here.\n")
+	// Simulate a post with slug "more+things+hello" (as stored by the repo)
+	post := convertedPost(t, "more+things+hello", raw)
+	repo := &stubRepo{posts: []*service.Post{post}}
+
+	// URL: /plain/more/things/hello should resolve to slug "more+things+hello"
+	w := doPlainRequest(t, repo, "more/things/hello")
+	if w.Code != http.StatusOK {
+		t.Errorf("want 200 for nested slug, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Nested") {
+		t.Errorf("want 'Nested' in body, got %q", w.Body.String())
 	}
 }
 
@@ -330,5 +346,24 @@ func TestHealthEndpoint(t *testing.T) {
 	}
 	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/plain") {
 		t.Errorf("want text/plain content type, got %q", ct)
+	}
+}
+
+func TestPathToSlug(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"hello", "hello"},
+		{"hello-world", "hello-world"},
+		{"more/hello", "more+hello"},
+		{"more/things/hello-world", "more+things+hello-world"},
+		{"a/b/c/d", "a+b+c+d"},
+		{"/leading/slash", "leading+slash"},
+	}
+	for _, tc := range cases {
+		if got := pathToSlug(tc.input); got != tc.want {
+			t.Errorf("pathToSlug(%q) = %q, want %q", tc.input, got, tc.want)
+		}
 	}
 }

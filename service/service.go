@@ -46,8 +46,12 @@ type PostData struct {
 
 // Data returns a PostData view of the post.
 func (p *Post) Data() PostData {
+	slug := p.slug
+	if slug == "" {
+		slug = slugFromPath(p.path)
+	}
 	d := PostData{
-		Slug:       p.slug,
+		Slug:       slug,
 		Visible:    p.IsVisible(),
 		RSSVisible: p.IsRSSVisible(),
 	}
