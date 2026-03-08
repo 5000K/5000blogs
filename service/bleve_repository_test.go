@@ -304,16 +304,15 @@ func TestBleve_AtomFeed_ValidXML(t *testing.T) {
 // --- LastModified / Sitemap ---
 
 func TestBleve_LastModified_ReturnsLatest(t *testing.T) {
-	src := newStubSource(map[string][]byte{
-		"posts/a.md": []byte("# A"),
-		"posts/b.md": []byte("# B"),
-	})
-	repo := newTestBleveRepo(t, newTestConf(10), src)
-	repo.rescan()
+	older := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	newer := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	repo := newTestBleveRepo(t, newTestConf(10), newStubSource(nil))
+	repo.posts["posts/a.md"] = &Post{path: "posts/a.md", modTime: older, metadata: &Metadata{}}
+	repo.posts["posts/b.md"] = &Post{path: "posts/b.md", modTime: newer, metadata: &Metadata{}}
 
-	lm := repo.LastModified()
-	if lm.IsZero() {
-		t.Error("LastModified should not be zero after loading posts")
+	got := repo.LastModified()
+	if !got.Equal(newer) {
+		t.Errorf("want %v, got %v", newer, got)
 	}
 }
 

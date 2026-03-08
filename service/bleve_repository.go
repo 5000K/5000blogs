@@ -276,7 +276,6 @@ func (r *BlevePostRepository) buildPageRequests(tags []string, size int) (*bleve
 	}
 
 	tagQ := bleve.NewBooleanQuery()
-	tagQ.SetMinShould(1)
 	for _, tag := range tags {
 		tq := bleve.NewTermQuery(strings.ToLower(tag))
 		tq.SetField("tags")
