@@ -27,6 +27,30 @@ func TestExtractFrontmatter_Valid(t *testing.T) {
 	}
 }
 
+func TestExtractFrontmatter_DateWithTime_RFC3339(t *testing.T) {
+	raw := []byte("---\ndate: 2026-01-02T10:30:45Z\n---\n")
+	meta, _, err := extractFrontmatter(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := time.Date(2026, 1, 2, 10, 30, 45, 0, time.UTC)
+	if !meta.Date.Equal(want) {
+		t.Errorf("date: want %v, got %v", want, meta.Date)
+	}
+}
+
+func TestExtractFrontmatter_DateWithTime_SpaceSeparated(t *testing.T) {
+	raw := []byte("---\ndate: 2026-01-02 10:30:45\n---\n")
+	meta, _, err := extractFrontmatter(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := time.Date(2026, 1, 2, 10, 30, 45, 0, time.UTC)
+	if !meta.Date.Equal(want) {
+		t.Errorf("date: want %v, got %v", want, meta.Date)
+	}
+}
+
 func TestExtractFrontmatter_NoFrontmatter(t *testing.T) {
 	raw := []byte("# Just content\n\nNo front matter here.\n")
 	meta, body, err := extractFrontmatter(raw)

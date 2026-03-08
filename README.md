@@ -85,7 +85,7 @@ tags:
 |---|---|---|---|
 | `title` | string | yes | Displayed in the page heading and browser tab |
 | `description` | string | recommended | Used in post lists, RSS, and `<meta name="description">` |
-| `date` | `YYYY-MM-DD` | recommended | Publication date; posts are sorted by this field |
+| `date` | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SSZ` | recommended | Publication date (and optional time); posts are sorted by this field. Add a time component to order multiple posts on the same day. |
 | `author` | string | no | Shown on the post page |
 | `tags` | list of strings | no | Used for categorisation; visible in templates |
 | `visible` | bool | no | Set to `false` to hide from all lists (including RSS/Atom) (default: `true`) |

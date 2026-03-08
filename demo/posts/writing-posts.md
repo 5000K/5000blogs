@@ -1,7 +1,7 @@
 ---
 title: Writing posts
 description: How to create a post — valid front matter fields, visibility controls, and markdown basics.
-date: 2026-03-07
+date: 2026-03-07T09:00:00Z
 author: 5000k
 tags:
   - guide
@@ -20,7 +20,7 @@ Every post starts with a YAML front matter block between `---` delimiters. It mu
 ---
 title: My Post Title
 description: A short sentence shown in lists and used as the meta description.
-date: 2026-03-07
+date: 2026-03-07T09:00:00Z
 author: Alice
 tags:
   - go
@@ -34,7 +34,7 @@ tags:
 |---|---|---|---|
 | `title` | string | yes | Displayed in the page heading and browser tab |
 | `description` | string | recommended | Used in post lists, RSS, and `<meta name="description">` |
-| `date` | `YYYY-MM-DD` | recommended | Publication date; posts are sorted by this field |
+| `date` | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SSZ` | recommended | Publication date (and optional time); posts are sorted by this field. Add a time component to order multiple posts on the same day. |
 | `author` | string | no | Shown on the post page |
 | `tags` | list of strings | no | Used for categorisation; visible in templates |
 | `visible` | bool | no | Set to `false` to hide from all lists and RSS (default: `true`) |
