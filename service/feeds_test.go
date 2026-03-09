@@ -16,9 +16,9 @@ func TestRSSFeed_ContentText_IncludesPlainText(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.RSSFeed()
+	data, err := BuildRSSFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("RSSFeed: %v", err)
+		t.Fatalf("BuildRSSFeed: %v", err)
 	}
 	xml := string(data)
 
@@ -45,9 +45,9 @@ func TestRSSFeed_ContentHTML_IncludesRenderedHTML(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.RSSFeed()
+	data, err := BuildRSSFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("RSSFeed: %v", err)
+		t.Fatalf("BuildRSSFeed: %v", err)
 	}
 	xml := string(data)
 
@@ -74,9 +74,9 @@ func TestRSSFeed_ContentNone_OmitsContentEncoded(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.RSSFeed()
+	data, err := BuildRSSFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("RSSFeed: %v", err)
+		t.Fatalf("BuildRSSFeed: %v", err)
 	}
 	xml := string(data)
 
@@ -116,9 +116,9 @@ func TestAtomFeed_ContentText(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.AtomFeed()
+	data, err := BuildAtomFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("AtomFeed: %v", err)
+		t.Fatalf("BuildAtomFeed: %v", err)
 	}
 	xml := string(data)
 
@@ -142,9 +142,9 @@ func TestAtomFeed_ContentHTML(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.AtomFeed()
+	data, err := BuildAtomFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("AtomFeed: %v", err)
+		t.Fatalf("BuildAtomFeed: %v", err)
 	}
 	xml := string(data)
 
@@ -168,9 +168,9 @@ func TestAtomFeed_ContentNone_OmitsContent(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.AtomFeed()
+	data, err := BuildAtomFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("AtomFeed: %v", err)
+		t.Fatalf("BuildAtomFeed: %v", err)
 	}
 	xml := string(data)
 
@@ -190,9 +190,9 @@ func TestAtomFeed_Structure(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.AtomFeed()
+	data, err := BuildAtomFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("AtomFeed: %v", err)
+		t.Fatalf("BuildAtomFeed: %v", err)
 	}
 	xml := string(data)
 
@@ -229,53 +229,6 @@ func TestAtomFeed_Structure(t *testing.T) {
 	}
 }
 
-func TestAtomFeed_Cached(t *testing.T) {
-	src := newStubSource(map[string][]byte{
-		"posts/a.md": []byte("# A"),
-	})
-	repo := newTestRepo(newTestConf(10), src)
-	repo.rescan()
-
-	first, err := repo.AtomFeed()
-	if err != nil {
-		t.Fatalf("AtomFeed: %v", err)
-	}
-	second, _ := repo.AtomFeed()
-	if &first[0] != &second[0] {
-		// Verify same backing array (cached slice).
-		// If identical content is returned that's also fine.
-		if string(first) != string(second) {
-			t.Error("subsequent AtomFeed calls should return identical content")
-		}
-	}
-}
-
-func TestAtomFeed_CacheInvalidatedOnRescan(t *testing.T) {
-	src := newStubSource(map[string][]byte{
-		"posts/a.md": []byte("# A"),
-	})
-	repo := newTestRepo(newTestConf(10), src)
-	repo.rescan()
-	_, _ = repo.AtomFeed()
-
-	repo.atomFeedMu.RLock()
-	before := repo.atomFeedCache
-	repo.atomFeedMu.RUnlock()
-	if before == nil {
-		t.Fatal("atom feed cache should be populated")
-	}
-
-	src.posts["posts/b.md"] = []byte("# B")
-	repo.rescan()
-
-	repo.atomFeedMu.RLock()
-	after := repo.atomFeedCache
-	repo.atomFeedMu.RUnlock()
-	if after != nil {
-		t.Error("atom feed cache should be nil after rescan with changes")
-	}
-}
-
 func TestAtomFeed_FeedSizeLimitsEntries(t *testing.T) {
 	src := newStubSource(map[string][]byte{
 		"posts/a.md": []byte("---\ntitle: A\ndate: 2026-01-01\n---\n# A"),
@@ -286,9 +239,9 @@ func TestAtomFeed_FeedSizeLimitsEntries(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.AtomFeed()
+	data, err := BuildAtomFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("AtomFeed: %v", err)
+		t.Fatalf("BuildAtomFeed: %v", err)
 	}
 	xml := string(data)
 
@@ -298,9 +251,9 @@ func TestAtomFeed_FeedSizeLimitsEntries(t *testing.T) {
 	}
 }
 
-// --- /feed.atom HTTP endpoint ---
+// --- XML declaration ---
 
-func TestAtomEndpoint_ContentType(t *testing.T) {
+func TestBuildAtomFeed_StartsWithXMLDeclaration(t *testing.T) {
 	src := newStubSource(map[string][]byte{
 		"posts/hello.md": []byte("---\ntitle: Hello\n---\n# Hello\n"),
 	})
@@ -308,11 +261,95 @@ func TestAtomEndpoint_ContentType(t *testing.T) {
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
-	data, err := repo.AtomFeed()
+	data, err := BuildAtomFeed(cfg, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("AtomFeed: %v", err)
+		t.Fatalf("BuildAtomFeed: %v", err)
 	}
 	if !strings.HasPrefix(string(data), "<?xml") {
 		t.Errorf("Atom feed should start with XML declaration, got: %q", string(data)[:50])
+	}
+}
+
+// --- FeedPosts filtering ---
+
+func TestFeedPosts_TagFilter(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/go.md":   []byte("---\ntitle: Go Post\ntags: [go]\n---\n# Go"),
+		"posts/rust.md": []byte("---\ntitle: Rust Post\ntags: [rust]\n---\n# Rust"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	posts := repo.FeedPosts([]string{"go"}, "")
+	if len(posts) != 1 {
+		t.Fatalf("want 1 post with tag 'go', got %d", len(posts))
+	}
+	if posts[0].Data().Slug != "go" {
+		t.Errorf("want slug 'go', got %q", posts[0].Data().Slug)
+	}
+}
+
+func TestFeedPosts_QueryFilter(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/hello.md": []byte("---\ntitle: Hello World\n---\n# Hello"),
+		"posts/bye.md":   []byte("---\ntitle: Goodbye\n---\n# Bye"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	posts := repo.FeedPosts(nil, "hello")
+	if len(posts) != 1 {
+		t.Fatalf("want 1 post matching 'hello', got %d", len(posts))
+	}
+	if posts[0].Data().Slug != "hello" {
+		t.Errorf("want slug 'hello', got %q", posts[0].Data().Slug)
+	}
+}
+
+func TestBuildRSSFeed_TagFiltered(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/go.md":   []byte("---\ntitle: Go Post\ntags: [go]\ndate: 2026-01-01\n---\n# Go"),
+		"posts/rust.md": []byte("---\ntitle: Rust Post\ntags: [rust]\ndate: 2026-01-02\n---\n# Rust"),
+	})
+	cfg := newTestConf(10)
+	cfg.SiteURL = "http://example.com"
+	repo := newTestRepo(cfg, src)
+	repo.rescan()
+
+	data, err := BuildRSSFeed(cfg, repo.FeedPosts([]string{"go"}, ""))
+	if err != nil {
+		t.Fatalf("BuildRSSFeed: %v", err)
+	}
+	xml := string(data)
+
+	if !strings.Contains(xml, "Go Post") {
+		t.Error("filtered RSS feed should include 'Go Post'")
+	}
+	if strings.Contains(xml, "Rust Post") {
+		t.Error("filtered RSS feed should not include 'Rust Post'")
+	}
+}
+
+func TestBuildAtomFeed_QueryFiltered(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/hello.md": []byte("---\ntitle: Hello World\ndate: 2026-01-01\n---\n# Hello"),
+		"posts/bye.md":   []byte("---\ntitle: Goodbye\ndate: 2026-01-02\n---\n# Bye"),
+	})
+	cfg := newTestConf(10)
+	cfg.SiteURL = "http://example.com"
+	repo := newTestRepo(cfg, src)
+	repo.rescan()
+
+	data, err := BuildAtomFeed(cfg, repo.FeedPosts(nil, "hello"))
+	if err != nil {
+		t.Fatalf("BuildAtomFeed: %v", err)
+	}
+	xml := string(data)
+
+	if !strings.Contains(xml, "Hello World") {
+		t.Error("filtered Atom feed should include 'Hello World'")
+	}
+	if strings.Contains(xml, "Goodbye") {
+		t.Error("filtered Atom feed should not include 'Goodbye'")
 	}
 }

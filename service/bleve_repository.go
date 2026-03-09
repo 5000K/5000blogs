@@ -111,11 +111,6 @@ type BlevePostRepository struct {
 	posts   map[string]*Post // path -> Post for direct lookups
 	index   bleve.Index      // in-memory bleve index
 
-	feedMu    sync.RWMutex
-	feedCache []byte
-
-	atomFeedMu    sync.RWMutex
-	atomFeedCache []byte
 }
 
 func NewBlevePostRepository(conf *config.Config, source PostSource, converter Converter, logger *slog.Logger) (*BlevePostRepository, error) {
@@ -390,67 +385,35 @@ func (r *BlevePostRepository) Sitemap() []SitemapEntry {
 	return entries
 }
 
-func (r *BlevePostRepository) invalidateFeedCache() {
-	r.feedMu.Lock()
-	r.feedCache = nil
-	r.feedMu.Unlock()
-	r.atomFeedMu.Lock()
-	r.atomFeedCache = nil
-	r.atomFeedMu.Unlock()
-}
-
-func (r *BlevePostRepository) RSSFeed() ([]byte, error) {
-	r.feedMu.RLock()
-	cached := r.feedCache
-	r.feedMu.RUnlock()
-	if cached != nil {
-		return cached, nil
-	}
-
+// FeedPosts returns all RSS-visible posts, optionally filtered by tags (OR logic)
+// and/or a full-text search query (case-insensitive match on title, description, body).
+func (r *BlevePostRepository) FeedPosts(tags []string, query string) []*Post {
 	r.postsMu.RLock()
-	posts := make([]*Post, 0, len(r.posts))
+	defer r.postsMu.RUnlock()
+	q := strings.ToLower(query)
+	var filtered []*Post
 	for _, p := range r.posts {
-		if p.IsRSSVisible() {
-			posts = append(posts, p)
+		if !p.IsRSSVisible() {
+			continue
 		}
-	}
-	r.postsMu.RUnlock()
-
-	data, err := buildRSSXML(r.conf, posts)
-	if err != nil {
-		return nil, err
-	}
-	r.feedMu.Lock()
-	r.feedCache = data
-	r.feedMu.Unlock()
-	return data, nil
-}
-
-func (r *BlevePostRepository) AtomFeed() ([]byte, error) {
-	r.atomFeedMu.RLock()
-	cached := r.atomFeedCache
-	r.atomFeedMu.RUnlock()
-	if cached != nil {
-		return cached, nil
-	}
-
-	r.postsMu.RLock()
-	posts := make([]*Post, 0, len(r.posts))
-	for _, p := range r.posts {
-		if p.IsRSSVisible() {
-			posts = append(posts, p)
+		if len(tags) > 0 && !hasAnyTag(p, tags) {
+			continue
 		}
+		if q != "" {
+			d := p.Data()
+			plain := ""
+			if pt := p.PlainText(); pt != nil {
+				plain = strings.ToLower(string(pt))
+			}
+			if !strings.Contains(strings.ToLower(d.Title), q) &&
+				!strings.Contains(strings.ToLower(d.Description), q) &&
+				!strings.Contains(plain, q) {
+				continue
+			}
+		}
+		filtered = append(filtered, p)
 	}
-	r.postsMu.RUnlock()
-
-	data, err := buildAtomXML(r.conf, posts)
-	if err != nil {
-		return nil, err
-	}
-	r.atomFeedMu.Lock()
-	r.atomFeedCache = data
-	r.atomFeedMu.Unlock()
-	return data, nil
+	return filtered
 }
 
 func (r *BlevePostRepository) rescan() {
@@ -520,8 +483,6 @@ func (r *BlevePostRepository) rescan() {
 		}
 	}
 	r.postsMu.Unlock()
-
-	r.invalidateFeedCache()
 	r.log.Debug("rescan complete", "total", len(paths))
 }
 

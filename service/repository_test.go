@@ -77,62 +77,6 @@ func TestRescan_UpdatesChangedPost(t *testing.T) {
 	}
 }
 
-func TestRescan_InvalidatesFeedCacheOnChange(t *testing.T) {
-	src := newStubSource(map[string][]byte{
-		"posts/a.md": []byte("# A"),
-	})
-	repo := newTestRepo(newTestConf(10), src)
-	repo.rescan()
-
-	// Prime the feed cache.
-	_, _ = repo.RSSFeed()
-
-	repo.feedMu.RLock()
-	before := repo.feedCache
-	repo.feedMu.RUnlock()
-	if before == nil {
-		t.Fatal("feed cache should be populated after RSSFeed()")
-	}
-
-	// Adding a new post invalidates the cache.
-	src.posts["posts/b.md"] = []byte("# B")
-	repo.rescan()
-
-	repo.feedMu.RLock()
-	after := repo.feedCache
-	repo.feedMu.RUnlock()
-	if after != nil {
-		t.Error("feed cache should be nil after rescan with changes")
-	}
-}
-
-func TestRescan_NoChangeDoesNotInvalidateCache(t *testing.T) {
-	src := newStubSource(map[string][]byte{
-		"posts/a.md": []byte("# A"),
-	})
-	cfg := newTestConf(10)
-	cfg.SkipUnchangedModTime = true
-	repo := newTestRepo(cfg, src)
-	repo.rescan()
-
-	_, _ = repo.RSSFeed()
-
-	repo.feedMu.RLock()
-	before := repo.feedCache
-	repo.feedMu.RUnlock()
-
-	// Second rescan with identical source — should not invalidate.
-	repo.rescan()
-
-	repo.feedMu.RLock()
-	after := repo.feedCache
-	repo.feedMu.RUnlock()
-
-	if after == nil && before != nil {
-		t.Error("feed cache should remain populated when nothing changed")
-	}
-}
-
 // --- GetPage ---
 
 func TestGetPage_SortedByDateDescending(t *testing.T) {
@@ -236,28 +180,13 @@ func TestRSSFeed_ValidXML(t *testing.T) {
 		NewPost("posts/hello.md", &Metadata{Title: "Hello", Date: time.Now()}, []byte("<p>hi</p>")),
 	}
 
-	data, err := repo.RSSFeed()
+	data, err := BuildRSSFeed(repo.conf, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("RSSFeed: %v", err)
+		t.Fatalf("BuildRSSFeed: %v", err)
 	}
 
 	if err := xml.Unmarshal(data, new(interface{})); err != nil {
-		t.Errorf("RSSFeed produced invalid XML: %v", err)
-	}
-}
-
-func TestRSSFeed_CachedOnSecondCall(t *testing.T) {
-	repo := newTestRepo(newTestConf(10), newStubSource(nil))
-	repo.posts = []*Post{
-		NewPost("posts/a.md", &Metadata{Title: "A"}, []byte("x")),
-	}
-
-	first, _ := repo.RSSFeed()
-	second, _ := repo.RSSFeed()
-
-	// Pointer equality on the first byte confirms cache hit.
-	if &first[0] != &second[0] {
-		t.Error("expected cached result on second call")
+		t.Errorf("BuildRSSFeed produced invalid XML: %v", err)
 	}
 }
 
@@ -268,9 +197,9 @@ func TestRSSFeed_ExcludesRSSHiddenPosts(t *testing.T) {
 		NewPost("posts/rss-hidden.md", &Metadata{Title: "RSSHidden", RSSVisible: boolPtr(false)}, []byte("<p>x</p>")),
 	}
 
-	data, err := repo.RSSFeed()
+	data, err := BuildRSSFeed(repo.conf, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("RSSFeed: %v", err)
+		t.Fatalf("BuildRSSFeed: %v", err)
 	}
 	if strings.Contains(string(data), "RSSHidden") {
 		t.Error("RSS feed should not include rss-hidden posts")
@@ -289,9 +218,9 @@ func TestRSSFeed_LimitedToFeedSize(t *testing.T) {
 		))
 	}
 
-	data, err := repo.RSSFeed()
+	data, err := BuildRSSFeed(repo.conf, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("RSSFeed: %v", err)
+		t.Fatalf("BuildRSSFeed: %v", err)
 	}
 	if count := strings.Count(string(data), "<item>"); count != 2 {
 		t.Errorf("want 2 RSS items (feed size), got %d", count)

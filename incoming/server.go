@@ -287,10 +287,12 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {
-		if checkLastModified(w, r, repo.LastModified()) {
-			return
+		var tags []string
+		if t := r.URL.Query().Get("tags"); t != "" {
+			tags = strings.Split(t, ",")
 		}
-		data, err := repo.RSSFeed()
+		q := r.URL.Query().Get("q")
+		data, err := service.BuildRSSFeed(cfg, repo.FeedPosts(tags, q))
 		if err != nil {
 			http.Error(w, "failed to generate feed", http.StatusInternalServerError)
 			return
@@ -300,10 +302,12 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	r.Get("/feed.atom", func(w http.ResponseWriter, r *http.Request) {
-		if checkLastModified(w, r, repo.LastModified()) {
-			return
+		var tags []string
+		if t := r.URL.Query().Get("tags"); t != "" {
+			tags = strings.Split(t, ",")
 		}
-		data, err := repo.AtomFeed()
+		q := r.URL.Query().Get("q")
+		data, err := service.BuildAtomFeed(cfg, repo.FeedPosts(tags, q))
 		if err != nil {
 			http.Error(w, "failed to generate atom feed", http.StatusInternalServerError)
 			return

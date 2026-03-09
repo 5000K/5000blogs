@@ -1,6 +1,7 @@
 package incoming
 
 import (
+	"5000blogs/config"
 	"5000blogs/service"
 	"net/http"
 	"net/http/httptest"
@@ -120,10 +121,11 @@ func doAtomRequest(t *testing.T, repo service.PostRepository) *httptest.Response
 	req := httptest.NewRequest(http.MethodGet, "/feed.atom", nil)
 	w := httptest.NewRecorder()
 	// Use a minimal router that wires only the atom feed handler.
+	cfg := &config.Config{}
 	atomRouter := func() http.Handler {
 		r := chi.NewRouter()
 		r.Get("/feed.atom", func(w http.ResponseWriter, r *http.Request) {
-			data, err := repo.AtomFeed()
+			data, err := service.BuildAtomFeed(cfg, repo.FeedPosts(nil, ""))
 			if err != nil {
 				http.Error(w, "failed to generate atom feed", http.StatusInternalServerError)
 				return

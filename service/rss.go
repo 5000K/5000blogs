@@ -45,43 +45,9 @@ type rssFeed struct {
 	Channel   rssChannel
 }
 
-// RSSFeed returns a RSS 2.0 feed document, cached (invalidated on rescan changes).
-func (r *MemoryPostRepository) RSSFeed() ([]byte, error) {
-	// Fast path: return cached feed under a read lock.
-	r.feedMu.RLock()
-	cached := r.feedCache
-	r.feedMu.RUnlock()
-	if cached != nil {
-		return cached, nil
-	}
-
-	// Slow path: build the feed, then store under a write lock.
-	data, err := r.buildFeed()
-	if err != nil {
-		return nil, err
-	}
-	r.feedMu.Lock()
-	r.feedCache = data
-	r.feedMu.Unlock()
-	return data, nil
-}
-
-// buildFeed constructs the RSS 2.0 document without consulting the cache.
-func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
-	r.postsMu.RLock()
-	filtered := make([]*Post, 0, len(r.posts))
-	for _, p := range r.posts {
-		if p.IsRSSVisible() {
-			filtered = append(filtered, p)
-		}
-	}
-	r.postsMu.RUnlock()
-	return buildRSSXML(r.conf, filtered)
-}
-
-// buildRSSXML constructs a RSS 2.0 feed document from the given posts.
+// BuildRSSFeed constructs a RSS 2.0 feed document from the given posts.
 // posts need not be pre-sorted; sorting and truncation are applied internally.
-func buildRSSXML(conf *config.Config, posts []*Post) ([]byte, error) {
+func BuildRSSFeed(conf *config.Config, posts []*Post) ([]byte, error) {
 	filtered := posts
 	size := conf.FeedSize
 	if size <= 0 {
