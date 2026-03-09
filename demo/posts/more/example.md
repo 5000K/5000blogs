@@ -8,3 +8,5 @@ tags:
 ---
 
 Lorem Impsum.
+
+![image](png.png)
