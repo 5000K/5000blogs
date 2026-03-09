@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"hash/fnv"
 	stdhtml "html"
+	"path"
 	"strings"
 
 	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
 	"gopkg.in/yaml.v3"
@@ -19,7 +21,17 @@ type Converter interface {
 }
 
 // GoMarkdownConverter implements Converter using gomarkdown.
-type GoMarkdownConverter struct{}
+// PostsBase is the URL prefix for posts (default "/posts/").
+type GoMarkdownConverter struct {
+	PostsBase string
+}
+
+func (c *GoMarkdownConverter) postsBase() string {
+	if c.PostsBase == "" {
+		return "/posts/"
+	}
+	return c.PostsBase
+}
 
 func (c *GoMarkdownConverter) Convert(post *Post, raw []byte) error {
 	post.hash = hashBytes(raw)
@@ -33,6 +45,8 @@ func (c *GoMarkdownConverter) Convert(post *Post, raw []byte) error {
 	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
 	p := parser.NewWithExtensions(extensions)
 	doc := p.Parse(body)
+
+	rewriteRelativeLinks(doc, post.slug, c.postsBase())
 
 	htmlFlags := html.CommonFlags | html.HrefTargetBlank
 	opts := html.RendererOptions{Flags: htmlFlags}
@@ -125,4 +139,78 @@ func hashBytes(data []byte) uint64 {
 	h := fnv.New64a()
 	h.Write(data)
 	return h.Sum64()
+}
+
+// rewriteRelativeLinks walks the parsed markdown AST and rewrites relative
+// link destinations so they are absolute paths rooted at postsBase.
+//
+// For a post with slug "more+about" (i.e. the file more/about.md) and
+// postsBase "/posts/", the link-directory is "/posts/more/". A relative href
+// like "./example.md" is resolved to "/posts/more/example".
+//
+// Absolute URLs (starting with "/" or containing "://"), anchor-only links
+// ("#…"), and scheme links ("mailto:", etc.) are left unchanged.
+func rewriteRelativeLinks(doc ast.Node, slug string, postsBase string) {
+	// Build the URL directory for this post.
+	// slug "more+about" → parts ["more","about"] → dir "/posts/more/"
+	// slug "about"      → parts ["about"]        → dir "/posts/"
+	parts := strings.Split(slug, "+")
+	dir := postsBase
+	if len(parts) > 1 {
+		dir = postsBase + strings.Join(parts[:len(parts)-1], "/") + "/"
+	}
+
+	ast.Walk(doc, &linkRewriter{dir: dir})
+}
+
+// linkRewriter implements ast.NodeVisitor to rewrite relative link/image destinations.
+type linkRewriter struct {
+	dir string
+}
+
+func (r *linkRewriter) Visit(node ast.Node, entering bool) ast.WalkStatus {
+	if !entering {
+		return ast.GoToNext
+	}
+	switch n := node.(type) {
+	case *ast.Link:
+		n.Destination = rewriteRelativeDest(n.Destination, r.dir)
+	case *ast.Image:
+		n.Destination = rewriteRelativeDest(n.Destination, r.dir)
+	}
+	return ast.GoToNext
+}
+
+// rewriteRelativeDest resolves a single link destination relative to dir
+// and strips any trailing ".md" extension.
+func rewriteRelativeDest(dest []byte, dir string) []byte {
+	s := string(dest)
+	// Leave absolute URLs, absolute paths, anchor-only, and scheme links.
+	if strings.HasPrefix(s, "/") || strings.Contains(s, "://") ||
+		strings.HasPrefix(s, "#") || strings.Contains(s, ":") {
+		return dest
+	}
+
+	// Separate fragment and query string before resolving the path.
+	fragment := ""
+	if idx := strings.IndexByte(s, '#'); idx != -1 {
+		fragment = s[idx:]
+		s = s[:idx]
+	}
+	query := ""
+	if idx := strings.IndexByte(s, '?'); idx != -1 {
+		query = s[idx:]
+		s = s[:idx]
+	}
+
+	if s == "" {
+		// Anchor-only or empty — leave as-is.
+		return dest
+	}
+
+	// Resolve relative path against the post's URL directory.
+	resolved := path.Join(dir, s)
+	// Strip the .md extension so links work without it in the browser.
+	resolved = strings.TrimSuffix(resolved, ".md")
+	return []byte(resolved + query + fragment)
 }

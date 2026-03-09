@@ -26,3 +26,5 @@ It's very capable for many use cases:
  - And probably many more!
 
 Start by exploring the posts list at [/posts](/posts), or customize this page by editing `demo/posts/home.md`.
+
+Or look at an [example page](./example.md).
