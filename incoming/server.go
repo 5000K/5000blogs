@@ -66,7 +66,6 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 var reservedPaths = map[string]bool{
 	"/":            true,
 	"/posts":       true,
-	"/search":      true,
 	"/feed.xml":    true,
 	"/feed.atom":   true,
 	"/health":      true,
@@ -260,6 +259,30 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
+		var tags []string
+		if t := r.URL.Query().Get("tags"); t != "" {
+			tags = strings.Split(t, ",")
+		}
+		if q := r.URL.Query().Get("q"); q != "" {
+			results := repo.Search(q)
+			if len(tags) > 0 {
+				filtered := results[:0]
+				for _, p := range results {
+					for _, pt := range p.Tags {
+						for _, ft := range tags {
+							if pt == ft {
+								filtered = append(filtered, p)
+								goto nextResult
+							}
+						}
+					}
+				nextResult:
+				}
+				results = filtered
+			}
+			renderer.ServeSearchResults(q, tags, results, w, cfg.SiteURL+r.URL.RequestURI())
+			return
+		}
 		if checkLastModified(w, r, repo.LastModified()) {
 			return
 		}
@@ -269,21 +292,7 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 				page = n
 			}
 		}
-		var tags []string
-		if t := r.URL.Query().Get("tags"); t != "" {
-			tags = strings.Split(t, ",")
-		}
 		renderer.ServePostList(repo.GetPage(page, tags), w, cfg.SiteURL+r.URL.RequestURI())
-	})
-
-	r.Get("/search", func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query().Get("q")
-		if q == "" {
-			renderer.ServePostList(repo.GetPage(1, nil), w, cfg.SiteURL+"/posts")
-			return
-		}
-		results := repo.Search(q)
-		renderer.ServeSearchResults(q, results, w, cfg.SiteURL+r.URL.RequestURI())
 	})
 
 	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {

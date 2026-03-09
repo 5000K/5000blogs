@@ -198,8 +198,8 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL 
 }
 
 // ServeSearchResults renders a list of search results through the HTML template.
-// It reuses the list-page layout; SearchQuery is exposed to the template.
-func (r *Renderer) ServeSearchResults(query string, results []service.PostSummary, w http.ResponseWriter, pageURL string) {
+// It reuses the list-page layout; SearchQuery and FilterTags are exposed to the template.
+func (r *Renderer) ServeSearchResults(query string, tags []string, results []service.PostSummary, w http.ResponseWriter, pageURL string) {
 	items := make([]postListItem, 0, len(results))
 	for _, p := range results {
 		item := postListItem{
@@ -224,6 +224,7 @@ func (r *Renderer) ServeSearchResults(query string, results []service.PostSummar
 		OGLogoURL:     r.ogLogoURL(),
 		IsListPage:    true,
 		SearchQuery:   query,
+		FilterTags:    tags,
 		Posts:         items,
 		Plugins:       r.cfg.Plugins,
 		BlogName:      r.cfg.BlogName,
