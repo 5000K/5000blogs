@@ -142,30 +142,38 @@ func hashBytes(data []byte) uint64 {
 }
 
 // rewriteRelativeLinks walks the parsed markdown AST and rewrites relative
-// link destinations so they are absolute paths rooted at postsBase.
+// link destinations so they are absolute paths rooted at postsBase or /media/.
 //
 // For a post with slug "more+about" (i.e. the file more/about.md) and
-// postsBase "/posts/", the link-directory is "/posts/more/". A relative href
-// like "./example.md" is resolved to "/posts/more/example".
+// postsBase "/posts/", the link-directory is "/posts/more/" and the
+// media-directory is "/media/more/".
+//
+//   - Relative links to .md files (or extensionless paths) are resolved
+//     under postsBase, with the .md suffix stripped.
+//   - Relative links to any other extension (.png, .jpg, .mp4, etc.) are
+//     resolved under /media/, so browsers can fetch them via the media route.
 //
 // Absolute URLs (starting with "/" or containing "://"), anchor-only links
 // ("#…"), and scheme links ("mailto:", etc.) are left unchanged.
 func rewriteRelativeLinks(doc ast.Node, slug string, postsBase string) {
-	// Build the URL directory for this post.
-	// slug "more+about" → parts ["more","about"] → dir "/posts/more/"
-	// slug "about"      → parts ["about"]        → dir "/posts/"
+	// Build the URL directories for this post.
+	// slug "more+about" → parts ["more","about"] → subdir "more/"
+	// slug "about"      → parts ["about"]        → subdir ""
 	parts := strings.Split(slug, "+")
-	dir := postsBase
+	subdir := ""
 	if len(parts) > 1 {
-		dir = postsBase + strings.Join(parts[:len(parts)-1], "/") + "/"
+		subdir = strings.Join(parts[:len(parts)-1], "/") + "/"
 	}
+	postsDir := postsBase + subdir
+	mediaDir := "/media/" + subdir
 
-	ast.Walk(doc, &linkRewriter{dir: dir})
+	ast.Walk(doc, &linkRewriter{postsDir: postsDir, mediaDir: mediaDir})
 }
 
 // linkRewriter implements ast.NodeVisitor to rewrite relative link/image destinations.
 type linkRewriter struct {
-	dir string
+	postsDir string
+	mediaDir string
 }
 
 func (r *linkRewriter) Visit(node ast.Node, entering bool) ast.WalkStatus {
@@ -174,16 +182,20 @@ func (r *linkRewriter) Visit(node ast.Node, entering bool) ast.WalkStatus {
 	}
 	switch n := node.(type) {
 	case *ast.Link:
-		n.Destination = rewriteRelativeDest(n.Destination, r.dir)
+		n.Destination = rewriteRelativeDest(n.Destination, r.postsDir, r.mediaDir)
 	case *ast.Image:
-		n.Destination = rewriteRelativeDest(n.Destination, r.dir)
+		n.Destination = rewriteRelativeDest(n.Destination, r.postsDir, r.mediaDir)
 	}
 	return ast.GoToNext
 }
 
-// rewriteRelativeDest resolves a single link destination relative to dir
-// and strips any trailing ".md" extension.
-func rewriteRelativeDest(dest []byte, dir string) []byte {
+// rewriteRelativeDest resolves a single link destination relative to postsDir
+// or mediaDir depending on the file extension, stripping any trailing ".md" suffix.
+//
+// Links with no extension or a .md extension are treated as post links and
+// resolved under postsDir. Links with any other extension (e.g. .png, .mp4)
+// are treated as media and resolved under mediaDir so they map to /media/….
+func rewriteRelativeDest(dest []byte, postsDir, mediaDir string) []byte {
 	s := string(dest)
 	// Leave absolute URLs, absolute paths, anchor-only, and scheme links.
 	if strings.HasPrefix(s, "/") || strings.Contains(s, "://") ||
@@ -208,9 +220,14 @@ func rewriteRelativeDest(dest []byte, dir string) []byte {
 		return dest
 	}
 
-	// Resolve relative path against the post's URL directory.
-	resolved := path.Join(dir, s)
-	// Strip the .md extension so links work without it in the browser.
-	resolved = strings.TrimSuffix(resolved, ".md")
+	ext := path.Ext(s)
+	if ext == "" || ext == ".md" {
+		// Post link: resolve under postsDir and strip the .md extension.
+		resolved := path.Join(postsDir, s)
+		resolved = strings.TrimSuffix(resolved, ".md")
+		return []byte(resolved + query + fragment)
+	}
+	// Media link: resolve under mediaDir; keep extension as-is.
+	resolved := path.Join(mediaDir, s)
 	return []byte(resolved + query + fragment)
 }

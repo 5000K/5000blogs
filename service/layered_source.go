@@ -3,6 +3,7 @@ package service
 import (
 	"embed"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -54,6 +55,10 @@ func (b *BuiltinSource) StatPost(path string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("builtin source: unknown path %q", path)
 	}
 	return time.Time{}, nil
+}
+
+func (b *BuiltinSource) ReadMedia(_ string) ([]byte, time.Time, error) {
+	return nil, time.Time{}, os.ErrNotExist
 }
 
 func (b *BuiltinSource) has(path string) bool {
@@ -148,4 +153,15 @@ func (l *LayeredSource) StatPost(path string) (time.Time, error) {
 		}
 	}
 	return time.Time{}, fmt.Errorf("layered source: no source has path %q", path)
+}
+
+// ReadMedia tries each source in order and returns the first successful result.
+func (l *LayeredSource) ReadMedia(relPath string) ([]byte, time.Time, error) {
+	for _, s := range l.sources {
+		data, t, err := s.ReadMedia(relPath)
+		if err == nil {
+			return data, t, nil
+		}
+	}
+	return nil, time.Time{}, fmt.Errorf("layered source: no source has media %q", relPath)
 }

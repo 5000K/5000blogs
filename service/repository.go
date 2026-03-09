@@ -24,6 +24,7 @@ type PostRepository interface {
 	AtomFeed() ([]byte, error)
 	LastModified() time.Time
 	Sitemap() []SitemapEntry
+	ReadMedia(relPath string) ([]byte, time.Time, error)
 	Start() error
 	Stop()
 }

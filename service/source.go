@@ -3,6 +3,7 @@ package service
 import (
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -19,6 +20,10 @@ type PostSource interface {
 	StatPost(path string) (time.Time, error)
 	// SlugForPath derives the URL slug for a path returned by ListPosts.
 	SlugForPath(path string) string
+	// ReadMedia returns the raw bytes and modification time of a non-markdown
+	// media file located at relPath relative to the source root.
+	// Returns os.ErrNotExist if the file is not present in this source.
+	ReadMedia(relPath string) ([]byte, time.Time, error)
 }
 
 // slugFromSegments builds a slug from path segments relative to a root:
@@ -94,4 +99,26 @@ func (fs *FileSystemSource) StatPost(path string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return info.ModTime(), nil
+}
+
+// ReadMedia returns the raw bytes and modification time of a media file located
+// at relPath (relative to the source directory). Path traversal is prevented by
+// resolving the path inside a virtual root before joining with the real dir.
+func (fs *FileSystemSource) ReadMedia(relPath string) ([]byte, time.Time, error) {
+	// Resolve inside a virtual root so "../../etc/passwd" becomes "etc/passwd".
+	cleaned := path.Clean("/" + relPath)
+	cleaned = strings.TrimPrefix(cleaned, "/")
+	fullPath := filepath.Join(fs.dir, filepath.FromSlash(cleaned))
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	if info.IsDir() {
+		return nil, time.Time{}, os.ErrNotExist
+	}
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	return data, info.ModTime(), nil
 }

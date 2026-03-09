@@ -43,6 +43,9 @@ func (r *stubRepo) LastModified() time.Time                  { return time.Time{
 func (r *stubRepo) Sitemap() []service.SitemapEntry          { return nil }
 func (r *stubRepo) Start() error                             { return nil }
 func (r *stubRepo) Stop()                                    {}
+func (r *stubRepo) ReadMedia(_ string) ([]byte, time.Time, error) {
+	return nil, time.Time{}, nil
+}
 func (r *stubRepo) Search(query string) []service.PostSummary {
 	if query == "" {
 		return []service.PostSummary{}

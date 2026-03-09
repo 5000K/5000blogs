@@ -4,6 +4,7 @@ import (
 	"5000blogs/config"
 	"5000blogs/service"
 	"5000blogs/view"
+	"bytes"
 	"context"
 	"encoding/xml"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -74,7 +76,7 @@ var reservedPaths = map[string]bool{
 	"/sitemap.xml": true,
 }
 
-var reservedPrefixes = []string{"/static/", "/api/", "/posts/", "/plain/"}
+var reservedPrefixes = []string{"/static/", "/api/", "/posts/", "/plain/", "/media/"}
 
 func isReservedPath(path string) bool {
 	if reservedPaths[path] {
@@ -115,6 +117,30 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	FileServer(r, "/static", filesDir)
 
 	r.Mount("/api/v1", apiRouter(repo))
+
+	// Serve media files (images, videos, etc.) from the post sources.
+	r.Get("/media/*", func(w http.ResponseWriter, r *http.Request) {
+		relPath := chi.URLParam(r, "*")
+		// Prevent serving raw markdown through the media endpoint.
+		if strings.HasSuffix(relPath, ".md") {
+			http.NotFound(w, r)
+			return
+		}
+		// Sanitise the path: resolve inside a virtual root to prevent traversal.
+		relPath = strings.TrimPrefix(path.Clean("/"+relPath), "/")
+		if relPath == "" {
+			http.NotFound(w, r)
+			return
+		}
+		data, modTime, err := repo.ReadMedia(relPath)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		// http.ServeContent handles Content-Type detection, Range requests,
+		// If-Modified-Since / Last-Modified, and ETag caching automatically.
+		http.ServeContent(w, r, relPath, modTime, bytes.NewReader(data))
+	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

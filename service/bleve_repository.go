@@ -153,6 +153,11 @@ func (r *BlevePostRepository) Stop() {
 	}
 }
 
+// ReadMedia delegates to the underlying source.
+func (r *BlevePostRepository) ReadMedia(relPath string) ([]byte, time.Time, error) {
+	return r.source.ReadMedia(relPath)
+}
+
 func (r *BlevePostRepository) Get(path string) *Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
