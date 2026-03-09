@@ -12,6 +12,8 @@ nav_links:
 
 site_url: 'http://localhost:8080'
 feed_description: 'Latest posts from My Blog'
+feed_size: 20
+rss_content: 'none'  # 'none' (default), 'text' (plain text), or 'html' (rendered HTML)
 
 og_image:
   enabled: true

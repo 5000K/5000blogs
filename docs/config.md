@@ -15,7 +15,8 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | `page_size` | `PAGE_SIZE` | `10` | Number of posts per page on the `/posts` list. Must be > 0. |
 | `site_url` | `SITE_URL` | `http://localhost:8080` | Absolute base URL of the site. Used in feed links and canonical URLs. Must be an absolute URL. |
 | `feed_description` | `FEED_DESCRIPTION` | _(empty)_ | Description of the RSS/Atom feed. |
-| `rss_full_content` | `RSS_FULL_CONTENT` | `false` | Include full rendered HTML in feed entries instead of description only. |
+| `feed_size` | `FEED_SIZE` | `20` | Maximum number of posts included in RSS and Atom feeds. Must be > 0. |
+| `rss_content` | `RSS_CONTENT` | `none` | Content included in feed entries. `none` — description only (default); `text` — plain text body; `html` — rendered HTML body. |
 | `blog_name` | `BLOG_NAME` | `Blog` | Site name shown in the header, used as the RSS/Atom feed title, and used as a fallback page title. |
 | `icon` | `ICON` | _(empty)_ | Path to a PNG file served as `/favicon.ico` and `/og-logo.png`. Also used as the logo in generated `og:image` PNGs. |
 | `nav_links` | — | _(none)_ | List of header navigation links. Each entry has `name` (display text) and `url`. YAML array only; no env var equivalent. |

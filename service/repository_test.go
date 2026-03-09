@@ -13,6 +13,7 @@ func newTestConf(pageSize int) *config.Config {
 	cfg := &config.Config{}
 	cfg.RescanCron = "* * * * *"
 	cfg.PageSize = pageSize
+	cfg.FeedSize = pageSize
 	cfg.SiteURL = "http://example.com"
 	return cfg
 }
@@ -276,7 +277,7 @@ func TestRSSFeed_ExcludesRSSHiddenPosts(t *testing.T) {
 	}
 }
 
-func TestRSSFeed_LimitedToPageSize(t *testing.T) {
+func TestRSSFeed_LimitedToFeedSize(t *testing.T) {
 	repo := newTestRepo(newTestConf(2), newStubSource(nil))
 	base := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	for i := 0; i < 5; i++ {
@@ -293,7 +294,7 @@ func TestRSSFeed_LimitedToPageSize(t *testing.T) {
 		t.Fatalf("RSSFeed: %v", err)
 	}
 	if count := strings.Count(string(data), "<item>"); count != 2 {
-		t.Errorf("want 2 RSS items (page size), got %d", count)
+		t.Errorf("want 2 RSS items (feed size), got %d", count)
 	}
 }
 

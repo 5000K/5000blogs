@@ -26,6 +26,7 @@ type atomEntry struct {
 	Updated string      `xml:"updated"`
 	Summary string      `xml:"summary,omitempty"`
 	Author  *atomPerson `xml:"author,omitempty"`
+	Content string      `xml:",innerxml"`
 }
 
 type atomFeedDoc struct {
@@ -74,9 +75,9 @@ func (r *MemoryPostRepository) buildAtomFeed() ([]byte, error) {
 // posts need not be pre-sorted; sorting and truncation are applied internally.
 func buildAtomXML(conf *config.Config, posts []*Post) ([]byte, error) {
 	filtered := posts
-	size := conf.PageSize
+	size := conf.FeedSize
 	if size <= 0 {
-		size = 10
+		size = 20
 	}
 
 	sort.Slice(filtered, func(i, j int) bool {
@@ -111,6 +112,16 @@ func buildAtomXML(conf *config.Config, posts []*Post) ([]byte, error) {
 		}
 		if d.Author != "" {
 			entry.Author = &atomPerson{Name: d.Author}
+		}
+		switch conf.RSSContent {
+		case "text":
+			if plain := p.PlainText(); plain != nil {
+				entry.Content = `<content type="text"><![CDATA[` + escapeCDATA(string(plain)) + "]]></content>"
+			}
+		case "html":
+			if html := p.Data().Content; html != nil {
+				entry.Content = `<content type="html"><![CDATA[` + escapeCDATA(string(html)) + "]]></content>"
+			}
 		}
 		entries = append(entries, entry)
 	}

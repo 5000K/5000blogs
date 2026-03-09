@@ -83,9 +83,9 @@ func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
 // posts need not be pre-sorted; sorting and truncation are applied internally.
 func buildRSSXML(conf *config.Config, posts []*Post) ([]byte, error) {
 	filtered := posts
-	size := conf.PageSize
+	size := conf.FeedSize
 	if size <= 0 {
-		size = 10
+		size = 20
 	}
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
@@ -111,9 +111,14 @@ func buildRSSXML(conf *config.Config, posts []*Post) ([]byte, error) {
 			Description: d.Description,
 			GUID:        link,
 		}
-		if conf.RSSFullContent {
+		switch conf.RSSContent {
+		case "text":
 			if plain := p.PlainText(); plain != nil {
 				item.ContentEncoded = "<content:encoded><![CDATA[" + escapeCDATA(string(plain)) + "]]></content:encoded>"
+			}
+		case "html":
+			if html := p.Data().Content; html != nil {
+				item.ContentEncoded = "<content:encoded><![CDATA[" + escapeCDATA(string(html)) + "]]></content:encoded>"
 			}
 		}
 		if !d.Date.IsZero() {
@@ -132,7 +137,7 @@ func buildRSSXML(conf *config.Config, posts []*Post) ([]byte, error) {
 			Items:         items,
 		},
 	}
-	if conf.RSSFullContent {
+	if conf.RSSContent == "text" || conf.RSSContent == "html" {
 		feed.ContentNS = "http://purl.org/rss/1.0/modules/content/"
 	}
 

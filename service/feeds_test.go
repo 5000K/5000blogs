@@ -5,14 +5,14 @@ import (
 	"testing"
 )
 
-// --- RSS full content ---
+// --- RSS content modes ---
 
-func TestRSSFeed_FullContent_IncludesContentEncoded(t *testing.T) {
+func TestRSSFeed_ContentText_IncludesPlainText(t *testing.T) {
 	src := newStubSource(map[string][]byte{
 		"posts/hello.md": []byte("---\ntitle: Hello\ndescription: A summary\n---\n\n# Hello\n\nSome content here.\n"),
 	})
 	cfg := newTestConf(10)
-	cfg.RSSFullContent = true
+	cfg.RSSContent = "text"
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
@@ -23,7 +23,7 @@ func TestRSSFeed_FullContent_IncludesContentEncoded(t *testing.T) {
 	xml := string(data)
 
 	if !strings.Contains(xml, "xmlns:content=") {
-		t.Error("RSS feed should declare content namespace when RSSFullContent is true")
+		t.Error("RSS feed should declare content namespace when rss_content=text")
 	}
 	if !strings.Contains(xml, "<content:encoded>") {
 		t.Error("RSS feed should include content:encoded element")
@@ -32,16 +32,45 @@ func TestRSSFeed_FullContent_IncludesContentEncoded(t *testing.T) {
 		t.Error("content:encoded should contain post plain text")
 	}
 	if !strings.Contains(xml, "<![CDATA[") {
-		t.Error("content:encoded should wrap text in CDATA")
+		t.Error("content:encoded should wrap content in CDATA")
 	}
 }
 
-func TestRSSFeed_NoFullContent_OmitsContentEncoded(t *testing.T) {
+func TestRSSFeed_ContentHTML_IncludesRenderedHTML(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/hello.md": []byte("---\ntitle: Hello\n---\n\n# Hello\n\nSome **bold** content.\n"),
+	})
+	cfg := newTestConf(10)
+	cfg.RSSContent = "html"
+	repo := newTestRepo(cfg, src)
+	repo.rescan()
+
+	data, err := repo.RSSFeed()
+	if err != nil {
+		t.Fatalf("RSSFeed: %v", err)
+	}
+	xml := string(data)
+
+	if !strings.Contains(xml, "xmlns:content=") {
+		t.Error("RSS feed should declare content namespace when rss_content=html")
+	}
+	if !strings.Contains(xml, "<content:encoded>") {
+		t.Error("RSS feed should include content:encoded element")
+	}
+	if !strings.Contains(xml, "<strong>") {
+		t.Error("content:encoded should contain rendered HTML tags")
+	}
+	if !strings.Contains(xml, "<![CDATA[") {
+		t.Error("content:encoded should wrap content in CDATA")
+	}
+}
+
+func TestRSSFeed_ContentNone_OmitsContentEncoded(t *testing.T) {
 	src := newStubSource(map[string][]byte{
 		"posts/hello.md": []byte("---\ntitle: Hello\n---\n\n# Hello\n\nBody text.\n"),
 	})
 	cfg := newTestConf(10)
-	cfg.RSSFullContent = false
+	cfg.RSSContent = "none"
 	repo := newTestRepo(cfg, src)
 	repo.rescan()
 
@@ -52,10 +81,10 @@ func TestRSSFeed_NoFullContent_OmitsContentEncoded(t *testing.T) {
 	xml := string(data)
 
 	if strings.Contains(xml, "content:encoded") {
-		t.Error("RSS feed should not include content:encoded when RSSFullContent is false")
+		t.Error("RSS feed should not include content:encoded when rss_content=none")
 	}
 	if strings.Contains(xml, "xmlns:content") {
-		t.Error("RSS feed should not declare content namespace when RSSFullContent is false")
+		t.Error("RSS feed should not declare content namespace when rss_content=none")
 	}
 }
 
@@ -77,6 +106,78 @@ func TestEscapeCDATA(t *testing.T) {
 }
 
 // --- Atom feed ---
+
+func TestAtomFeed_ContentText(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/hello.md": []byte("---\ntitle: Hello\n---\n\n# Hello\n\nSome content here.\n"),
+	})
+	cfg := newTestConf(10)
+	cfg.RSSContent = "text"
+	repo := newTestRepo(cfg, src)
+	repo.rescan()
+
+	data, err := repo.AtomFeed()
+	if err != nil {
+		t.Fatalf("AtomFeed: %v", err)
+	}
+	xml := string(data)
+
+	if !strings.Contains(xml, `<content type="text">`) {
+		t.Error("Atom feed should include content element with type=text")
+	}
+	if !strings.Contains(xml, "Some content here") {
+		t.Error("Atom content should contain plain text")
+	}
+	if !strings.Contains(xml, "<![CDATA[") {
+		t.Error("Atom content should wrap text in CDATA")
+	}
+}
+
+func TestAtomFeed_ContentHTML(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/hello.md": []byte("---\ntitle: Hello\n---\n\n# Hello\n\nSome **bold** content.\n"),
+	})
+	cfg := newTestConf(10)
+	cfg.RSSContent = "html"
+	repo := newTestRepo(cfg, src)
+	repo.rescan()
+
+	data, err := repo.AtomFeed()
+	if err != nil {
+		t.Fatalf("AtomFeed: %v", err)
+	}
+	xml := string(data)
+
+	if !strings.Contains(xml, `<content type="html">`) {
+		t.Error("Atom feed should include content element with type=html")
+	}
+	if !strings.Contains(xml, "<strong>") {
+		t.Error("Atom content should contain rendered HTML")
+	}
+	if !strings.Contains(xml, "<![CDATA[") {
+		t.Error("Atom content should wrap HTML in CDATA")
+	}
+}
+
+func TestAtomFeed_ContentNone_OmitsContent(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/hello.md": []byte("---\ntitle: Hello\n---\n\n# Hello\n\nBody text.\n"),
+	})
+	cfg := newTestConf(10)
+	cfg.RSSContent = "none"
+	repo := newTestRepo(cfg, src)
+	repo.rescan()
+
+	data, err := repo.AtomFeed()
+	if err != nil {
+		t.Fatalf("AtomFeed: %v", err)
+	}
+	xml := string(data)
+
+	if strings.Contains(xml, "<content") {
+		t.Error("Atom feed should not include content element when rss_content=none")
+	}
+}
 
 func TestAtomFeed_Structure(t *testing.T) {
 	src := newStubSource(map[string][]byte{
@@ -175,7 +276,7 @@ func TestAtomFeed_CacheInvalidatedOnRescan(t *testing.T) {
 	}
 }
 
-func TestAtomFeed_PageSizeLimitsEntries(t *testing.T) {
+func TestAtomFeed_FeedSizeLimitsEntries(t *testing.T) {
 	src := newStubSource(map[string][]byte{
 		"posts/a.md": []byte("---\ntitle: A\ndate: 2026-01-01\n---\n# A"),
 		"posts/b.md": []byte("---\ntitle: B\ndate: 2026-01-02\n---\n# B"),
@@ -193,7 +294,7 @@ func TestAtomFeed_PageSizeLimitsEntries(t *testing.T) {
 
 	count := strings.Count(xml, "<entry>")
 	if count != 2 {
-		t.Errorf("want 2 entries (page size), got %d", count)
+		t.Errorf("want 2 entries (feed size), got %d", count)
 	}
 }
 
