@@ -26,6 +26,7 @@ type atomEntry struct {
 	Updated string      `xml:"updated"`
 	Summary string      `xml:"summary,omitempty"`
 	Author  *atomPerson `xml:"author,omitempty"`
+	Content string      `xml:",innerxml"`
 }
 
 type atomFeedDoc struct {
@@ -38,45 +39,13 @@ type atomFeedDoc struct {
 	Entries []atomEntry `xml:""`
 }
 
-// AtomFeed returns an Atom 1.0 feed document, cached (invalidated on rescan changes).
-func (r *MemoryPostRepository) AtomFeed() ([]byte, error) {
-	r.atomFeedMu.RLock()
-	cached := r.atomFeedCache
-	r.atomFeedMu.RUnlock()
-	if cached != nil {
-		return cached, nil
-	}
-
-	data, err := r.buildAtomFeed()
-	if err != nil {
-		return nil, err
-	}
-	r.atomFeedMu.Lock()
-	r.atomFeedCache = data
-	r.atomFeedMu.Unlock()
-	return data, nil
-}
-
-// buildAtomFeed constructs the Atom 1.0 document without consulting the cache.
-func (r *MemoryPostRepository) buildAtomFeed() ([]byte, error) {
-	r.postsMu.RLock()
-	filtered := make([]*Post, 0, len(r.posts))
-	for _, p := range r.posts {
-		if p.IsRSSVisible() {
-			filtered = append(filtered, p)
-		}
-	}
-	r.postsMu.RUnlock()
-	return buildAtomXML(r.conf, filtered)
-}
-
-// buildAtomXML constructs an Atom 1.0 feed document from the given posts.
+// BuildAtomFeed constructs an Atom 1.0 feed document from the given posts.
 // posts need not be pre-sorted; sorting and truncation are applied internally.
-func buildAtomXML(conf *config.Config, posts []*Post) ([]byte, error) {
+func BuildAtomFeed(conf *config.Config, posts []*Post) ([]byte, error) {
 	filtered := posts
-	size := conf.PageSize
+	size := conf.FeedSize
 	if size <= 0 {
-		size = 10
+		size = 20
 	}
 
 	sort.Slice(filtered, func(i, j int) bool {
@@ -111,6 +80,16 @@ func buildAtomXML(conf *config.Config, posts []*Post) ([]byte, error) {
 		}
 		if d.Author != "" {
 			entry.Author = &atomPerson{Name: d.Author}
+		}
+		switch conf.RSSContent {
+		case "text":
+			if plain := p.PlainText(); plain != nil {
+				entry.Content = `<content type="text"><![CDATA[` + escapeCDATA(string(plain)) + "]]></content>"
+			}
+		case "html":
+			if html := p.Data().Content; html != nil {
+				entry.Content = `<content type="html"><![CDATA[` + escapeCDATA(string(html)) + "]]></content>"
+			}
 		}
 		entries = append(entries, entry)
 	}

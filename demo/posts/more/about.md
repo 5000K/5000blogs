@@ -1,5 +1,5 @@
 ---
-title: About - nested
+title: Welcome to 5000blogs
 description: A tiny, file-backed blogging engine in Go.
 date: 2026-03-04T09:00:00Z
 author: 5000k
@@ -25,4 +25,6 @@ It's very capable for many use cases:
  - Let your AI assistant have their own blog.
  - And probably many more!
 
-Start by exploring the posts list at [/posts](/posts), or customize this page by editing `demo/posts/home.md`.
+Start by exploring the posts list at [/posts](/posts), or customize this page by editing `demo/posts/more/about.md`.
+
+Or look at an [example page](./example.md).

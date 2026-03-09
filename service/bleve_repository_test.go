@@ -72,33 +72,6 @@ func TestBleve_Rescan_UpdatesChangedPost(t *testing.T) {
 	}
 }
 
-func TestBleve_Rescan_InvalidatesFeedCacheOnChange(t *testing.T) {
-	src := newStubSource(map[string][]byte{
-		"posts/a.md": []byte("# A"),
-	})
-	repo := newTestBleveRepo(t, newTestConf(10), src)
-	repo.rescan()
-
-	_, _ = repo.RSSFeed()
-
-	repo.feedMu.RLock()
-	before := repo.feedCache
-	repo.feedMu.RUnlock()
-	if before == nil {
-		t.Fatal("feed cache should be populated after RSSFeed()")
-	}
-
-	src.posts["posts/b.md"] = []byte("# B")
-	repo.rescan()
-
-	repo.feedMu.RLock()
-	after := repo.feedCache
-	repo.feedMu.RUnlock()
-	if after != nil {
-		t.Error("feed cache should be nil after rescan with changes")
-	}
-}
-
 // --- Get / GetBySlug ---
 
 func TestBleve_Get_ReturnsPostByPath(t *testing.T) {
@@ -276,12 +249,12 @@ func TestBleve_RSSFeed_ValidXML(t *testing.T) {
 	repo := newTestBleveRepo(t, newTestConf(10), src)
 	repo.rescan()
 
-	data, err := repo.RSSFeed()
+	data, err := BuildRSSFeed(repo.conf, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("RSSFeed: %v", err)
+		t.Fatalf("BuildRSSFeed: %v", err)
 	}
 	if err := xml.Unmarshal(data, new(interface{})); err != nil {
-		t.Errorf("RSSFeed produced invalid XML: %v", err)
+		t.Errorf("BuildRSSFeed produced invalid XML: %v", err)
 	}
 }
 
@@ -292,12 +265,12 @@ func TestBleve_AtomFeed_ValidXML(t *testing.T) {
 	repo := newTestBleveRepo(t, newTestConf(10), src)
 	repo.rescan()
 
-	data, err := repo.AtomFeed()
+	data, err := BuildAtomFeed(repo.conf, repo.FeedPosts(nil, ""))
 	if err != nil {
-		t.Fatalf("AtomFeed: %v", err)
+		t.Fatalf("BuildAtomFeed: %v", err)
 	}
 	if err := xml.Unmarshal(data, new(interface{})); err != nil {
-		t.Errorf("AtomFeed produced invalid XML: %v", err)
+		t.Errorf("BuildAtomFeed produced invalid XML: %v", err)
 	}
 }
 

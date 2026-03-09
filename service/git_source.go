@@ -143,3 +143,29 @@ func (g *GitSource) StatPost(p string) (time.Time, error) {
 	}
 	return commit.Author.When, nil
 }
+
+// ReadMedia returns the raw bytes and modification time of a media file at
+// relPath relative to the source's directory within the repository.
+func (g *GitSource) ReadMedia(relPath string) ([]byte, time.Time, error) {
+	// Prevent path traversal by resolving inside a virtual root.
+	cleaned := path.Clean("/" + relPath)
+	cleaned = strings.TrimPrefix(cleaned, "/")
+	p := cleaned
+	if g.dir != "." && g.dir != "" {
+		p = path.Join(g.dir, cleaned)
+	}
+	f, err := g.fs.Open(p)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	info, err := g.fs.Stat(p)
+	if err != nil {
+		return data, time.Time{}, nil
+	}
+	return data, info.ModTime(), nil
+}

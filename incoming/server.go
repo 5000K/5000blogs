@@ -4,6 +4,7 @@ import (
 	"5000blogs/config"
 	"5000blogs/service"
 	"5000blogs/view"
+	"bytes"
 	"context"
 	"encoding/xml"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -64,7 +66,6 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 var reservedPaths = map[string]bool{
 	"/":            true,
 	"/posts":       true,
-	"/search":      true,
 	"/feed.xml":    true,
 	"/feed.atom":   true,
 	"/health":      true,
@@ -74,7 +75,7 @@ var reservedPaths = map[string]bool{
 	"/sitemap.xml": true,
 }
 
-var reservedPrefixes = []string{"/static/", "/api/", "/posts/", "/plain/"}
+var reservedPrefixes = []string{"/static/", "/api/", "/posts/", "/plain/", "/media/"}
 
 func isReservedPath(path string) bool {
 	if reservedPaths[path] {
@@ -115,6 +116,30 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	FileServer(r, "/static", filesDir)
 
 	r.Mount("/api/v1", apiRouter(repo))
+
+	// Serve media files (images, videos, etc.) from the post sources.
+	r.Get("/media/*", func(w http.ResponseWriter, r *http.Request) {
+		relPath := chi.URLParam(r, "*")
+		// Prevent serving raw markdown through the media endpoint.
+		if strings.HasSuffix(relPath, ".md") {
+			http.NotFound(w, r)
+			return
+		}
+		// Sanitise the path: resolve inside a virtual root to prevent traversal.
+		relPath = strings.TrimPrefix(path.Clean("/"+relPath), "/")
+		if relPath == "" {
+			http.NotFound(w, r)
+			return
+		}
+		data, modTime, err := repo.ReadMedia(relPath)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		// http.ServeContent handles Content-Type detection, Range requests,
+		// If-Modified-Since / Last-Modified, and ETag caching automatically.
+		http.ServeContent(w, r, relPath, modTime, bytes.NewReader(data))
+	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -234,6 +259,30 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
+		var tags []string
+		if t := r.URL.Query().Get("tags"); t != "" {
+			tags = strings.Split(t, ",")
+		}
+		if q := r.URL.Query().Get("q"); q != "" {
+			results := repo.Search(q)
+			if len(tags) > 0 {
+				filtered := results[:0]
+				for _, p := range results {
+					for _, pt := range p.Tags {
+						for _, ft := range tags {
+							if pt == ft {
+								filtered = append(filtered, p)
+								goto nextResult
+							}
+						}
+					}
+				nextResult:
+				}
+				results = filtered
+			}
+			renderer.ServeSearchResults(q, tags, results, w, cfg.SiteURL+r.URL.RequestURI())
+			return
+		}
 		if checkLastModified(w, r, repo.LastModified()) {
 			return
 		}
@@ -243,28 +292,16 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 				page = n
 			}
 		}
+		renderer.ServePostList(repo.GetPage(page, tags), w, cfg.SiteURL+r.URL.RequestURI())
+	})
+
+	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {
 		var tags []string
 		if t := r.URL.Query().Get("tags"); t != "" {
 			tags = strings.Split(t, ",")
 		}
-		renderer.ServePostList(repo.GetPage(page, tags), w, cfg.SiteURL+r.URL.RequestURI())
-	})
-
-	r.Get("/search", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
-		if q == "" {
-			renderer.ServePostList(repo.GetPage(1, nil), w, cfg.SiteURL+"/posts")
-			return
-		}
-		results := repo.Search(q)
-		renderer.ServeSearchResults(q, results, w, cfg.SiteURL+r.URL.RequestURI())
-	})
-
-	r.Get("/feed.xml", func(w http.ResponseWriter, r *http.Request) {
-		if checkLastModified(w, r, repo.LastModified()) {
-			return
-		}
-		data, err := repo.RSSFeed()
+		data, err := service.BuildRSSFeed(cfg, repo.FeedPosts(tags, q))
 		if err != nil {
 			http.Error(w, "failed to generate feed", http.StatusInternalServerError)
 			return
@@ -274,10 +311,12 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	r.Get("/feed.atom", func(w http.ResponseWriter, r *http.Request) {
-		if checkLastModified(w, r, repo.LastModified()) {
-			return
+		var tags []string
+		if t := r.URL.Query().Get("tags"); t != "" {
+			tags = strings.Split(t, ",")
 		}
-		data, err := repo.AtomFeed()
+		q := r.URL.Query().Get("q")
+		data, err := service.BuildAtomFeed(cfg, repo.FeedPosts(tags, q))
 		if err != nil {
 			http.Error(w, "failed to generate atom feed", http.StatusInternalServerError)
 			return

@@ -45,47 +45,13 @@ type rssFeed struct {
 	Channel   rssChannel
 }
 
-// RSSFeed returns a RSS 2.0 feed document, cached (invalidated on rescan changes).
-func (r *MemoryPostRepository) RSSFeed() ([]byte, error) {
-	// Fast path: return cached feed under a read lock.
-	r.feedMu.RLock()
-	cached := r.feedCache
-	r.feedMu.RUnlock()
-	if cached != nil {
-		return cached, nil
-	}
-
-	// Slow path: build the feed, then store under a write lock.
-	data, err := r.buildFeed()
-	if err != nil {
-		return nil, err
-	}
-	r.feedMu.Lock()
-	r.feedCache = data
-	r.feedMu.Unlock()
-	return data, nil
-}
-
-// buildFeed constructs the RSS 2.0 document without consulting the cache.
-func (r *MemoryPostRepository) buildFeed() ([]byte, error) {
-	r.postsMu.RLock()
-	filtered := make([]*Post, 0, len(r.posts))
-	for _, p := range r.posts {
-		if p.IsRSSVisible() {
-			filtered = append(filtered, p)
-		}
-	}
-	r.postsMu.RUnlock()
-	return buildRSSXML(r.conf, filtered)
-}
-
-// buildRSSXML constructs a RSS 2.0 feed document from the given posts.
+// BuildRSSFeed constructs a RSS 2.0 feed document from the given posts.
 // posts need not be pre-sorted; sorting and truncation are applied internally.
-func buildRSSXML(conf *config.Config, posts []*Post) ([]byte, error) {
+func BuildRSSFeed(conf *config.Config, posts []*Post) ([]byte, error) {
 	filtered := posts
-	size := conf.PageSize
+	size := conf.FeedSize
 	if size <= 0 {
-		size = 10
+		size = 20
 	}
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
@@ -111,9 +77,14 @@ func buildRSSXML(conf *config.Config, posts []*Post) ([]byte, error) {
 			Description: d.Description,
 			GUID:        link,
 		}
-		if conf.RSSFullContent {
+		switch conf.RSSContent {
+		case "text":
 			if plain := p.PlainText(); plain != nil {
 				item.ContentEncoded = "<content:encoded><![CDATA[" + escapeCDATA(string(plain)) + "]]></content:encoded>"
+			}
+		case "html":
+			if html := p.Data().Content; html != nil {
+				item.ContentEncoded = "<content:encoded><![CDATA[" + escapeCDATA(string(html)) + "]]></content:encoded>"
 			}
 		}
 		if !d.Date.IsZero() {
@@ -132,7 +103,7 @@ func buildRSSXML(conf *config.Config, posts []*Post) ([]byte, error) {
 			Items:         items,
 		},
 	}
-	if conf.RSSFullContent {
+	if conf.RSSContent == "text" || conf.RSSContent == "html" {
 		feed.ContentNS = "http://purl.org/rss/1.0/modules/content/"
 	}
 

@@ -33,16 +33,18 @@ func (r *stubRepo) GetBySlug(slug string) *service.Post {
 	return nil
 }
 
-func (r *stubRepo) List() []*service.Post                    { return r.posts }
-func (r *stubRepo) Count() int                               { return len(r.posts) }
-func (r *stubRepo) GetPage(int, []string) service.PageResult { return service.PageResult{} }
-func (r *stubRepo) AllTags() []string                        { return nil }
-func (r *stubRepo) RSSFeed() ([]byte, error)                 { return nil, nil }
-func (r *stubRepo) AtomFeed() ([]byte, error)                { return nil, nil }
-func (r *stubRepo) LastModified() time.Time                  { return time.Time{} }
-func (r *stubRepo) Sitemap() []service.SitemapEntry          { return nil }
-func (r *stubRepo) Start() error                             { return nil }
-func (r *stubRepo) Stop()                                    {}
+func (r *stubRepo) List() []*service.Post                      { return r.posts }
+func (r *stubRepo) Count() int                                 { return len(r.posts) }
+func (r *stubRepo) GetPage(int, []string) service.PageResult   { return service.PageResult{} }
+func (r *stubRepo) AllTags() []string                          { return nil }
+func (r *stubRepo) FeedPosts([]string, string) []*service.Post { return r.posts }
+func (r *stubRepo) LastModified() time.Time                    { return time.Time{} }
+func (r *stubRepo) Sitemap() []service.SitemapEntry            { return nil }
+func (r *stubRepo) Start() error                               { return nil }
+func (r *stubRepo) Stop()                                      {}
+func (r *stubRepo) ReadMedia(_ string) ([]byte, time.Time, error) {
+	return nil, time.Time{}, nil
+}
 func (r *stubRepo) Search(query string) []service.PostSummary {
 	if query == "" {
 		return []service.PostSummary{}

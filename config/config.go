@@ -24,7 +24,8 @@ type Config struct {
 
 	SiteURL         string `env:"SITE_URL" env-default:"http://localhost:8080" yaml:"site_url"`
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`
-	RSSFullContent  bool   `env:"RSS_FULL_CONTENT" env-default:"false" yaml:"rss_full_content"`
+	FeedSize        int    `env:"FEED_SIZE" env-default:"20" yaml:"feed_size"`
+	RSSContent      string `env:"RSS_CONTENT" env-default:"none" yaml:"rss_content"`
 
 	BlogName string         `env:"BLOG_NAME" env-default:"Blog" yaml:"blog_name"`
 	Icon     string         `env:"ICON" env-default:"./static/icon.png" yaml:"icon"` // path to PNG file served as favicon and og:logo
@@ -75,6 +76,15 @@ type OGImageConfig struct {
 func (c *Config) Validate() error {
 	if c.PageSize <= 0 {
 		return fmt.Errorf("page_size must be > 0, got %d", c.PageSize)
+	}
+	if c.FeedSize <= 0 {
+		return fmt.Errorf("feed_size must be > 0, got %d", c.FeedSize)
+	}
+	switch c.RSSContent {
+	case "", "none", "text", "html":
+		// valid
+	default:
+		return fmt.Errorf("rss_content must be \"none\", \"text\", or \"html\", got %q", c.RSSContent)
 	}
 	u, err := url.Parse(c.SiteURL)
 	if err != nil || !u.IsAbs() {

@@ -57,7 +57,7 @@
 
       <h1>{{if .SearchQuery}}Search{{else}}Posts{{end}}{{if .FilterTags}} — tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}{{end}}</h1>
 
-      <form action="/search" method="GET">
+      <form action="/posts" method="GET">
         <input type="search" name="q" value="{{.SearchQuery}}" placeholder="Search posts…">
         <button type="submit">Search</button>
       </form>

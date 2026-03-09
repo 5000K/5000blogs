@@ -44,6 +44,10 @@ func (s *stubSource) StatPost(path string) (time.Time, error) {
 	return time.Time{}, nil
 }
 
+func (s *stubSource) ReadMedia(_ string) ([]byte, time.Time, error) {
+	return nil, time.Time{}, errors.New("not found")
+}
+
 type notFoundError struct{ path string }
 
 func (e *notFoundError) Error() string { return "not found: " + e.path }

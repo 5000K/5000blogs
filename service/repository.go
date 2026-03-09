@@ -20,10 +20,10 @@ type PostRepository interface {
 	GetPage(page int, tags []string) PageResult
 	AllTags() []string
 	Search(query string) []PostSummary
-	RSSFeed() ([]byte, error)
-	AtomFeed() ([]byte, error)
+	FeedPosts(tags []string, query string) []*Post
 	LastModified() time.Time
 	Sitemap() []SitemapEntry
+	ReadMedia(relPath string) ([]byte, time.Time, error)
 	Start() error
 	Stop()
 }
@@ -51,12 +51,6 @@ type MemoryPostRepository struct {
 	// short mutation phase (slice append/replace/remove), not during file I/O.
 	postsMu sync.RWMutex
 	posts   []*Post
-
-	feedMu    sync.RWMutex
-	feedCache []byte
-
-	atomFeedMu    sync.RWMutex
-	atomFeedCache []byte
 }
 
 func NewMemoryPostRepository(conf *config.Config, source PostSource, converter Converter, logger *slog.Logger) *MemoryPostRepository {
@@ -257,6 +251,37 @@ func (r *MemoryPostRepository) Search(query string) []PostSummary {
 	return results
 }
 
+// FeedPosts returns all RSS-visible posts, optionally filtered by tags (OR logic)
+// and/or a full-text search query (case-insensitive match on title, description, body).
+func (r *MemoryPostRepository) FeedPosts(tags []string, query string) []*Post {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	q := strings.ToLower(query)
+	var filtered []*Post
+	for _, p := range r.posts {
+		if !p.IsRSSVisible() {
+			continue
+		}
+		if len(tags) > 0 && !hasAnyTag(p, tags) {
+			continue
+		}
+		if q != "" {
+			d := p.Data()
+			plain := ""
+			if pt := p.PlainText(); pt != nil {
+				plain = strings.ToLower(string(pt))
+			}
+			if !strings.Contains(strings.ToLower(d.Title), q) &&
+				!strings.Contains(strings.ToLower(d.Description), q) &&
+				!strings.Contains(plain, q) {
+				continue
+			}
+		}
+		filtered = append(filtered, p)
+	}
+	return filtered
+}
+
 // hasAnyTag reports whether p has at least one of the given tags.
 func hasAnyTag(p *Post, tags []string) bool {
 	if p.metadata == nil {
@@ -305,15 +330,6 @@ func (r *MemoryPostRepository) LastModified() time.Time {
 		}
 	}
 	return latest
-}
-
-func (r *MemoryPostRepository) invalidateFeedCache() {
-	r.feedMu.Lock()
-	r.feedCache = nil
-	r.feedMu.Unlock()
-	r.atomFeedMu.Lock()
-	r.atomFeedCache = nil
-	r.atomFeedMu.Unlock()
 }
 
 // pendingChange describes a single mutation to apply to r.posts.
@@ -393,8 +409,6 @@ func (r *MemoryPostRepository) rescan() {
 		}
 	}
 	r.postsMu.Unlock()
-
-	r.invalidateFeedCache()
 	r.log.Debug("rescan complete", "total", len(paths))
 }
 
