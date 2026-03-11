@@ -34,7 +34,7 @@ func main() {
 		log.Fatalf("failed to build sources: %v", err)
 	}
 	source := service.NewLayeredSource(append(userSources, service.NewBuiltinSource())...)
-	converter := &service.GoMarkdownConverter{}
+	converter := &service.GoldmarkConverter{}
 	repo, err := service.NewBlevePostRepository(cfg, source, converter, logger)
 	if err != nil {
 		log.Fatalf("failed to create repository: %v", err)

@@ -19,7 +19,7 @@ func newTestConf(pageSize int) *config.Config {
 }
 
 func newTestRepo(conf *config.Config, source PostSource) *MemoryPostRepository {
-	return NewMemoryPostRepository(conf, source, &GoMarkdownConverter{}, slog.Default())
+	return NewMemoryPostRepository(conf, source, &GoldmarkConverter{}, slog.Default())
 }
 
 // --- rescan ---

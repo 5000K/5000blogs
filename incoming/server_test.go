@@ -46,7 +46,7 @@ func doPlainRequest(t *testing.T, repo service.PostRepository, slug string) *htt
 func convertedPost(t *testing.T, slug string, raw []byte) *service.Post {
 	t.Helper()
 	post := service.NewPost(slug+".md", nil, nil)
-	c := &service.GoMarkdownConverter{}
+	c := &service.GoldmarkConverter{}
 	if err := c.Convert(post, raw); err != nil {
 		t.Fatalf("Convert: %v", err)
 	}
