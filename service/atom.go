@@ -66,7 +66,7 @@ func BuildAtomFeed(conf *config.Config, posts []*Post) ([]byte, error) {
 	entries := make([]atomEntry, 0, len(filtered))
 	for _, p := range filtered {
 		d := p.Data()
-		link := fmt.Sprintf("%s/posts/%s", conf.SiteURL, d.Slug)
+		link := fmt.Sprintf("%s/%s", conf.SiteURL, d.Slug)
 		entry := atomEntry{
 			Title:   d.Title,
 			Link:    atomLink{Href: link, Rel: "alternate", Type: "text/html"},

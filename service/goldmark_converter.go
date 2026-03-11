@@ -9,13 +9,14 @@ import (
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
 
 // GoldmarkConverter implements Converter using goldmark.
-// PostsBase is the URL prefix for posts (default "/posts/").
+// PostsBase is the URL prefix for posts (default "/").
 type GoldmarkConverter struct {
 	PostsBase string
 	Features  config.Features
@@ -27,7 +28,7 @@ func NewGoldmarkConverter(postsBase string, features config.Features) *GoldmarkC
 
 func (c *GoldmarkConverter) postsBase() string {
 	if c.PostsBase == "" {
-		return "/posts/"
+		return "/"
 	}
 	return c.PostsBase
 }
@@ -61,6 +62,27 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 			resolveSlugByTitle: resolveSlugByTitle,
 		}))
 	}
+
+	if c.Features.Tables {
+		opts = append(opts, goldmark.WithExtensions(extension.Table))
+	}
+
+	if c.Features.Strikethrough {
+		opts = append(opts, goldmark.WithExtensions(extension.Strikethrough))
+	}
+	
+	if c.Features.Autolinks {
+		opts = append(opts, goldmark.WithExtensions(extension.Linkify))
+	}
+
+	if c.Features.TaskList {
+		opts = append(opts, goldmark.WithExtensions(extension.TaskList))
+	}
+	
+	if c.Features.Footnotes {
+		opts = append(opts, goldmark.WithExtensions(extension.Footnote))
+	}
+
 	md := goldmark.New(opts...)
 
 	var buf bytes.Buffer
@@ -84,7 +106,7 @@ type goldmarkLinkRewriter struct {
 }
 
 func (t *goldmarkLinkRewriter) Transform(node *ast.Document, reader text.Reader, pc parser.Context) {
-	parts := strings.Split(t.slug, "+")
+	parts := strings.Split(t.slug, "/")
 	subdir := ""
 	if len(parts) > 1 {
 		subdir = strings.Join(parts[:len(parts)-1], "/") + "/"

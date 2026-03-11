@@ -22,7 +22,6 @@ The same URL-or-path loading applies to `paths.template` and `paths.icon`, enabl
 | `rss_content` | `RSS_CONTENT` | `none` | Content included in feed entries. `none` — description only (default); `text` — plain text body; `html` — rendered HTML body. |
 | `blog_name` | `BLOG_NAME` | `Blog` | Site name shown in the header, used as the RSS/Atom feed title, and used as a fallback page title. |
 | `nav_links` | — | _(none)_ | List of header navigation links. Each entry has `name` (display text) and `url`. YAML array only; no env var equivalent. |
-| `pages` | — | _(none)_ | Custom page routes. Each entry has `path` (URL path, must start with `/`) and `slug` (post slug to serve at that path). The `/` path defaults to slug `home` if not listed here. Paths already owned by the static router (e.g. `/posts`, `/feed.xml`) are silently ignored. YAML array only; no env var equivalent. |
 | `plugins` | — | _(none)_ | List of JavaScript URLs injected as `<script>` tags via `.Plugins` in the template to quickly extend the client. YAML array only; no env var equivalent. |
 | `sources` | — | _(none)_ | List of post sources. If omitted, a single filesystem source using `paths.posts` is used. See [Sources](#sources) below. YAML array only; no env var equivalent. |
 
@@ -107,10 +106,10 @@ Three posts are built in and served automatically:
 
 | Slug | Purpose |
 |---|---|
-| `home` | Rendered at `/` (the root page). Override the slug via `pages: [{path: /, slug: my-home}]`. |
+| `index` | Rendered at `/` (the root page). Override by placing `index.md` in your posts source. |
 | `footer` | Rendered as the page footer on every page. Override by placing `footer.md` in your `paths.posts` directory. |
 | `404` | Rendered for any unknown URL. |
 
-To override any of these, place a file with the matching name in your posts source (e.g. `home.md` or `404.md`). Your file takes precedence over the built-in version.
+To override any of these, place a file with the matching name in your posts source (e.g. `index.md` or `404.md`). Your file takes precedence over the built-in version.
 
-Slugs are derived from the file path relative to the source root, with directory segments joined by `+`: `more/hello.md` → `more+hello`, served at `/posts/more+hello`. See the [Writing posts](../README.md#slugs) section for the full rules.
+Slugs are derived from the file path relative to the source root: `more/hello.md` → `more/hello`, served at `/more/hello`. Each post is served directly at its slug path.

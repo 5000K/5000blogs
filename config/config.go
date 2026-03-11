@@ -34,7 +34,6 @@ type Config struct {
 
 	BlogName string         `env:"BLOG_NAME" env-default:"Blog" yaml:"blog_name"`
 	NavLinks []NavLink      `yaml:"nav_links"`
-	Pages    []PageRoute    `yaml:"pages"`
 	Plugins  []string       `yaml:"plugins"`
 	Sources  []SourceConfig `yaml:"sources"`
 
@@ -43,8 +42,24 @@ type Config struct {
 	OGImage OGImageConfig `yaml:"og_image"`
 }
 
-type Features struct{
-	WikiLinks bool `env:"FEATURE_WIKI_LINKS" env-default:"false" yaml:"wiki_links"`
+type Features struct {
+	// https://help.obsidian.md/links
+	WikiLinks bool `env:"FEATURE_WIKI_LINKS" env-default:"true" yaml:"wiki_links"`
+
+	// https://github.github.com/gfm/#tables-extension-
+	Tables bool `env:"FEATURE_TABLES" env-default:"true" yaml:"tables"`
+
+	// https://github.github.com/gfm/#strikethrough-extension-
+	Strikethrough bool `env:"FEATURE_STRIKETHROUGH" env-default:"true" yaml:"strikethrough"`
+
+	// https://github.github.com/gfm/#autolinks-extension-
+	Autolinks bool `env:"FEATURE_AUTOLINKS" env-default:"false" yaml:"autolinks"`
+
+	// https://github.github.com/gfm/#task-list-items-extension-
+	TaskList bool `env:"FEATURE_TASK_LIST" env-default:"false" yaml:"task_list"`
+
+	// https://michelf.ca/projects/php-markdown/extra/#footnotes
+	Footnotes bool `env:"FEATURE_FOOTNOTES" env-default:"false" yaml:"footnotes"`
 }
 
 // FetchResource reads a file from disk or downloads it over HTTP/HTTPS.
@@ -75,12 +90,6 @@ func FetchResource(urlOrPath string) ([]byte, error) {
 type NavLink struct {
 	Name string `yaml:"name"`
 	URL  string `yaml:"url"`
-}
-
-// PageRoute maps a URL path to a post slug for serving static page content.
-type PageRoute struct {
-	Path string `yaml:"path"`
-	Slug string `yaml:"slug"`
 }
 
 // SourceConfig defines a post source. Type is required: "filesystem" or "git".
@@ -126,14 +135,6 @@ func (c *Config) Validate() error {
 	}
 	if c.OGImage.CacheSize <= 0 {
 		return fmt.Errorf("og_image.cache_size must be > 0, got %d", c.OGImage.CacheSize)
-	}
-	for _, p := range c.Pages {
-		if !strings.HasPrefix(p.Path, "/") {
-			return fmt.Errorf("pages: path %q must start with /", p.Path)
-		}
-		if p.Slug == "" {
-			return fmt.Errorf("pages: slug for path %q must not be empty", p.Path)
-		}
 	}
 	for i, s := range c.Sources {
 		switch s.Type {

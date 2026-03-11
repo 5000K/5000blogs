@@ -121,7 +121,7 @@
       <ul class="list pl0 mt0">
         {{range .Posts}}
         <li class="mb5 pb4" style="border-bottom:1px solid #1e1e1e;">
-          <a href="/posts/{{.Slug}}" class="no-underline db f4 fw6 lh-title mb1" style="color:#f0f0f0;">{{.Title}}</a>
+          <a href="/{{.Slug}}" class="no-underline db f4 fw6 lh-title mb1" style="color:#f0f0f0;">{{.Title}}</a>
           {{if .DateStr}}<time class="f6 ttu tracked db mb1" style="color:#444; letter-spacing:.1em;">{{.DateStr}}</time>{{end}}
           {{if .Author}}<p class="f6 mt0 mb1" style="color:#555;">by {{.Author}}</p>{{end}}
           {{if .Description}}<p class="f5 lh-copy mt0 mb0" style="color:#888;">{{.Description}}</p>{{end}}

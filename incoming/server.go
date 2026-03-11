@@ -60,41 +60,6 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 	}
 }
 
-// reservedPaths lists URL paths explicitly registered by the static router.
-// Configured page routes matching these paths or their prefixes are skipped.
-var reservedPaths = map[string]bool{
-	"/":            true,
-	"/posts":       true,
-	"/feed.xml":    true,
-	"/feed.atom":   true,
-	"/health":      true,
-	"/favicon.ico": true,
-	"/og-logo.png": true,
-	"/robots.txt":  true,
-	"/sitemap.xml": true,
-}
-
-var reservedPrefixes = []string{"/api/", "/posts/", "/plain/", "/media/"}
-
-func isReservedPath(path string) bool {
-	if reservedPaths[path] {
-		return true
-	}
-	for _, prefix := range reservedPrefixes {
-		if strings.HasPrefix(path, prefix) {
-			return true
-		}
-	}
-	return false
-}
-
-// pathToSlug converts a URL sub-path to a post slug.
-// "hello" → "hello", "more/things/hello-world" → "more+things+hello-world"
-func pathToSlug(urlPath string) string {
-	parts := strings.FieldsFunc(urlPath, func(r rune) bool { return r == '/' })
-	return strings.Join(parts, "+")
-}
-
 func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator, iconData []byte) chi.Router {
 	renderer.SetFooter(func() template.HTML {
 		if post := repo.GetBySlug("footer"); post != nil {
@@ -158,54 +123,9 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 
 	r.NotFound(serve404)
 
-	r.Get("/posts/*", func(w http.ResponseWriter, r *http.Request) {
-		rest := chi.URLParam(r, "*")
-
-		if strings.Contains(rest, "+") {
-			http.Redirect(w, r, "/posts/"+strings.ReplaceAll(rest, "+", "/"), http.StatusMovedPermanently)
-			return
-		}
-
-		if strings.HasSuffix(rest, "/og-image.png") {
-			if ogGen == nil {
-				http.NotFound(w, r)
-				return
-			}
-			slug := pathToSlug(strings.TrimSuffix(rest, "/og-image.png"))
-			post := repo.GetBySlug(slug)
-			if post == nil {
-				http.NotFound(w, r)
-				return
-			}
-			data, err := ogGen.Generate(post)
-			if err != nil {
-				http.Error(w, "failed to generate og:image", http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "image/png")
-			w.Header().Set("Cache-Control", "public, max-age=86400")
-			_, _ = w.Write(data)
-			return
-		}
-
-		slug := pathToSlug(rest)
-		post := repo.GetBySlug(slug)
-		if post == nil {
-			serve404(w, r)
-			return
-		}
-		if checkLastModified(w, r, post.ModTime()) {
-			return
-		}
-		var ogImageURL string
-		if ogGen != nil {
-			ogImageURL = cfg.SiteURL + "/posts/" + rest + "/og-image.png"
-		}
-		renderer.ServePost(post, w, cfg.SiteURL+r.URL.RequestURI(), ogImageURL)
-	})
-
+	// Serve plain text version of a post.
 	r.Get("/plain/*", func(w http.ResponseWriter, r *http.Request) {
-		slug := pathToSlug(chi.URLParam(r, "*"))
+		slug := chi.URLParam(r, "*")
 		post := repo.GetBySlug(slug)
 		if post == nil {
 			serve404(w, r)
@@ -223,16 +143,8 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		_, _ = w.Write(plain)
 	})
 
-	homeSlug := "home"
-	for _, p := range cfg.Pages {
-		if p.Path == "/" {
-			homeSlug = p.Slug
-			break
-		}
-	}
-
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		if home := repo.GetBySlug(homeSlug); home != nil {
+		if home := repo.GetBySlug("index"); home != nil {
 			if data := home.Data(); len(data.Content) > 0 {
 				if checkLastModified(w, r, home.ModTime()) {
 					return
@@ -319,29 +231,6 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", cfg.SiteURL)
 	})
 
-	for _, pg := range cfg.Pages {
-		if isReservedPath(pg.Path) {
-			continue
-		}
-		slug := pg.Slug
-		path := pg.Path
-		r.Get(path, func(w http.ResponseWriter, r *http.Request) {
-			post := repo.GetBySlug(slug)
-			if post == nil {
-				serve404(w, r)
-				return
-			}
-			if data := post.Data(); len(data.Content) == 0 {
-				serve404(w, r)
-				return
-			}
-			if checkLastModified(w, r, post.ModTime()) {
-				return
-			}
-			renderer.ServePost(post, w, cfg.SiteURL+path, "")
-		})
-	}
-
 	r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
 		entries := repo.Sitemap()
 		type url struct {
@@ -356,7 +245,7 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		urls := make([]url, 0, len(entries)+1)
 		urls = append(urls, url{Loc: cfg.SiteURL + "/posts"})
 		for _, e := range entries {
-			u := url{Loc: cfg.SiteURL + "/posts/" + e.Slug}
+			u := url{Loc: cfg.SiteURL + "/" + e.Slug}
 			if !e.LastMod.IsZero() {
 				u.LastMod = e.LastMod.UTC().Format(time.RFC3339)
 			}
@@ -368,6 +257,49 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		enc := xml.NewEncoder(w)
 		enc.Indent("", "  ")
 		_ = enc.Encode(set)
+	})
+
+	// Catch-all: serve posts by their slug (the URL path IS the slug).
+	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		rest := chi.URLParam(r, "*")
+
+		// Serve og:image for a post: /{slug}/og-image.png
+		if strings.HasSuffix(rest, "/og-image.png") {
+			if ogGen == nil {
+				http.NotFound(w, r)
+				return
+			}
+			slug := strings.TrimSuffix(rest, "/og-image.png")
+			post := repo.GetBySlug(slug)
+			if post == nil {
+				http.NotFound(w, r)
+				return
+			}
+			data, err := ogGen.Generate(post)
+			if err != nil {
+				http.Error(w, "failed to generate og:image", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "image/png")
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			_, _ = w.Write(data)
+			return
+		}
+
+		slug := rest
+		post := repo.GetBySlug(slug)
+		if post == nil {
+			serve404(w, r)
+			return
+		}
+		if checkLastModified(w, r, post.ModTime()) {
+			return
+		}
+		var ogImageURL string
+		if ogGen != nil {
+			ogImageURL = cfg.SiteURL + "/" + slug + "/og-image.png"
+		}
+		renderer.ServePost(post, w, cfg.SiteURL+r.URL.RequestURI(), ogImageURL)
 	})
 
 	return r

@@ -68,7 +68,7 @@
       <ul>
         {{range .Posts}}
         <li>
-          <a href="/posts/{{.Slug}}">{{.Title}}</a>
+          <a href="/{{.Slug}}">{{.Title}}</a>
           {{if .DateStr}}<time>{{.DateStr}}</time>{{end}}
           {{if .Author}}<p>by {{.Author}}</p>{{end}}
           {{if .Description}}<p>{{.Description}}</p>{{end}}
