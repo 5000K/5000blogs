@@ -9,6 +9,7 @@ import (
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
@@ -61,6 +62,27 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 			resolveSlugByTitle: resolveSlugByTitle,
 		}))
 	}
+
+	if c.Features.Tables {
+		opts = append(opts, goldmark.WithExtensions(extension.Table))
+	}
+
+	if c.Features.Strikethrough {
+		opts = append(opts, goldmark.WithExtensions(extension.Strikethrough))
+	}
+	
+	if c.Features.Autolinks {
+		opts = append(opts, goldmark.WithExtensions(extension.Linkify))
+	}
+
+	if c.Features.TaskList {
+		opts = append(opts, goldmark.WithExtensions(extension.TaskList))
+	}
+	
+	if c.Features.Footnotes {
+		opts = append(opts, goldmark.WithExtensions(extension.Footnote))
+	}
+
 	md := goldmark.New(opts...)
 
 	var buf bytes.Buffer

@@ -43,7 +43,23 @@ type Config struct {
 }
 
 type Features struct {
-	WikiLinks bool `env:"FEATURE_WIKI_LINKS" env-default:"false" yaml:"wiki_links"`
+	// https://help.obsidian.md/links
+	WikiLinks bool `env:"FEATURE_WIKI_LINKS" env-default:"true" yaml:"wiki_links"`
+
+	// https://github.github.com/gfm/#tables-extension-
+	Tables bool `env:"FEATURE_TABLES" env-default:"true" yaml:"tables"`
+
+	// https://github.github.com/gfm/#strikethrough-extension-
+	Strikethrough bool `env:"FEATURE_STRIKETHROUGH" env-default:"true" yaml:"strikethrough"`
+
+	// https://github.github.com/gfm/#autolinks-extension-
+	Autolinks bool `env:"FEATURE_AUTOLINKS" env-default:"false" yaml:"autolinks"`
+
+	// https://github.github.com/gfm/#task-list-items-extension-
+	TaskList bool `env:"FEATURE_TASK_LIST" env-default:"false" yaml:"task_list"`
+
+	// https://michelf.ca/projects/php-markdown/extra/#footnotes
+	Footnotes bool `env:"FEATURE_FOOTNOTES" env-default:"false" yaml:"footnotes"`
 }
 
 // FetchResource reads a file from disk or downloads it over HTTP/HTTPS.
