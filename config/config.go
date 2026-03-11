@@ -38,7 +38,13 @@ type Config struct {
 	Plugins  []string       `yaml:"plugins"`
 	Sources  []SourceConfig `yaml:"sources"`
 
+	Features Features `yaml:"features"`
+
 	OGImage OGImageConfig `yaml:"og_image"`
+}
+
+type Features struct{
+	WikiLinks bool `env:"FEATURE_WIKI_LINKS" env-default:"false" yaml:"wiki_links"`
 }
 
 // FetchResource reads a file from disk or downloads it over HTTP/HTTPS.
