@@ -76,11 +76,7 @@ func (g *GitSource) SlugForPath(p string) string {
 	if ext != "" {
 		rel = rel[:len(rel)-len(ext)]
 	}
-	parts := strings.Split(rel, "/")
-	for i, seg := range parts {
-		parts[i] = strings.ReplaceAll(seg, "+", "-")
-	}
-	return strings.Join(parts, "+")
+	return rel
 }
 
 func (g *GitSource) ListPosts() ([]string, error) {
