@@ -44,20 +44,33 @@ func main() {
 	}
 	defer repo.Stop()
 
-	renderer, err := view.NewRenderer(cfg, logger)
+	tmplData, err := config.FetchResource(cfg.Paths.Template)
+	if err != nil {
+		log.Fatalf("failed to load template: %v", err)
+	}
+
+	var iconData []byte
+	if cfg.Paths.Icon != "" {
+		iconData, err = config.FetchResource(cfg.Paths.Icon)
+		if err != nil {
+			log.Fatalf("failed to load icon: %v", err)
+		}
+	}
+
+	renderer, err := view.NewRenderer(cfg, tmplData, logger)
 	if err != nil {
 		log.Fatalf("failed to create renderer: %v", err)
 	}
 
 	var ogGen *service.OGImageGenerator
 	if cfg.OGImage.Enabled {
-		ogGen, err = service.NewOGImageGenerator(cfg.OGImage, cfg.BlogName, cfg.Icon)
+		ogGen, err = service.NewOGImageGenerator(cfg.OGImage, cfg.BlogName, iconData)
 		if err != nil {
 			log.Fatalf("failed to create og:image generator: %v", err)
 		}
 	}
 
-	incoming.Serve(cfg, repo, renderer, ogGen)
+	incoming.Serve(cfg, repo, renderer, ogGen, iconData)
 }
 
 func buildSources(cfg *config.Config, logger *slog.Logger) ([]service.PostSource, error) {

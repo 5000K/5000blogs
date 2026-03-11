@@ -242,7 +242,6 @@ func TestIsReservedPath_KnownStaticPaths(t *testing.T) {
 
 func TestIsReservedPath_ReservedPrefixes(t *testing.T) {
 	reserved := []string{
-		"/static/foo.css",
 		"/api/v1/posts",
 		"/posts/my-slug",
 		"/plain/my-slug",

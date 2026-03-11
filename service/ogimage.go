@@ -10,7 +10,6 @@ import (
 	"image/draw"
 	_ "image/jpeg"
 	"image/png"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -114,7 +113,8 @@ type OGImageGenerator struct {
 }
 
 // NewOGImageGenerator creates a generator from the given config.
-func NewOGImageGenerator(cfg config.OGImageConfig, blogName, iconPath string) (*OGImageGenerator, error) {
+// iconData is optional PNG/JPEG bytes for the blog logo; pass nil to omit.
+func NewOGImageGenerator(cfg config.OGImageConfig, blogName string, iconData []byte) (*OGImageGenerator, error) {
 	boldFont, err := opentype.Parse(gobold.TTF)
 	if err != nil {
 		return nil, fmt.Errorf("ogimage: parse bold font: %w", err)
@@ -146,8 +146,11 @@ func NewOGImageGenerator(cfg config.OGImageConfig, blogName, iconPath string) (*
 		cache:       newOGLRUCache(cfg.CacheSize),
 	}
 
-	if iconPath != "" {
-		g.icon = loadIcon(iconPath)
+	if len(iconData) > 0 {
+		img, _, err := image.Decode(bytes.NewReader(iconData))
+		if err == nil {
+			g.icon = img
+		}
 	}
 
 	return g, nil
@@ -312,19 +315,6 @@ func drawText(img *image.RGBA, face font.Face, text string, x, y int, col color.
 		Dot:  fixed.P(x, y),
 	}
 	d.DrawString(text)
-}
-
-func loadIcon(path string) image.Image {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	img, _, err := image.Decode(f)
-	if err != nil {
-		return nil
-	}
-	return img
 }
 
 func parseHexColor(s string) (color.RGBA, error) {
