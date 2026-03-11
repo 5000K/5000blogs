@@ -43,7 +43,7 @@ A single value of the following shape is passed to the template on every request
 .FilterTags   []string      — active tag filter; nil when not filtering
 
 .Posts        []postListItem
-  .Slug         string      — URL slug (filename without .md); used in href="/posts/{{.Slug}}"
+  .Slug         string      — URL slug (relative path without .md); used in href="/{{.Slug}}"
   .Title        string      — post title; falls back to .Slug if empty
   .Description  string      — empty string if unset
   .DateStr      string      — formatted date ("January 2, 2006"); empty string if unset

@@ -58,8 +58,7 @@ func (p *wikilinkInlineParser) Parse(parent ast.Node, block text.Reader, pc pars
 func (p *wikilinkInlineParser) resolveHref(title string) string {
 	if p.resolveSlugByTitle != nil {
 		if slug := p.resolveSlugByTitle(title); slug != "" {
-			// slug "more+about" → "/posts/more/about"
-			return p.postsBase + strings.ReplaceAll(slug, "+", "/")
+			return p.postsBase + slug
 		}
 	}
 	return "/" + url.PathEscape(title)

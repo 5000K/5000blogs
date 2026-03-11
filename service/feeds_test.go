@@ -205,7 +205,7 @@ func TestAtomFeed_Structure(t *testing.T) {
 	if !strings.Contains(xml, "<title>Alpha</title>") || !strings.Contains(xml, "<title>Beta</title>") {
 		t.Error("Atom feed should include entry titles")
 	}
-	if !strings.Contains(xml, "http://example.com/posts/alpha") {
+	if !strings.Contains(xml, "http://example.com/alpha") {
 		t.Error("Atom feed entries should include post URL")
 	}
 	if !strings.Contains(xml, "<summary>First post summary</summary>") {

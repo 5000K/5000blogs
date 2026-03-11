@@ -15,7 +15,7 @@ import (
 )
 
 // GoldmarkConverter implements Converter using goldmark.
-// PostsBase is the URL prefix for posts (default "/posts/").
+// PostsBase is the URL prefix for posts (default "/").
 type GoldmarkConverter struct {
 	PostsBase string
 	Features  config.Features
@@ -27,7 +27,7 @@ func NewGoldmarkConverter(postsBase string, features config.Features) *GoldmarkC
 
 func (c *GoldmarkConverter) postsBase() string {
 	if c.PostsBase == "" {
-		return "/posts/"
+		return "/"
 	}
 	return c.PostsBase
 }
@@ -84,7 +84,7 @@ type goldmarkLinkRewriter struct {
 }
 
 func (t *goldmarkLinkRewriter) Transform(node *ast.Document, reader text.Reader, pc parser.Context) {
-	parts := strings.Split(t.slug, "+")
+	parts := strings.Split(t.slug, "/")
 	subdir := ""
 	if len(parts) > 1 {
 		subdir = strings.Join(parts[:len(parts)-1], "/") + "/"

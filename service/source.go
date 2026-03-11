@@ -27,8 +27,7 @@ type PostSource interface {
 }
 
 // slugFromSegments builds a slug from path segments relative to a root:
-// segments are joined with "+" and any literal "+" in a segment is replaced
-// with "-" to keep slugs predictable.
+// segments are joined with "/" to form a path-based slug.
 func slugFromSegments(root, fullPath string) string {
 	rel := fullPath
 	if root != "." && root != "" {
@@ -47,10 +46,7 @@ func slugFromSegments(root, fullPath string) string {
 	parts := strings.FieldsFunc(rel, func(r rune) bool {
 		return r == filepath.Separator || r == '/'
 	})
-	for i, p := range parts {
-		parts[i] = strings.ReplaceAll(p, "+", "-")
-	}
-	return strings.Join(parts, "+")
+	return strings.Join(parts, "/")
 }
 
 // FileSystemSource reads posts from a directory on disk.

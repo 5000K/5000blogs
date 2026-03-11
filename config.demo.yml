@@ -14,13 +14,7 @@ nav_links:
   - name: 'Posts'
     url: '/posts'
   - name: 'About'
-    url: '/about'
-
-# Custom page routes: map URL paths to post slugs.
-# The / path defaults to slug 'home' if not listed.
-pages:
-  - path: /about
-    slug: more+about # maps to more/about.md
+    url: '/more/about'
 
 site_url: 'http://localhost:8080'
 feed_description: 'Latest posts from My Blog'

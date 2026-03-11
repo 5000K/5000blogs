@@ -18,15 +18,15 @@ func TestSlugFromSegments(t *testing.T) {
 		// flat file at root
 		{"/posts", "/posts/hello.md", "hello"},
 		// one subdirectory
-		{"/posts", "/posts/more/hello.md", "more+hello"},
+		{"/posts", "/posts/more/hello.md", "more/hello"},
 		// two subdirectories
-		{"/posts", "/posts/more/things/hello-world.md", "more+things+hello-world"},
+		{"/posts", "/posts/more/things/hello-world.md", "more/things/hello-world"},
 		// + in filename becomes -
-		{"/posts", "/posts/a+b.md", "a-b"},
+		{"/posts", "/posts/a+b.md", "a+b"},
 		// + in directory segment also becomes -
-		{"/posts", "/posts/a+b/hello.md", "a-b+hello"},
+		{"/posts", "/posts/a+b/hello.md", "a+b/hello"},
 		// root "."
-		{".", "sub/hello.md", "sub+hello"},
+		{".", "sub/hello.md", "sub/hello"},
 		// no subdir, root == dir
 		{"./demo/posts", "demo/posts/simple.md", "simple"},
 	}

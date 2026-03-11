@@ -70,7 +70,7 @@ func BuildRSSFeed(conf *config.Config, posts []*Post) ([]byte, error) {
 	items := make([]rssItem, 0, len(filtered))
 	for _, p := range filtered {
 		d := p.Data()
-		link := fmt.Sprintf("%s/posts/%s", conf.SiteURL, d.Slug)
+		link := fmt.Sprintf("%s/%s", conf.SiteURL, d.Slug)
 		item := rssItem{
 			Title:       d.Title,
 			Link:        link,

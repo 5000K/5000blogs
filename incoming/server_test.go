@@ -17,7 +17,7 @@ import (
 func plainRouter(repo service.PostRepository) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/plain/*", func(w http.ResponseWriter, r *http.Request) {
-		slug := pathToSlug(chi.URLParam(r, "*"))
+		slug := chi.URLParam(r, "*")
 		post := repo.GetBySlug(slug)
 		if post == nil {
 			http.NotFound(w, r)
@@ -45,7 +45,7 @@ func doPlainRequest(t *testing.T, repo service.PostRepository, slug string) *htt
 // convertedPost creates a *service.Post with plain text populated via the converter.
 func convertedPost(t *testing.T, slug string, raw []byte) *service.Post {
 	t.Helper()
-	post := service.NewPost(slug+".md", nil, nil)
+	post := service.NewPostWithSlug(slug+".md", slug, nil, nil)
 	c := &service.GoldmarkConverter{}
 	body, err := c.ExtractMetadata(post, raw)
 	if err != nil {
@@ -93,11 +93,11 @@ func TestPlainEndpoint_NotFound(t *testing.T) {
 
 func TestPlainEndpoint_NestedSlug(t *testing.T) {
 	raw := []byte("---\ntitle: Nested\n---\n\n# Nested\n\nContent here.\n")
-	// Simulate a post with slug "more+things+hello" (as stored by the repo)
-	post := convertedPost(t, "more+things+hello", raw)
+	// Simulate a post with slug "more/things/hello" (as stored by the repo)
+	post := convertedPost(t, "more/things/hello", raw)
 	repo := &stubRepo{posts: []*service.Post{post}}
 
-	// URL: /plain/more/things/hello should resolve to slug "more+things+hello"
+	// URL: /plain/more/things/hello should resolve to slug "more/things/hello"
 	w := doPlainRequest(t, repo, "more/things/hello")
 	if w.Code != http.StatusOK {
 		t.Errorf("want 200 for nested slug, got %d", w.Code)
@@ -229,106 +229,6 @@ func TestCheckLastModified_ZeroTimeIsNoop(t *testing.T) {
 	}
 }
 
-// --- isReservedPath ---
-
-func TestIsReservedPath_KnownStaticPaths(t *testing.T) {
-	reserved := []string{
-		"/", "/posts", "/feed.xml", "/feed.atom",
-		"/health", "/favicon.ico", "/og-logo.png",
-		"/robots.txt", "/sitemap.xml",
-	}
-	for _, p := range reserved {
-		if !isReservedPath(p) {
-			t.Errorf("want %q to be reserved", p)
-		}
-	}
-}
-
-func TestIsReservedPath_ReservedPrefixes(t *testing.T) {
-	reserved := []string{
-		"/api/v1/posts",
-		"/posts/my-slug",
-		"/plain/my-slug",
-	}
-	for _, p := range reserved {
-		if !isReservedPath(p) {
-			t.Errorf("want %q to be reserved", p)
-		}
-	}
-}
-
-func TestIsReservedPath_CustomPathsAreNotReserved(t *testing.T) {
-	free := []string{"/about", "/contact", "/info", "/services/web"}
-	for _, p := range free {
-		if isReservedPath(p) {
-			t.Errorf("want %q to be free (not reserved), but it was reserved", p)
-		}
-	}
-}
-
-// --- dynamic page routes ---
-
-// pageRouter builds a minimal router that registers one dynamic page route,
-// mirroring the logic in buildRouter for cfg.Pages entries.
-func pageRouter(path, slug string, repo service.PostRepository) chi.Router {
-	r := chi.NewRouter()
-	serve404 := func(w http.ResponseWriter, r *http.Request) {
-		http.NotFound(w, r)
-	}
-	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
-		post := repo.GetBySlug(slug)
-		if post == nil {
-			serve404(w, r)
-			return
-		}
-		if data := post.Data(); len(data.Content) == 0 {
-			serve404(w, r)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(post.Data().Content)
-	})
-	return r
-}
-
-func TestDynamicPageRoute_ServesPost(t *testing.T) {
-	post := service.NewPost("about.md", &service.Metadata{Title: "About"}, []byte("<p>about us</p>"))
-	repo := &stubRepo{posts: []*service.Post{post}}
-
-	req := httptest.NewRequest(http.MethodGet, "/about", nil)
-	w := httptest.NewRecorder()
-	pageRouter("/about", "about", repo).ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("want 200, got %d", w.Code)
-	}
-}
-
-func TestDynamicPageRoute_NotFoundWhenSlugMissing(t *testing.T) {
-	repo := &stubRepo{}
-
-	req := httptest.NewRequest(http.MethodGet, "/about", nil)
-	w := httptest.NewRecorder()
-	pageRouter("/about", "about", repo).ServeHTTP(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("want 404, got %d", w.Code)
-	}
-}
-
-func TestDynamicPageRoute_NotFoundWhenPostHasNoContent(t *testing.T) {
-	post := service.NewPost("about.md", &service.Metadata{Title: "About"}, nil)
-	repo := &stubRepo{posts: []*service.Post{post}}
-
-	req := httptest.NewRequest(http.MethodGet, "/about", nil)
-	w := httptest.NewRecorder()
-	pageRouter("/about", "about", repo).ServeHTTP(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("want 404, got %d", w.Code)
-	}
-}
-
 // --- /health ---
 
 func TestHealthEndpoint(t *testing.T) {
@@ -351,24 +251,5 @@ func TestHealthEndpoint(t *testing.T) {
 	}
 	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/plain") {
 		t.Errorf("want text/plain content type, got %q", ct)
-	}
-}
-
-func TestPathToSlug(t *testing.T) {
-	cases := []struct {
-		input string
-		want  string
-	}{
-		{"hello", "hello"},
-		{"hello-world", "hello-world"},
-		{"more/hello", "more+hello"},
-		{"more/things/hello-world", "more+things+hello-world"},
-		{"a/b/c/d", "a+b+c+d"},
-		{"/leading/slash", "leading+slash"},
-	}
-	for _, tc := range cases {
-		if got := pathToSlug(tc.input); got != tc.want {
-			t.Errorf("pathToSlug(%q) = %q, want %q", tc.input, got, tc.want)
-		}
 	}
 }

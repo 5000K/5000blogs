@@ -143,7 +143,7 @@ func TestFileSystemSource_SlugForPath_Subdir(t *testing.T) {
 	fs, dir := newFSSource(t)
 	p := filepath.Join(dir, "sub", "my-post.md")
 	slug := fs.SlugForPath(p)
-	if slug != "sub+my-post" {
-		t.Errorf("want %q, got %q", "sub+my-post", slug)
+	if slug != "sub/my-post" {
+		t.Errorf("want %q, got %q", "sub/my-post", slug)
 	}
 }

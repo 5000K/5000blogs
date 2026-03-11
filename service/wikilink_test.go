@@ -32,8 +32,8 @@ func TestWikiLink_KnownTitle_RendersAnchor(t *testing.T) {
 	wikiConvert(t, post, []byte("See [[Another Example]] for details.\n"), resolver)
 
 	html := string(*post.contents)
-	if !strings.Contains(html, `href="/posts/example"`) {
-		t.Errorf("want href=/posts/example, got:\n%s", html)
+	if !strings.Contains(html, `href="/example"`) {
+		t.Errorf("want href=/example, got:\n%s", html)
 	}
 	if !strings.Contains(html, `>Another Example<`) {
 		t.Errorf("want link text 'Another Example', got:\n%s", html)
@@ -68,7 +68,7 @@ func TestWikiLink_NilResolver_FallsBackToURLEncodedHref(t *testing.T) {
 func TestWikiLink_NestedSlug_RewritesSlashSeparator(t *testing.T) {
 	resolver := func(title string) string {
 		if title == "About Me" {
-			return "more+about" // slug with subdirectory
+			return "more/about"
 		}
 		return ""
 	}
@@ -76,8 +76,8 @@ func TestWikiLink_NestedSlug_RewritesSlashSeparator(t *testing.T) {
 	wikiConvert(t, post, []byte("[[About Me]]\n"), resolver)
 
 	html := string(*post.contents)
-	if !strings.Contains(html, `href="/posts/more/about"`) {
-		t.Errorf("want href=/posts/more/about (+ replaced with /), got:\n%s", html)
+	if !strings.Contains(html, `href="/more/about"`) {
+		t.Errorf("want href=/more/about, got:\n%s", html)
 	}
 }
 
@@ -93,10 +93,10 @@ func TestWikiLink_Multiple_AllResolved(t *testing.T) {
 	wikiConvert(t, post, []byte("[[First Post]] and [[Second Post]].\n"), resolver)
 
 	html := string(*post.contents)
-	if !strings.Contains(html, `href="/posts/first"`) {
+	if !strings.Contains(html, `href="/first"`) {
 		t.Errorf("want first post link, got:\n%s", html)
 	}
-	if !strings.Contains(html, `href="/posts/second"`) {
+	if !strings.Contains(html, `href="/second"`) {
 		t.Errorf("want second post link, got:\n%s", html)
 	}
 }
@@ -137,7 +137,7 @@ func TestWikiLink_CoexistsWithRegularLinks(t *testing.T) {
 	if !strings.Contains(html, `href="https://example.com"`) {
 		t.Errorf("regular link should be preserved, got:\n%s", html)
 	}
-	if !strings.Contains(html, `href="/posts/wiki-page"`) {
+	if !strings.Contains(html, `href="/wiki-page"`) {
 		t.Errorf("wiki-link should be resolved, got:\n%s", html)
 	}
 }

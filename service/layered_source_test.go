@@ -67,7 +67,7 @@ func TestBuiltinSource_ListPosts(t *testing.T) {
 	for _, p := range paths {
 		slugs[slugFromPath(p)] = true
 	}
-	for _, want := range []string{"home", "404", "footer"} {
+	for _, want := range []string{"index", "404", "footer"} {
 		if !slugs[want] {
 			t.Errorf("expected builtin slug %q", want)
 		}
@@ -106,7 +106,7 @@ func TestBuiltinSource_StatPost_Unknown(t *testing.T) {
 
 func TestBuiltinSource_HomeContent(t *testing.T) {
 	b := NewBuiltinSource()
-	data, err := b.ReadPost("builtin/home.md")
+	data, err := b.ReadPost("builtin/index.md")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -118,13 +118,13 @@ func TestBuiltinSource_HomeContent(t *testing.T) {
 // --- LayeredSource tests ---
 
 func TestLayeredSource_ListPosts_Priority(t *testing.T) {
-	// First source has home.md; second also has home.md — first wins.
+	// First source has index.md; second also has index.md — first wins.
 	s1 := newStubSource(map[string][]byte{
-		"/user/posts/home.md": []byte("---\ntitle: User Home\n---\n"),
+		"/user/posts/index.md": []byte("---\ntitle: User Home\n---\n"),
 	})
 	s2 := newStubSource(map[string][]byte{
-		"builtin/home.md": []byte("---\ntitle: Builtin Home\n---\n"),
-		"builtin/404.md":  []byte("---\ntitle: 404\n---\n"),
+		"builtin/index.md": []byte("---\ntitle: Builtin Home\n---\n"),
+		"builtin/404.md":   []byte("---\ntitle: 404\n---\n"),
 	})
 	l := NewLayeredSource(s1, s2)
 
@@ -136,8 +136,8 @@ func TestLayeredSource_ListPosts_Priority(t *testing.T) {
 	for _, p := range paths {
 		slugs[slugFromPath(p)] = true
 	}
-	if !slugs["home"] {
-		t.Error("expected slug 'home' in result")
+	if !slugs["index"] {
+		t.Error("expected slug 'index' in result")
 	}
 	if !slugs["404"] {
 		t.Error("expected slug '404' from fallback source")
@@ -145,9 +145,9 @@ func TestLayeredSource_ListPosts_Priority(t *testing.T) {
 	if len(paths) != 2 {
 		t.Errorf("expected 2 paths, got %d: %v", len(paths), paths)
 	}
-	// The user's home.md should be used, not the builtin one.
-	if paths[0] != "/user/posts/home.md" {
-		t.Errorf("expected user's home path first, got %q", paths[0])
+	// The user's index.md should be used, not the builtin one.
+	if paths[0] != "/user/posts/index.md" {
+		t.Errorf("expected user's index path first, got %q", paths[0])
 	}
 }
 
@@ -155,7 +155,7 @@ func TestLayeredSource_ListPosts_FallbackOnly(t *testing.T) {
 	// Primary source is empty; all posts come from fallback.
 	s1 := newStubSource(map[string][]byte{})
 	s2 := newStubSource(map[string][]byte{
-		"builtin/home.md": []byte("---\ntitle: Home\n---\n"),
+		"builtin/index.md": []byte("---\ntitle: Home\n---\n"),
 	})
 	l := NewLayeredSource(s1, s2)
 
@@ -163,8 +163,8 @@ func TestLayeredSource_ListPosts_FallbackOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(paths) != 1 || slugFromPath(paths[0]) != "home" {
-		t.Errorf("expected fallback home post, got %v", paths)
+	if len(paths) != 1 || slugFromPath(paths[0]) != "index" {
+		t.Errorf("expected fallback index post, got %v", paths)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestLayeredSource_ReadPost_Routing(t *testing.T) {
 		"/posts/mine.md": []byte("user content"),
 	})
 	s2 := newStubSource(map[string][]byte{
-		"builtin/home.md": []byte("builtin content"),
+		"builtin/index.md": []byte("builtin content"),
 	})
 	l := NewLayeredSource(s1, s2)
 
@@ -182,7 +182,7 @@ func TestLayeredSource_ReadPost_Routing(t *testing.T) {
 		t.Errorf("expected user content, got %q err=%v", data, err)
 	}
 
-	data, err = l.ReadPost("builtin/home.md")
+	data, err = l.ReadPost("builtin/index.md")
 	if err != nil || string(data) != "builtin content" {
 		t.Errorf("expected builtin content, got %q err=%v", data, err)
 	}

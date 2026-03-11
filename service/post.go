@@ -14,3 +14,17 @@ func NewPost(path string, metadata *Metadata, content []byte) *Post {
 	}
 	return p
 }
+
+// NewPostWithSlug is like NewPost but allows setting the slug explicitly.
+// Useful for tests that need nested slugs (e.g. "more/things/hello").
+func NewPostWithSlug(path string, slug string, metadata *Metadata, content []byte) *Post {
+	p := &Post{
+		path:     path,
+		slug:     slug,
+		metadata: metadata,
+	}
+	if content != nil {
+		p.contents = &content
+	}
+	return p
+}
