@@ -332,7 +332,6 @@
 </head>
 
 <body>
-
     <!-- brand banner -->
     <header class="garden-header">
         <div class="mw7 center ph3 ph4-ns pv3 flex items-center justify-between">
@@ -419,6 +418,12 @@
             {{if .Author}}
             <p class="f6 mt0 mb0" style="color:#7a6040; font-family:'Montserrat',sans-serif;">by {{.Author}}</p>
             {{end}}
+
+            {{if .Slug}}
+            <p class="mt3 mb0">
+                also available as <a href="/plain/{{.Slug}}" class="f7" style="color:#7a6040; font-family:'Montserrat',sans-serif; font-style:italic;">plain text</a>
+            </p>
+            {{end}}
         </div>
     </div>
 
@@ -444,7 +449,6 @@
     {{if .FooterContent}}
     <div style="background: var(--surface);">
         <footer class="mw7 center ph3 ph4-ns pb5 pt4 post-body footer">
-            <div class="pt4" style="border-top:1px solid #3d3020;"></div>
             <div class="f7 tc" style="color:#7a6040; font-family:'Montserrat',sans-serif; font-style:italic;">{{.FooterContent}}</div>
         </footer>
     </div>

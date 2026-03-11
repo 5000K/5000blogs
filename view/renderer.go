@@ -26,6 +26,7 @@ type templateData struct {
 	Plugins     []string
 	BlogName    string
 	NavLinks    []navLink
+	Slug        string // for setting active nav link; empty on list pages
 
 	// Post view
 	DateStr string
@@ -172,6 +173,7 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL 
 		BlogName:      r.cfg.BlogName,
 		NavLinks:      r.navLinks(),
 		FooterContent: r.footer(),
+		Slug:          data.Slug,
 	}
 	if !data.Date.IsZero() {
 		td.DateStr = data.Date.Format("January 2, 2006")
