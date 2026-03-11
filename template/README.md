@@ -31,11 +31,3 @@
 <img width="1240" height="1274" alt="image" src="https://github.com/user-attachments/assets/48cfb52f-8d46-4db2-bfe8-f8de327ccc62" />
 
 <img width="1238" height="1097" alt="image" src="https://github.com/user-attachments/assets/b0b3c3b2-3e06-49c3-a9fe-3f0fc108f5ec" />
-
-# template.paper.html
-
-> A light mode template immitating "modern paper".
-
-<img width="1238" height="1265" alt="image" src="https://github.com/user-attachments/assets/dae2a197-b8f7-42cf-bc71-2e9ab41f0c3c" />
-
-<img width="1236" height="1229" alt="image" src="https://github.com/user-attachments/assets/41e32ad8-21fd-4e15-b534-3437f5eef9d0" />
