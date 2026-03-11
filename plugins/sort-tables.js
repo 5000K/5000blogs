@@ -1,3 +1,4 @@
+// works like a charm.
 (function() {
   'use strict';
 

@@ -1,3 +1,4 @@
+// broken right now. needs to be rewritten with a more robust approach, maybe using a single tooltip element and updating its content and position on hover.
 (function () {
   const cache = {};
   let tip = null;
