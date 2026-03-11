@@ -16,10 +16,12 @@ type Config struct {
 	ServerAddress string `env:"SERVER_ADDRESS" env-default:":8080" yaml:"address"`
 
 	Paths struct {
-		Config   string `env:"CONFIG_PATH" env-default:"config.yml"`
-		Posts    string `env:"POSTS_PATH" env-default:"./posts/" yaml:"posts"`
-		Template string `env:"TEMPLATE_PATH" env-default:"./template/template.html" yaml:"template"`
-		Icon     string `env:"ICON_PATH" env-default:"" yaml:"icon"`
+		Config string `env:"CONFIG_PATH" env-default:"config.yml"`
+		Posts  string `env:"POSTS_PATH" env-default:"./posts/" yaml:"posts"`
+
+		// default links to the current version in the official repo so that we no longer have to include templates in the dockerfile.
+		Template string `env:"TEMPLATE_PATH" env-default:"https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/template.html" yaml:"template"`
+		Icon     string `env:"ICON_PATH" env-default:"https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/icon.png" yaml:"icon"`
 	} `yaml:"paths"`
 
 	RescanCron           string `env:"RESCAN_CRON" env-default:"* * * * *" yaml:"rescan_cron"`
@@ -165,7 +167,7 @@ func Get() (*Config, error) {
 
 	data, err := FetchResource(cfg.Paths.Config)
 	if err != nil {
-		return nil, fmt.Errorf("load config: %w", err)
+		return &cfg, nil
 	}
 
 	if err := cleanenv.ParseYAML(bytes.NewReader(data), &cfg); err != nil {
