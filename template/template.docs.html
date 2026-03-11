@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- page title / meta — fed by templateData.Title / .Description -->
+  <title>{{if .Title}}{{.Title}}{{else}}Docs{{end}}</title>
+  {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
+  {{if .NoIndex}}<meta name="robots" content="noindex, follow">{{end}}
+
+  {{if .URL}}<link rel="canonical" href="{{.URL}}">{{end}}
+  {{if .OGLogoURL}}<link rel="icon" type="image/png" href="/favicon.ico">{{end}}
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  {{if .Title}}<meta property="og:title" content="{{.Title}}">{{end}}
+  {{if .Description}}<meta property="og:description" content="{{.Description}}">{{end}}
+  {{if .URL}}<meta property="og:url" content="{{.URL}}">{{end}}
+  {{if .OGImageURL}}<meta property="og:image" content="{{.OGImageURL}}">{{end}}
+  {{if .OGLogoURL}}<meta property="og:logo" content="{{.OGLogoURL}}">{{end}}
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="{{if .OGImageURL}}summary_large_image{{else}}summary{{end}}">
+  {{if .Title}}<meta name="twitter:title" content="{{.Title}}">{{end}}
+  {{if .Description}}<meta name="twitter:description" content="{{.Description}}">{{end}}
+  {{if .OGImageURL}}<meta name="twitter:image" content="{{.OGImageURL}}">{{end}}
+
+  {{if not .IsListPage}}
+  <!-- JSON-LD structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    {{if .Title}}"headline": {{.Title | js}},{{end}}
+    {{if .Description}}"description": {{.Description | js}},{{end}}
+    "url": "{{.URL}}"
+  }
+  </script>
+  {{end}}
+
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+      font-weight: 400;
+      background: #f9fafb; /* gray-50 */
+      color: #1f2937;      /* gray-800 */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: #4f46e5; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Header / navbar ── */
+    .site-header {
+      background: #111827; /* gray-900 */
+      border-bottom: 1px solid #374151; /* gray-700 */
+    }
+    .site-header-inner {
+      max-width: 56rem;
+      margin: 0 auto;
+      padding: .75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .site-header-brand {
+      color: #f9fafb;
+      font-weight: 600;
+      font-size: 1.125rem;
+      letter-spacing: -.015em;
+      text-decoration: none;
+    }
+    .site-header-brand:hover { text-decoration: none; color: #e5e7eb; }
+    .site-header-nav { display: flex; align-items: center; gap: 1.5rem; }
+    .site-header-nav a { color: #9ca3af; font-size: .875rem; text-decoration: none; }
+    .site-header-nav a:hover { color: #f9fafb; text-decoration: none; }
+
+    /* ── Main content wrapper ── */
+    .content-wrapper {
+      max-width: 56rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    /* ── Search form (in header) ── */
+    .search-form { display: flex; gap: .375rem; margin: 0; }
+    .search-input {
+      width: 14rem;
+      font-size: .8125rem;
+      padding: .375rem .625rem;
+      background: #1f2937; /* gray-800 */
+      border: 1px solid #374151; /* gray-700 */
+      border-radius: .375rem;
+      color: #e5e7eb;
+      outline: none;
+    }
+    .search-input::placeholder { color: #6b7280; }
+    .search-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,.25); }
+    .search-btn {
+      font-size: .8125rem;
+      padding: .375rem .75rem;
+      background: #4f46e5; /* indigo-600 */
+      color: #ffffff;
+      border: none;
+      border-radius: .375rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .search-btn:hover { background: #4338ca; } /* indigo-700 */
+
+    /* ── Article list ── */
+    .doc-list { list-style: none; padding: 0; margin: 0; }
+    .doc-list-item {
+      padding: 1.25rem 0;
+      border-bottom: 1px solid #e5e7eb; /* gray-200 */
+    }
+    .doc-list-item:first-child { border-top: 1px solid #e5e7eb; }
+    .doc-list-title {
+      display: block;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1f2937;
+      text-decoration: none;
+      margin-bottom: .25rem;
+    }
+    .doc-list-title:hover { color: #4f46e5; text-decoration: none; }
+    .doc-list-desc { font-size: .875rem; color: #6b7280; margin: 0; }
+    .doc-list-tags { margin: .5rem 0 0; }
+
+    /* ── Tags ── */
+    .tag {
+      display: inline-block;
+      font-size: .75rem;
+      padding: .125rem .5rem;
+      background: #e0e7ff; /* indigo-100 */
+      color: #4f46e5;       /* indigo-600 */
+      border-radius: .25rem;
+      margin-right: .25rem;
+      text-decoration: none;
+    }
+    .tag:hover { background: #c7d2fe; text-decoration: none; }
+
+    /* ── Empty / search results ── */
+    .muted { color: #6b7280; font-size: .875rem; }
+    .muted-search { color: #6b7280; font-size: .875rem; margin-bottom: 1rem; }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid #e5e7eb;
+      font-size: .875rem;
+    }
+    .pagination a { color: #4f46e5; font-weight: 500; }
+    .pagination a:hover { text-decoration: underline; }
+    .pagination-info { color: #9ca3af; }
+
+    /* ── List page header ── */
+    .list-heading { font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0 0 1.25rem; }
+    .list-heading-filter { font-size: 1rem; font-weight: 400; color: #6b7280; }
+
+    /* ── Single article header ── */
+    .article-header { margin-bottom: 2rem; }
+    .article-title {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.25;
+      margin: 0 0 .75rem;
+    }
+    .article-tags-header { margin-top: .75rem; }
+
+    /* ── Article body — scoped styles for markdown-rendered HTML ── */
+    .article-body { color: #374151; line-height: 1.7; } /* gray-700 */
+    .article-body h1,
+    .article-body h2,
+    .article-body h3,
+    .article-body h4 { color: #111827; font-weight: 600; line-height: 1.25; margin-top: 2rem; margin-bottom: .5rem; }
+    .article-body h1 { font-size: 1.75rem; }
+    .article-body h2 { font-size: 1.375rem; border-bottom: 1px solid #e5e7eb; padding-bottom: .35rem; }
+    .article-body h3 { font-size: 1.125rem; }
+    .article-body p  { margin-top: 0; margin-bottom: 1rem; }
+    .article-body a  { color: #4f46e5; }
+    .article-body a:hover { text-decoration: underline; }
+    .article-body strong { color: #111827; }
+    .article-body em    { color: #4b5563; }
+    .article-body code  { background: #f3f4f6; color: #1f2937; padding: .1em .35em; border-radius: .25rem; font-size: .875em; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; border: 1px solid #e5e7eb; }
+    .article-body pre   { background: #111827; padding: 1rem 1.25rem; border-radius: .5rem; overflow-x: auto; margin-bottom: 1.25rem; }
+    .article-body pre code { background: none; border: none; padding: 0; font-size: .85em; color: #e5e7eb; }
+    .article-body blockquote { border-left: 3px solid #4f46e5; margin: 0 0 1rem; padding: .5rem 0 .5rem 1rem; color: #6b7280; background: #f5f3ff; border-radius: 0 .25rem .25rem 0; }
+    .article-body blockquote p { margin-bottom: 0; }
+    .article-body ul,
+    .article-body ol  { padding-left: 1.5rem; margin-bottom: 1rem; }
+    .article-body li  { margin-bottom: .25rem; }
+    .article-body hr  { border: none; border-top: 1px solid #e5e7eb; margin: 2rem 0; }
+    .article-body img { max-width: 100%; height: auto; border-radius: .375rem; }
+    .article-body table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+    .article-body th,
+    .article-body td  { border: 1px solid #e5e7eb; padding: .5rem .75rem; text-align: left; }
+    .article-body th  { background: #f3f4f6; color: #111827; font-weight: 600; }
+
+    /* ── Footer ── */
+    .site-footer {
+      max-width: 56rem;
+      margin: 0 auto;
+      padding: 0 1.5rem 2.5rem;
+    }
+    .site-footer-inner {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 1.25rem;
+      font-size: .75rem;
+      color: #9ca3af;
+      text-align: center;
+    }
+    .site-footer-inner a { color: #6b7280; }
+    .site-footer-inner a:hover { color: #4f46e5; }
+  </style>
+</head>
+<body>
+
+  <!-- brand banner -->
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="/" class="site-header-brand">{{.BlogName}}</a>
+      <nav class="site-header-nav">
+        {{range .NavLinks}}<a href="{{.URL}}">{{.Name}}</a>{{end}}
+        <form action="/posts" method="GET" class="search-form">
+          <input type="search" name="q" value="{{.SearchQuery}}" placeholder="Search docs…" class="search-input">
+          <button type="submit" class="search-btn">Search</button>
+        </form>
+      </nav>
+    </div>
+  </header>
+
+  <!-- main content column — max-width constrained, centred -->
+  <div class="content-wrapper">
+
+    <article>
+
+      <!-- ── LIST VIEW (IsListPage = true) ── -->
+      {{if .IsListPage}}
+
+      <h1 class="list-heading">
+        {{if .SearchQuery}}Search Results{{else}}Documentation{{end}}{{if .FilterTags}} <span class="list-heading-filter">— tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}</span>{{end}}
+      </h1>
+
+      {{if .SearchQuery}}<p class="muted-search">Results for <em>{{.SearchQuery}}</em></p>{{end}}
+
+      <!-- article list; each item: title and optional description -->
+      {{if .Posts}}
+      <ul class="doc-list">
+        {{range .Posts}}
+        <li class="doc-list-item">
+          <a href="/{{.Slug}}" class="doc-list-title">{{.Title}}</a>
+          {{if .Description}}<p class="doc-list-desc">{{.Description}}</p>{{end}}
+          {{if .Tags}}<div class="doc-list-tags">{{range .Tags}}<a href="/posts?tags={{.}}" class="tag">{{.}}</a>{{end}}</div>{{end}}
+        </li>
+        {{end}}
+      </ul>
+      {{else}}
+      <p class="muted">No articles yet.</p>
+      {{end}}
+
+      <!-- pagination — only shown when there is more than one page -->
+      {{if or .Pagination.HasPrev .Pagination.HasNext}}
+      <nav class="pagination">
+        <span>
+          {{if .Pagination.HasPrev}}
+          <a href="/posts?page={{.Pagination.PrevPage}}{{.Pagination.TagParam}}">← Previous</a>
+          {{end}}
+        </span>
+        <span class="pagination-info">Page {{.Pagination.Page}} of {{.Pagination.TotalPages}}</span>
+        <span>
+          {{if .Pagination.HasNext}}
+          <a href="/posts?page={{.Pagination.NextPage}}{{.Pagination.TagParam}}">Next →</a>
+          {{end}}
+        </span>
+      </nav>
+      {{end}}
+
+      <!-- ── SINGLE ARTICLE VIEW (IsListPage = false) ── -->
+      {{else}}
+
+      <!-- article title -->
+      <header class="article-header">
+        {{if .Title}}
+        <h1 class="article-title">{{.Title}}</h1>
+        {{end}}
+        {{if .Tags}}
+        <div class="article-tags-header">
+          {{range .Tags}}<a href="/posts?tags={{.}}" class="tag">{{.}}</a>{{end}}
+        </div>
+        {{end}}
+      </header>
+
+      <!-- rendered markdown body -->
+      <div class="article-body">
+        {{.Content}}
+      </div>
+
+      {{end}}
+    </article>
+
+  </div>
+
+  <!-- footer — content from builtin/footer.md -->
+  {{if .FooterContent}}
+  <footer class="site-footer">
+    <div class="site-footer-inner article-body">{{.FooterContent}}</div>
+  </footer>
+  {{end}}
+
+  <!-- plugins from config.plugins -->
+  {{range .Plugins}}
+  <script src="{{.}}"></script>
+  {{end}}
+</body>
+</html>
