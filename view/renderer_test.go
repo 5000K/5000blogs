@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -17,18 +15,8 @@ const minimalTemplate = `<!DOCTYPE html><html><head><title>{{.Title}}</title></h
 
 func newTestRenderer(t *testing.T) *Renderer {
 	t.Helper()
-	dir := t.TempDir()
-	staticDir := filepath.Join(dir, "static")
-	if err := os.MkdirAll(staticDir, 0755); err != nil {
-		t.Fatalf("mkdir static: %v", err)
-	}
-	tmplPath := filepath.Join(staticDir, "template.html")
-	if err := os.WriteFile(tmplPath, []byte(minimalTemplate), 0644); err != nil {
-		t.Fatalf("write template: %v", err)
-	}
 	cfg := &config.Config{}
-	cfg.Paths.Static = staticDir
-	r, err := NewRenderer(cfg, slog.Default())
+	r, err := NewRenderer(cfg, []byte(minimalTemplate), slog.Default())
 	if err != nil {
 		t.Fatalf("NewRenderer: %v", err)
 	}

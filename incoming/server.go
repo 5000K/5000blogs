@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -40,10 +39,10 @@ func checkLastModified(w http.ResponseWriter, r *http.Request, t time.Time) bool
 	return false
 }
 
-func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) {
+func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator, iconData []byte) {
 	srv := &http.Server{
 		Addr:    cfg.ServerAddress,
-		Handler: buildRouter(cfg, repo, renderer, ogGen),
+		Handler: buildRouter(cfg, repo, renderer, ogGen, iconData),
 	}
 
 	quit := make(chan os.Signal, 1)
@@ -75,7 +74,7 @@ var reservedPaths = map[string]bool{
 	"/sitemap.xml": true,
 }
 
-var reservedPrefixes = []string{"/static/", "/api/", "/posts/", "/plain/", "/media/"}
+var reservedPrefixes = []string{"/api/", "/posts/", "/plain/", "/media/"}
 
 func isReservedPath(path string) bool {
 	if reservedPaths[path] {
@@ -96,7 +95,7 @@ func pathToSlug(urlPath string) string {
 	return strings.Join(parts, "+")
 }
 
-func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator) chi.Router {
+func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator, iconData []byte) chi.Router {
 	renderer.SetFooter(func() template.HTML {
 		if post := repo.GetBySlug("footer"); post != nil {
 			if data := post.Data(); len(data.Content) > 0 {
@@ -110,10 +109,6 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
-
-	workDir, _ := os.Getwd()
-	filesDir := http.Dir(filepath.Join(workDir, cfg.Paths.Static))
-	FileServer(r, "/static", filesDir)
 
 	r.Mount("/api/v1", apiRouter(repo))
 
@@ -147,21 +142,15 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		if cfg.Icon == "" {
+	serveIcon := func(w http.ResponseWriter, r *http.Request) {
+		if len(iconData) == 0 {
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeFile(w, r, cfg.Icon)
-	})
-
-	r.Get("/og-logo.png", func(w http.ResponseWriter, r *http.Request) {
-		if cfg.Icon == "" {
-			http.NotFound(w, r)
-			return
-		}
-		http.ServeFile(w, r, cfg.Icon)
-	})
+		http.ServeContent(w, r, "icon.png", time.Time{}, bytes.NewReader(iconData))
+	}
+	r.Get("/favicon.ico", serveIcon)
+	r.Get("/og-logo.png", serveIcon)
 
 	serve404 := func(w http.ResponseWriter, r *http.Request) {
 		renderer.Serve404(repo.GetBySlug("404"), w)
@@ -382,23 +371,4 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	return r
-}
-
-func FileServer(r chi.Router, path string, root http.FileSystem) {
-	if strings.ContainsAny(path, "{}*") {
-		panic("FileServer does not permit any URL parameters.")
-	}
-
-	if path != "/" && path[len(path)-1] != '/' {
-		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
-		path += "/"
-	}
-	path += "*"
-
-	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
-		rctx := chi.RouteContext(r.Context())
-		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
-		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
-		fs.ServeHTTP(w, r)
-	})
 }

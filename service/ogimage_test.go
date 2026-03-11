@@ -19,7 +19,7 @@ func defaultOGConfig() config.OGImageConfig {
 }
 
 func TestOGImageGenerator_GeneratesPNG(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", "")
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", nil)
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestOGImageGenerator_GeneratesPNG(t *testing.T) {
 }
 
 func TestOGImageGenerator_Cache(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", "")
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", nil)
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestOGImageGenerator_Cache(t *testing.T) {
 }
 
 func TestOGImageGenerator_Invalidate(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", "")
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", nil)
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestOGImageGenerator_Invalidate(t *testing.T) {
 }
 
 func TestOGImageGenerator_NoTitle(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", "")
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "Test Blog", nil)
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestOGImageGenerator_CacheEviction(t *testing.T) {
 	cap := 5
 	cfg := defaultOGConfig()
 	cfg.CacheSize = cap
-	gen, err := NewOGImageGenerator(cfg, "", "")
+	gen, err := NewOGImageGenerator(cfg, "", nil)
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestParseHexColor(t *testing.T) {
 }
 
 func TestWrapText(t *testing.T) {
-	gen, err := NewOGImageGenerator(defaultOGConfig(), "", "")
+	gen, err := NewOGImageGenerator(defaultOGConfig(), "", nil)
 	if err != nil {
 		t.Fatalf("NewOGImageGenerator: %v", err)
 	}

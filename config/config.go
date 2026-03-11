@@ -1,8 +1,12 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -12,9 +16,10 @@ type Config struct {
 	ServerAddress string `env:"SERVER_ADDRESS" env-default:":8080" yaml:"address"`
 
 	Paths struct {
-		Config string `env:"CONFIG_PATH" env-default:"config.yml"`
-		Posts  string `env:"POSTS_PATH" env-default:"./posts/" yaml:"posts"`
-		Static string `env:"STATIC_PATH" env-default:"./static/" yaml:"static"`
+		Config   string `env:"CONFIG_PATH" env-default:"config.yml"`
+		Posts    string `env:"POSTS_PATH" env-default:"./posts/" yaml:"posts"`
+		Template string `env:"TEMPLATE_PATH" env-default:"./template/template.html" yaml:"template"`
+		Icon     string `env:"ICON_PATH" env-default:"" yaml:"icon"`
 	} `yaml:"paths"`
 
 	RescanCron           string `env:"RESCAN_CRON" env-default:"* * * * *" yaml:"rescan_cron"`
@@ -28,13 +33,36 @@ type Config struct {
 	RSSContent      string `env:"RSS_CONTENT" env-default:"none" yaml:"rss_content"`
 
 	BlogName string         `env:"BLOG_NAME" env-default:"Blog" yaml:"blog_name"`
-	Icon     string         `env:"ICON" env-default:"./static/icon.png" yaml:"icon"` // path to PNG file served as favicon and og:logo
 	NavLinks []NavLink      `yaml:"nav_links"`
 	Pages    []PageRoute    `yaml:"pages"`
 	Plugins  []string       `yaml:"plugins"`
 	Sources  []SourceConfig `yaml:"sources"`
 
 	OGImage OGImageConfig `yaml:"og_image"`
+}
+
+// FetchResource reads a file from disk or downloads it over HTTP/HTTPS.
+func FetchResource(urlOrPath string) ([]byte, error) {
+	if strings.HasPrefix(urlOrPath, "http://") || strings.HasPrefix(urlOrPath, "https://") {
+		resp, err := http.Get(urlOrPath) //nolint:noctx
+		if err != nil {
+			return nil, fmt.Errorf("fetch %q: %w", urlOrPath, err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("fetch %q: HTTP %d", urlOrPath, resp.StatusCode)
+		}
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("fetch %q: read body: %w", urlOrPath, err)
+		}
+		return data, nil
+	}
+	data, err := os.ReadFile(urlOrPath)
+	if err != nil {
+		return nil, fmt.Errorf("read %q: %w", urlOrPath, err)
+	}
+	return data, nil
 }
 
 // NavLink is a navigation entry rendered in the site header.
@@ -124,15 +152,17 @@ func (c *Config) Validate() error {
 func Get() (*Config, error) {
 	var cfg Config
 
-	err := cleanenv.ReadEnv(&cfg)
-	if err != nil {
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
 		return nil, err
 	}
 
-	err = cleanenv.ReadConfig(cfg.Paths.Config, &cfg)
-
+	data, err := FetchResource(cfg.Paths.Config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+
+	if err := cleanenv.ParseYAML(bytes.NewReader(data), &cfg); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
 	}
 
 	return &cfg, nil

@@ -1,6 +1,8 @@
 # Configuration Reference
 
-Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environment variable (default: `config.yml`). Environment variables override YAML values.
+Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environment variable (default: `config.yml`). `CONFIG_PATH` can be a local file path or an `http://`/`https://` URL. Environment variables override YAML values.
+
+The same URL-or-path loading applies to `paths.template` and `paths.icon`, enabling fully remote configuration.
 
 ## Keys
 
@@ -8,7 +10,8 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 |---|---|---|---|
 | `address` | `SERVER_ADDRESS` | `:8080` | TCP address the HTTP server listens on. |
 | `paths.posts` | `POSTS_PATH` | `./posts/` | Directory containing Markdown post files. |
-| `paths.static` | `STATIC_PATH` | `./static/` | Directory containing `template.html` and other static assets. |
+| `paths.template` | `TEMPLATE_PATH` | `./template/template.html` | Path or URL to the HTML template file. Read once at startup. |
+| `paths.icon` | `ICON_PATH` | _(empty)_ | Path or URL to a PNG file served as `/favicon.ico` and `/og-logo.png`. Also used as the logo in generated `og:image` PNGs. Read once at startup. |
 | `rescan_cron` | `RESCAN_CRON` | `* * * * *` | Cron expression controlling how often the posts directory is rescanned. Default is every minute. |
 | `skip_unchanged_mod_time` | `SKIP_UNCHANGED_MOD_TIME` | `true` | Skip re-parsing a post file if its modification time has not changed since the last scan. |
 | `log_level` | `LOG_LEVEL` | `info` | Log verbosity. Accepted values: `debug`, `info`, `warn`, `error`. |
@@ -18,7 +21,6 @@ Config is loaded from a YAML file whose path is set by the `CONFIG_PATH` environ
 | `feed_size` | `FEED_SIZE` | `20` | Maximum number of posts included in RSS and Atom feeds. Must be > 0. |
 | `rss_content` | `RSS_CONTENT` | `none` | Content included in feed entries. `none` — description only (default); `text` — plain text body; `html` — rendered HTML body. |
 | `blog_name` | `BLOG_NAME` | `Blog` | Site name shown in the header, used as the RSS/Atom feed title, and used as a fallback page title. |
-| `icon` | `ICON` | _(empty)_ | Path to a PNG file served as `/favicon.ico` and `/og-logo.png`. Also used as the logo in generated `og:image` PNGs. |
 | `nav_links` | — | _(none)_ | List of header navigation links. Each entry has `name` (display text) and `url`. YAML array only; no env var equivalent. |
 | `pages` | — | _(none)_ | Custom page routes. Each entry has `path` (URL path, must start with `/`) and `slug` (post slug to serve at that path). The `/` path defaults to slug `home` if not listed here. Paths already owned by the static router (e.g. `/posts`, `/feed.xml`) are silently ignored. YAML array only; no env var equivalent. |
 | `plugins` | — | _(none)_ | List of JavaScript URLs injected as `<script>` tags via `.Plugins` in the template to quickly extend the client. YAML array only; no env var equivalent. |

@@ -2,13 +2,13 @@ address: ":8080"
 
 paths:
   posts: './demo/posts'
-  static: './template'
+  template: './template/template.html'
+  icon: './template/icon.png'  # path to a PNG file served as favicon and og:logo
 
 log_level: 'info'
 page_size: 10
 
 blog_name: 'My Blog'
-icon: './template/icon.png'  # path to a PNG file served as favicon and og:logo
 
 nav_links:
   - name: 'Posts'

@@ -7,8 +7,6 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 )
 
 type navLink struct {
@@ -68,11 +66,10 @@ type paginationData struct {
 	TagParam   string // "&tags=foo,bar" when tag filter is active; empty otherwise
 }
 
-// Renderer loads an HTML template from disk and renders posts through it.
+// Renderer loads an HTML template and renders posts through it.
 type Renderer struct {
 	cfg        *config.Config
 	log        *slog.Logger
-	tmplPath   string
 	tmpl       *template.Template
 	footerHTML func() template.HTML
 }
@@ -90,32 +87,18 @@ func (r *Renderer) footer() template.HTML {
 	return r.footerHTML()
 }
 
-// NewRenderer creates a Renderer, loading the template from the static directory.
-// Returns an error if the template file cannot be parsed.
-func NewRenderer(cfg *config.Config, logger *slog.Logger) (*Renderer, error) {
-	r := &Renderer{
-		cfg:      cfg,
-		log:      logger.With("component", "Renderer"),
-		tmplPath: filepath.Join(cfg.Paths.Static, "template.html"),
-	}
-	if err := r.reload(); err != nil {
-		return nil, err
-	}
-	return r, nil
-}
-
-// reload re-parses the template file from disk.
-func (r *Renderer) reload() error {
-	raw, err := os.ReadFile(r.tmplPath)
+// NewRenderer creates a Renderer using the provided template bytes.
+// Returns an error if the template cannot be parsed.
+func NewRenderer(cfg *config.Config, tmplData []byte, logger *slog.Logger) (*Renderer, error) {
+	tmpl, err := template.New("template.html").Parse(string(tmplData))
 	if err != nil {
-		return fmt.Errorf("view.Renderer: read template %q: %w", r.tmplPath, err)
+		return nil, fmt.Errorf("view.Renderer: parse template: %w", err)
 	}
-	tmpl, err := template.New(filepath.Base(r.tmplPath)).Parse(string(raw))
-	if err != nil {
-		return fmt.Errorf("view.Renderer: parse template %q: %w", r.tmplPath, err)
-	}
-	r.tmpl = tmpl
-	return nil
+	return &Renderer{
+		cfg:  cfg,
+		log:  logger.With("component", "Renderer"),
+		tmpl: tmpl,
+	}, nil
 }
 
 func (r *Renderer) navLinks() []navLink {
@@ -128,7 +111,7 @@ func (r *Renderer) navLinks() []navLink {
 
 // ogLogoURL returns the absolute URL of the logo if an icon is configured.
 func (r *Renderer) ogLogoURL() string {
-	if r.cfg.Icon == "" {
+	if r.cfg.Paths.Icon == "" {
 		return ""
 	}
 	return r.cfg.SiteURL + "/og-logo.png"
