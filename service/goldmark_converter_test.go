@@ -5,14 +5,78 @@ import (
 	"testing"
 )
 
+// fullConvert runs ExtractMetadata then Convert — the two steps repositories use.
+func fullConvert(c *GoldmarkConverter, post *Post, raw []byte) error {
+	body, err := c.ExtractMetadata(post, raw)
+	if err != nil {
+		return err
+	}
+	return c.Convert(post, body, nil)
+}
+
+// --- ExtractMetadata ---
+
+func TestGoldmarkExtractMetadata_ParsesFrontmatter(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{}
+	raw := []byte("---\ntitle: Test Post\nauthor: Bob\n---\n\n# Hello\n\nWorld.\n")
+	body, err := c.ExtractMetadata(post, raw)
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if post.metadata.Title != "Test Post" {
+		t.Errorf("title: want Test Post, got %q", post.metadata.Title)
+	}
+	if post.metadata.Author != "Bob" {
+		t.Errorf("author: want Bob, got %q", post.metadata.Author)
+	}
+	if post.hash == 0 {
+		t.Error("want non-zero hash after ExtractMetadata")
+	}
+	if strings.Contains(string(body), "title:") {
+		t.Errorf("front matter should be stripped from body: %s", body)
+	}
+	if !strings.Contains(string(body), "Hello") {
+		t.Errorf("body should contain markdown content: %s", body)
+	}
+}
+
+func TestGoldmarkExtractMetadata_NoFrontmatter(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{}
+	raw := []byte("# No Front Matter\n\nJust content.\n")
+	body, err := c.ExtractMetadata(post, raw)
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if post.metadata.Title != "" {
+		t.Errorf("want empty title, got %q", post.metadata.Title)
+	}
+	if string(body) != string(raw) {
+		t.Errorf("body should equal raw when no frontmatter")
+	}
+}
+
+func TestGoldmarkExtractMetadata_SetsHash(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{}
+	raw := []byte("# Hello\n")
+	if _, err := c.ExtractMetadata(post, raw); err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if post.hash == 0 {
+		t.Error("want non-zero hash")
+	}
+}
+
 // --- GoldmarkConverter basic rendering ---
 
 func TestGoldmarkConvert_RendersHTML(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{}
 	raw := []byte("---\ntitle: Test Post\nauthor: Bob\n---\n\n# Hello\n\nWorld.\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	if post.metadata.Title != "Test Post" {
 		t.Errorf("title: want Test Post, got %q", post.metadata.Title)
@@ -39,8 +103,8 @@ func TestGoldmarkConvert_NoFrontmatter(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{}
 	raw := []byte("# No Front Matter\n\nJust content.\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	if post.metadata.Title != "" {
 		t.Errorf("want empty title, got %q", post.metadata.Title)
@@ -54,8 +118,8 @@ func TestGoldmarkConvert_SetsPlainText(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{}
 	raw := []byte("---\ntitle: Plain Test\n---\n\n# Hello\n\nWorld.\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	if post.plainText == nil {
 		t.Fatal("want plainText to be set after Convert")
@@ -76,8 +140,8 @@ func TestGoldmarkConvert_AutoHeadingID(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{}
 	raw := []byte("# My Heading\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	contents := string(*post.contents)
 	if !strings.Contains(contents, `id="`) {
@@ -89,8 +153,8 @@ func TestGoldmarkConvert_SetsHash(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{}
 	raw := []byte("# Hello\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	if post.hash == 0 {
 		t.Error("want non-zero hash")
@@ -103,8 +167,8 @@ func TestGoldmarkConvert_RelativeLinksRewritten(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{slug: "more+about"}
 	raw := []byte("# Page\n\n[Example](./example.md)\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	html := string(*post.contents)
 	if !strings.Contains(html, `href="/posts/more/example"`) {
@@ -119,8 +183,8 @@ func TestGoldmarkConvert_RelativeLinksRewritten_TopLevelPost(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{slug: "about"}
 	raw := []byte("[Go](./other.md)\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	html := string(*post.contents)
 	if !strings.Contains(html, `href="/posts/other"`) {
@@ -132,8 +196,8 @@ func TestGoldmarkConvert_AbsoluteLinksUnchanged(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{slug: "more+about"}
 	raw := []byte("[External](https://example.com) [Anchor](#section) [Root](/posts/hello)\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	html := string(*post.contents)
 	if !strings.Contains(html, `href="https://example.com"`) {
@@ -151,8 +215,8 @@ func TestGoldmarkConvert_RelativeImageRewrittenToMedia(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{slug: "more+about"}
 	raw := []byte("# Page\n\n![Alt](./funny.png)\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	html := string(*post.contents)
 	if !strings.Contains(html, `src="/media/more/funny.png"`) {
@@ -164,8 +228,8 @@ func TestGoldmarkConvert_RelativeImageTopLevelPost(t *testing.T) {
 	c := &GoldmarkConverter{}
 	post := &Post{slug: "about"}
 	raw := []byte("![Banner](./banner.jpg)\n")
-	if err := c.Convert(post, raw); err != nil {
-		t.Fatalf("Convert: %v", err)
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
 	}
 	html := string(*post.contents)
 	if !strings.Contains(html, `src="/media/banner.jpg"`) {

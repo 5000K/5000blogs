@@ -5,6 +5,8 @@ import (
 	"path"
 	"strings"
 
+	"5000blogs/config"
+
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
@@ -16,6 +18,11 @@ import (
 // PostsBase is the URL prefix for posts (default "/posts/").
 type GoldmarkConverter struct {
 	PostsBase string
+	Features  config.Features
+}
+
+func NewGoldmarkConverter(postsBase string, features config.Features) *GoldmarkConverter {
+	return &GoldmarkConverter{PostsBase: postsBase, Features: features}
 }
 
 func (c *GoldmarkConverter) postsBase() string {
@@ -25,16 +32,18 @@ func (c *GoldmarkConverter) postsBase() string {
 	return c.PostsBase
 }
 
-func (c *GoldmarkConverter) Convert(post *Post, raw []byte) error {
+func (c *GoldmarkConverter) ExtractMetadata(post *Post, raw []byte) ([]byte, error) {
 	post.hash = hashBytes(raw)
-
 	metadata, body, err := extractFrontmatter(raw)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	post.metadata = metadata
+	return body, nil
+}
 
-	md := goldmark.New(
+func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle func(string) string) error {
+	opts := []goldmark.Option{
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(
@@ -45,7 +54,14 @@ func (c *GoldmarkConverter) Convert(post *Post, raw []byte) error {
 				}, 100),
 			),
 		),
-	)
+	}
+	if c.Features.WikiLinks {
+		opts = append(opts, goldmark.WithExtensions(&WikiLinkExtension{
+			postsBase:          c.postsBase(),
+			resolveSlugByTitle: resolveSlugByTitle,
+		}))
+	}
+	md := goldmark.New(opts...)
 
 	var buf bytes.Buffer
 	if err := md.Convert(body, &buf); err != nil {

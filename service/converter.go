@@ -11,8 +11,16 @@ import (
 )
 
 // Converter parses raw post bytes into metadata and rendered HTML on a Post.
+// The two methods are intended to be called in sequence:
+//
+//  1. ExtractMetadata sets post.metadata and post.hash, and returns the markdown body stripped of front matter.
+//  2. Convert renders that body to HTML and sets post.contents and post.plainText.
+//
+// resolveSlugByTitle maps a post title to its URL slug; used for wiki-link resolution.
+// It may be nil when wiki-link support is not needed.
 type Converter interface {
-	Convert(post *Post, raw []byte) error
+	ExtractMetadata(post *Post, raw []byte) (body []byte, err error)
+	Convert(post *Post, body []byte, resolveSlugByTitle func(string) string) error
 }
 
 // blockElements are HTML tags that represent block boundaries and map to newlines in plain text.
