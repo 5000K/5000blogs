@@ -96,9 +96,9 @@ func (e *WikiLinkExtension) Extend(m goldmark.Markdown) {
 		util.Prioritized(&wikilinkInlineParser{
 			postsBase:          e.postsBase,
 			resolveSlugByTitle: e.resolveSlugByTitle,
-		}, 201),
+		}, 199),
 	))
 	m.Renderer().AddOptions(renderer.WithNodeRenderers(
-		util.Prioritized(&wikilinkNodeRenderer{}, 201),
+		util.Prioritized(&wikilinkNodeRenderer{}, 199),
 	))
 }
