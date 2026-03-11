@@ -438,29 +438,71 @@ func (r *BlevePostRepository) rescan() {
 	}
 	r.postsMu.RUnlock()
 
-	found := make(map[string]bool, len(paths))
-	var changes []pendingChange
+	type pendingRender struct {
+		path  string
+		body  []byte
+		post  *Post
+		isNew bool
+	}
 
+	found := make(map[string]bool, len(paths))
+	var toRender []pendingRender
+	var removals []string
+
+	// Phase 1: extract metadata for all new/changed posts.
 	for _, path := range paths {
 		found[path] = true
 		if existing, ok := snapshot[path]; ok {
-			if p, updated := r.checkPostChanged(path, existing); updated {
-				changes = append(changes, pendingChange{path: path, post: p})
-				r.log.Info("updated post", "path", path)
+			if post, body, ok := r.extractMetadataIfChanged(path, existing); ok {
+				toRender = append(toRender, pendingRender{path: path, body: body, post: post, isNew: false})
 			}
 		} else {
-			if p, ok2 := r.preparePost(path); ok2 {
-				changes = append(changes, pendingChange{path: path, post: p})
-				r.log.Info("added post", "path", path)
+			if post, body, ok := r.extractMetadataForNew(path); ok {
+				toRender = append(toRender, pendingRender{path: path, body: body, post: post, isNew: true})
 			}
 		}
 	}
-
 	for path := range snapshot {
 		if !found[path] {
-			changes = append(changes, pendingChange{path: path, post: nil})
-			r.log.Info("removed post", "path", path)
+			removals = append(removals, path)
 		}
+	}
+
+	// Phase 2: build a title→slug index across all current posts, then render HTML.
+	titleIndex := make(map[string]string)
+	for _, p := range snapshot {
+		if p.metadata != nil && p.metadata.Title != "" {
+			titleIndex[p.metadata.Title] = p.slug
+		}
+	}
+	for _, pr := range toRender {
+		if pr.post.metadata != nil && pr.post.metadata.Title != "" {
+			titleIndex[pr.post.metadata.Title] = pr.post.slug
+		}
+	}
+	for _, path := range removals {
+		if p, ok := snapshot[path]; ok && p.metadata != nil {
+			delete(titleIndex, p.metadata.Title)
+		}
+	}
+	resolveSlugByTitle := func(title string) string { return titleIndex[title] }
+
+	var changes []pendingChange
+	for _, pr := range toRender {
+		if err := r.converter.Convert(pr.post, pr.body, resolveSlugByTitle); err != nil {
+			r.log.Error("failed to convert post", "path", pr.path, "err", err)
+			continue
+		}
+		if pr.isNew {
+			r.log.Info("added post", "path", pr.path)
+		} else {
+			r.log.Info("updated post", "path", pr.path)
+		}
+		changes = append(changes, pendingChange{path: pr.path, post: pr.post})
+	}
+	for _, path := range removals {
+		r.log.Info("removed post", "path", path)
+		changes = append(changes, pendingChange{path: path, post: nil})
 	}
 
 	if len(changes) == 0 {
@@ -486,57 +528,63 @@ func (r *BlevePostRepository) rescan() {
 	r.log.Debug("rescan complete", "total", len(paths))
 }
 
-func (r *BlevePostRepository) preparePost(path string) (*Post, bool) {
+// extractMetadataForNew reads and extracts metadata for a brand-new post.
+// Returns the post (with metadata set), the markdown body, and whether it succeeded.
+func (r *BlevePostRepository) extractMetadataForNew(path string) (*Post, []byte, bool) {
 	modTime, err := r.source.StatPost(path)
 	if err != nil {
 		r.log.Error("failed to stat post", "path", path, "err", err)
-		return nil, false
+		return nil, nil, false
 	}
 	buf, err := r.source.ReadPost(path)
 	if err != nil {
 		r.log.Error("failed to read post", "path", path, "err", err)
-		return nil, false
+		return nil, nil, false
 	}
 	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
-	if err := r.converter.Convert(post, buf); err != nil {
-		r.log.Error("failed to convert post", "path", path, "err", err)
-		return nil, false
+	body, err := r.converter.ExtractMetadata(post, buf)
+	if err != nil {
+		r.log.Error("failed to extract metadata", "path", path, "err", err)
+		return nil, nil, false
 	}
-	return post, true
+	return post, body, true
 }
 
-func (r *BlevePostRepository) checkPostChanged(path string, existing *Post) (*Post, bool) {
+// extractMetadataIfChanged reads and extracts metadata when the on-disk post
+// differs from existing. Returns nil when the post is unchanged.
+func (r *BlevePostRepository) extractMetadataIfChanged(path string, existing *Post) (*Post, []byte, bool) {
 	var modTime time.Time
 	if r.conf.SkipUnchangedModTime {
 		var err error
 		modTime, err = r.source.StatPost(path)
 		if err != nil {
 			r.log.Error("failed to stat post", "path", path, "err", err)
-			return nil, false
+			return nil, nil, false
 		}
 		if modTime.Equal(existing.modTime) {
-			return nil, false
+			return nil, nil, false
 		}
 	}
 	buf, err := r.source.ReadPost(path)
 	if err != nil {
 		r.log.Error("failed to read post", "path", path, "err", err)
-		return nil, false
+		return nil, nil, false
 	}
 	if hashBytes(buf) == existing.hash {
-		return nil, false
+		return nil, nil, false
 	}
 	if modTime.IsZero() {
 		modTime, err = r.source.StatPost(path)
 		if err != nil {
 			r.log.Error("failed to stat post", "path", path, "err", err)
-			return nil, false
+			return nil, nil, false
 		}
 	}
 	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
-	if err := r.converter.Convert(post, buf); err != nil {
-		r.log.Error("failed to convert post", "path", path, "err", err)
-		return nil, false
+	body, err := r.converter.ExtractMetadata(post, buf)
+	if err != nil {
+		r.log.Error("failed to extract metadata", "path", path, "err", err)
+		return nil, nil, false
 	}
-	return post, true
+	return post, body, true
 }

@@ -37,6 +37,12 @@ The same URL-or-path loading applies to `paths.template` and `paths.icon`, enabl
 | `og_image.accent_color` | `OG_IMAGE_ACCENT_COLOR` | `#7eb8f7` | Accent colour used for decorative elements (hex). |
 | `og_image.cache_size` | `OG_IMAGE_CACHE_SIZE` | `128` | Maximum number of generated `og:image` PNGs to keep in the in-memory LRU cache. |
 
+### features
+
+| YAML key | Env var | Default | Description |
+|---|---|---|---|
+| `features.wiki_links` | `FEATURE_WIKI_LINKS` | `false` | Enable Obsidian-style `[[Post Title]]` wiki-links. Each link resolves to the post whose `title` front-matter field matches the bracketed text. If no post is found the link falls back to `/<URL-encoded-title>`. |
+
 ## Sources
 
 `sources` is an optional list of post sources. When omitted, a single `filesystem` source pointing at `paths.posts` is used automatically.
