@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>{{if .Title}}{{.Title}}{{else}}Blog{{end}}</title>
+  {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
+  {{if .NoIndex}}<meta name="robots" content="noindex, follow">{{end}}
+  {{if .Author}}<meta name="author" content="{{.Author}}">{{end}}
+
+  {{if .URL}}<link rel="canonical" href="{{.URL}}">{{end}}
+  {{if .OGLogoURL}}<link rel="icon" type="image/png" href="/favicon.ico">{{end}}
+
+  <meta property="og:type" content="{{if .IsListPage}}website{{else}}article{{end}}">
+  {{if .Title}}<meta property="og:title" content="{{.Title}}">{{end}}
+  {{if .Description}}<meta property="og:description" content="{{.Description}}">{{end}}
+  {{if .URL}}<meta property="og:url" content="{{.URL}}">{{end}}
+  {{if .OGImageURL}}<meta property="og:image" content="{{.OGImageURL}}">{{end}}
+  {{if .OGLogoURL}}<meta property="og:logo" content="{{.OGLogoURL}}">{{end}}
+
+  <meta name="twitter:card" content="{{if .OGImageURL}}summary_large_image{{else}}summary{{end}}">
+  {{if .Title}}<meta name="twitter:title" content="{{.Title}}">{{end}}
+  {{if .Description}}<meta name="twitter:description" content="{{.Description}}">{{end}}
+  {{if .OGImageURL}}<meta name="twitter:image" content="{{.OGImageURL}}">{{end}}
+
+  {{if not .IsListPage}}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    {{if .Title}}"headline": {{.Title | js}},{{end}}
+    {{if .Description}}"description": {{.Description | js}},{{end}}
+    {{if .DateISO}}"datePublished": "{{.DateISO}}",{{end}}
+    {{if .Author}}"author": {"@type": "Person", "name": {{.Author | js}}},{{end}}
+    "url": "{{.URL}}"
+  }
+  </script>
+  {{end}}
+
+  <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/feed.xml">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --paper: #f8f6f1;
+      --paper-dark: #eee9e0;
+      --text-primary: #2d2a26;
+      --text-secondary: #6b6760;
+      --accent: #c17a5c;
+      --accent-hover: #a66549;
+      --border: #d9d4ca;
+      --shadow: rgba(45, 42, 38, 0.08);
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      background-color: var(--paper);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Header */
+    header {
+      background-color: var(--paper-dark);
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      box-shadow: 0 1px 3px var(--shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    header > a {
+      font-family: 'Libre Baskerville', Georgia, serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+    
+    header > a:hover {
+      color: var(--accent);
+    }
+    
+    header nav {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    header nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: color 0.2s ease;
+    }
+    
+    header nav a:hover {
+      color: var(--accent);
+    }
+    
+    /* Main Content */
+    main {
+      flex: 1;
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+    
+    article h1 {
+      font-family: 'Libre Baskerville', Georgia, serif;
+      font-size: 2.5rem;
+      line-height: 1.2;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+    
+    article > time {
+      display: block;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    article > p {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      font-style: italic;
+    }
+    
+    /* Search Form */
+    form {
+      display: flex;
+      gap: 0.75rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+    
+    input[type="search"] {
+      flex: 1;
+      min-width: 250px;
+      padding: 0.75rem 1rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background-color: #ffffff;
+      color: var(--text-primary);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    input[type="search"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(193, 122, 92, 0.1);
+    }
+    
+    input[type="search"]::placeholder {
+      color: var(--text-secondary);
+    }
+    
+    button[type="submit"] {
+      padding: 0.75rem 1.5rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      background-color: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+    
+    button[type="submit"]:hover {
+      background-color: var(--accent-hover);
+    }
+    
+    button[type="submit"]:active {
+      transform: translateY(1px);
+    }
+    
+    /* Post List */
+    ul {
+      list-style: none;
+      margin: 2rem 0;
+    }
+    
+    ul li {
+      position: relative;
+      background-color: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      cursor: pointer;
+    }
+    
+    ul li:hover {
+      box-shadow: 0 4px 12px var(--shadow);
+      transform: translateY(-2px);
+    }
+    
+    ul li > a {
+      font-family: 'Libre Baskerville', Georgia, serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-decoration: none;
+      display: block;
+      margin-bottom: 0.5rem;
+      transition: color 0.2s ease;
+    }
+    
+    ul li > a::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1;
+    }
+    
+    ul li:hover > a {
+      color: var(--accent);
+    }
+    
+    ul li time {
+      display: block;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    ul li p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-top: 0.5rem;
+    }
+    
+    /* Tags */
+    ul li a[href*="tags="],
+    article > div a[href*="tags="] {
+      position: relative;
+      z-index: 2;
+      display: inline-block;
+      background-color: var(--paper-dark);
+      color: var(--text-secondary);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      text-decoration: none;
+      margin-right: 0.5rem;
+      margin-top: 0.75rem;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    
+    ul li a[href*="tags="]:hover,
+    article > div a[href*="tags="]:hover {
+      background-color: var(--accent);
+      color: #ffffff;
+    }
+    
+    article > div:has(a[href*="tags="]) {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    article > div > span {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Post Body */
+    .post-body {
+      font-size: 1.05rem;
+      line-height: 1.8;
+      color: var(--text-primary);
+    }
+    
+    .post-body h1,
+    .post-body h2,
+    .post-body h3,
+    .post-body h4,
+    .post-body h5,
+    .post-body h6 {
+      font-family: 'Libre Baskerville', Georgia, serif;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      line-height: 1.3;
+      font-weight: 700;
+    }
+    
+    .post-body h2 { font-size: 1.85rem; }
+    .post-body h3 { font-size: 1.5rem; }
+    .post-body h4 { font-size: 1.25rem; }
+    
+    .post-body p {
+      margin-bottom: 1.25rem;
+    }
+    
+    .post-body a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+      transition: color 0.2s ease;
+    }
+    
+    .post-body a:hover {
+      color: var(--accent-hover);
+    }
+    
+    .post-body ul,
+    .post-body ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    
+    .post-body li {
+      margin-bottom: 0.5rem;
+    }
+    
+    .post-body code {
+      background-color: var(--paper-dark);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+    
+    .post-body pre {
+      background-color: var(--paper-dark);
+      padding: 1.25rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+    }
+    
+    .post-body pre code {
+      background: none;
+      padding: 0;
+    }
+    
+    .post-body blockquote {
+      border-left: 4px solid var(--accent);
+      padding-left: 1.5rem;
+      margin: 1.5rem 0;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+    
+    .post-body table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 1rem 0.5rem;
+      margin: 1.5rem 0;
+    }
+    
+    .post-body th,
+    .post-body td {
+      text-align: left;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .post-body th {
+      font-weight: 600;
+      color: var(--text-primary);
+      background-color: var(--paper-dark);
+      border-bottom: 2px solid var(--border);
+    }
+    
+    .post-body td {
+      color: var(--text-secondary);
+    }
+    
+    .post-body tr:hover td {
+      background-color: var(--paper);
+    }
+    
+    /* Pagination */
+    article > nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    article > nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+    
+    article > nav a:hover {
+      color: var(--accent-hover);
+    }
+    
+    article > nav span {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    
+    /* Footer */
+    footer {
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 2rem 3rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      header nav {
+        width: 100%;
+      }
+    }
+    
+    @media (max-width: 640px) {
+      header {
+        padding: 1.25rem 1rem;
+      }
+      
+      main {
+        padding: 2rem 1rem;
+      }
+      
+      article h1 {
+        font-size: 2rem;
+      }
+      
+      ul li {
+        padding: 1.25rem;
+      }
+      
+      ul li > a {
+        font-size: 1.2rem;
+      }
+      
+      footer {
+        padding: 2rem 1rem;
+      }
+      
+      .post-body table {
+        border-spacing: 0.5rem 0.5rem;
+      }
+      
+      .post-body th,
+      .post-body td {
+        padding: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/">{{.BlogName}}</a>
+    <nav>
+      {{range .NavLinks}}<a href="{{.URL}}">{{.Name}}</a>{{end}}
+    </nav>
+  </header>
+
+  <main>
+    <article>
+
+      {{if .IsListPage}}
+
+      <h1>{{if .SearchQuery}}Search{{else}}Posts{{end}}{{if .FilterTags}} — tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}{{end}}</h1>
+
+      <form action="/posts" method="GET">
+        <input type="search" name="q" value="{{.SearchQuery}}" placeholder="Search posts…">
+        <button type="submit">Search</button>
+      </form>
+
+      {{if .SearchQuery}}<p>Results for <em>{{.SearchQuery}}</em></p>{{end}}
+
+      {{if .Posts}}
+      <ul>
+        {{range .Posts}}
+        <li>
+          <a href="/{{.Slug}}">{{.Title}}</a>
+          {{if .DateStr}}<time>{{.DateStr}}</time>{{end}}
+          {{if .Author}}<p>by {{.Author}}</p>{{end}}
+          {{if .Description}}<p>{{.Description}}</p>{{end}}
+          {{if .Tags}}{{range .Tags}}<a href="/posts?tags={{.}}">{{.}}</a>{{end}}{{end}}
+        </li>
+        {{end}}
+      </ul>
+      {{else}}
+      <p>No posts yet.</p>
+      {{end}}
+
+      {{if or .Pagination.HasPrev .Pagination.HasNext}}
+      <nav>
+        {{if .Pagination.HasPrev}}<a href="/posts?page={{.Pagination.PrevPage}}{{.Pagination.TagParam}}">← newer</a>{{end}}
+        <span>page {{.Pagination.Page}} / {{.Pagination.TotalPages}}</span>
+        {{if .Pagination.HasNext}}<a href="/posts?page={{.Pagination.NextPage}}{{.Pagination.TagParam}}">older →</a>{{end}}
+      </nav>
+      {{end}}
+
+      {{else}}
+
+      {{if .Title}}<h1>{{.Title}}</h1>{{end}}
+      {{if .DateStr}}<time datetime="{{.DateISO}}">{{.DateStr}}</time>{{end}}
+      {{if .Author}}<p>by {{.Author}}</p>{{end}}
+
+      <div class="post-body">{{.Content}}</div>
+
+      {{if .Tags}}
+      <div>
+        <span>Tags</span>
+        {{range .Tags}}<a href="/posts?tags={{.}}">{{.}}</a>{{end}}
+      </div>
+      {{end}}
+
+      {{end}}
+    </article>
+  </main>
+
+  {{if .FooterContent}}
+  <footer class="post-body">{{.FooterContent}}</footer>
+  {{end}}
+
+  {{range .Plugins}}<script src="{{.}}"></script>{{end}}
+
+</body>
+</html>

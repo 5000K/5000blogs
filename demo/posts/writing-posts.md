@@ -8,7 +8,6 @@ tags:
   - writing
 ---
 
-# Writing posts
 
 A post is a single markdown file dropped into the posts directory. The filename becomes the URL slug: `my-post.md` is served at `/posts/my-post`.
 

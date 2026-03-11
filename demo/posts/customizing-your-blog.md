@@ -8,8 +8,6 @@ tags:
   - about
 ---
 
-# Customizing your blog
-
 Every page on a 5000blogs site is produced by a single HTML template. Understanding that one file is all you need to make the site look exactly the way you want.
 
 ## The template

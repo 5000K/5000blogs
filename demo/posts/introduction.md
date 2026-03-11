@@ -7,8 +7,6 @@ tags:
   - about
 ---
 
-# Introducing 5000blogs
-
 5000blogs is a lightweight platform for blogging and publishing. It is designed to be easy to host, easy to customize, and easy to automate.
 
 ## What it is
