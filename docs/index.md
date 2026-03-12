@@ -5,18 +5,19 @@ visible: false
 rss-visible: false
 ---
 
-# 5000blogs
+## What it is
 
-A single-binary blog engine. Write markdown files, get a blog.
+5000blogs is a single-binary server for serving markdown files. The project focus is on doing one thing well: serving static markdowns. It is opiniated towards blogs - with features like feed generation, author and date metadata, or social media previews. But can be used to serve all kinds of "a bunch of markdown files".
 
 ## What it does
 
 - Serves `.md` files as HTML pages with zero build step
+- Serves all other files next to your markdown files as-is
 - Periodically rescans for new/changed/deleted posts (configurable cron)
 - RSS 2.0 and Atom 1.0 feeds with tag/search filtering
-- Full-text search via built-in index
-- Auto-generated `og:image` cards, `sitemap.xml`, `robots.txt`
-- Git repositories as post sources (with SSH/token auth)
+- Full-text search via built-in indexing
+- Auto-generated social media previews, `sitemap.xml`, `robots.txt`
+- Git repositories as post sources (with SSH/token auth) - push changes, and 5000blogs updates automatically
 - Wikilinks, tables, footnotes, and other CommonMark extensions
 - Pluggable HTML templates and JS plugins
 - REST API for programmatic access
