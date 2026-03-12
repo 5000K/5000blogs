@@ -15,7 +15,7 @@ func apiRouter(repo service.PostRepository) chi.Router {
 	r.Get("/posts", apiListPosts(repo))
 	r.Get("/posts/search", apiSearchPosts(repo))
 	r.Get("/posts/tags", apiListTags(repo))
-	r.Get("/post/{name}", apiGetPost(repo))
+	r.Get("/post/*", apiGetPost(repo))
 	r.Get("/search", apiSearch(repo))
 	r.Get("/stats", apiStats(repo))
 	return r
@@ -71,8 +71,8 @@ func hasTagMatch(postTags, filter []string) bool {
 // GET /api/v1/post/{name} — full metadata for a single post.
 func apiGetPost(repo service.PostRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := chi.URLParam(r, "name")
-		post := repo.GetBySlug(name)
+		slug := chi.URLParam(r, "*")
+		post := repo.GetBySlug(slug)
 		if post == nil {
 			http.NotFound(w, r)
 			return

@@ -227,8 +227,16 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view
 	})
 
 	r.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", cfg.SiteURL)
+		bytes, _, err := repo.ReadMedia("/robots.txt")
+
+		if err != nil {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			fmt.Fprintf(w, "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n", cfg.SiteURL)
+		} else {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			_, _ = w.Write(bytes)
+		}
+
 	})
 
 	r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
