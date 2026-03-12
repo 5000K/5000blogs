@@ -1,6 +1,6 @@
 ---
 title: 5000blogs Documentation
-description: Complete documentation for 5000blogs — a file-backed markdown blog engine.
+description: Complete documentation for 5000blogs - a file-backed markdown blog engine.
 visible: false
 rss-visible: false
 ---
@@ -38,7 +38,7 @@ docker run -p 8080:8080 \
   ghcr.io/5000k/5000blogs:latest
 ```
 
-Put `.md` files in `./posts/` — they appear on your blog instantly.
+Put `.md` files in `./posts/` - they appear on your blog instantly.
 
 ## Documentation
 

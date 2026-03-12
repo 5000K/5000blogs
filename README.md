@@ -1,5 +1,7 @@
 # <img src="./template/icon.png" width="64"/> 5000blogs
 
+> ! 5000blogs is in active testing and development. API and features aren't stable yet.
+
 ## About
 5000blogs is a lightweight platform for blogging and publishing markdown files.
 
@@ -59,7 +61,7 @@ All other defaults should work for the vast majority of blogs, but you can take 
 
 By default, 5000blogs reads posts from the `paths.posts` directory (or the `POSTS_PATH` env var).
 
-You can instead — or in combination — pull posts from one or more **sources** declared in your config. Sources are layered in order: if two sources expose a post with the same slug, the first one wins.
+You can instead - or in combination - pull posts from one or more **sources** declared in your config. Sources are layered in order: if two sources expose a post with the same slug, the first one wins.
 
 **Posts from a local directory:**
 ```yml
@@ -175,7 +177,7 @@ Everything after the closing `---` is standard markdown. A few notes:
 - Fenced code blocks with a language tag get syntax-highlighted by whatever stylesheet your template loads.
 - Relative links between posts work fine: `[see also](/posts/introduction)`.
 
-For a full markdown reference see the [CommonMark spec](https://spec.commonmark.org/current/) — that is the dialect 5000blogs uses, with automatic heading IDs added.
+For a full markdown reference see the [CommonMark spec](https://spec.commonmark.org/current/) - that is the dialect 5000blogs uses, with automatic heading IDs added.
 
 ## Special posts
 There are a few posts that are kind of *special*. They are called *well-known posts*, and here they are:

@@ -13,7 +13,7 @@ Each post has an og:image URL at `/{slug}/og-image.png`. The image is:
 
 - 1200×630 pixels (standard Open Graph dimensions)
 - Generated server-side using Go fonts (Go Bold for titles, Go Regular for descriptions)
-- Cached in an LRU cache keyed by post content hash — regenerated only when content changes
+- Cached in an LRU cache keyed by post content hash - regenerated only when content changes
 
 The template automatically includes the og:image URL in `<meta property="og:image">` and Twitter Card tags.
 

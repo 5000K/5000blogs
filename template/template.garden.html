@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- page title / meta — fed by templateData.Title / .Description -->
+    <!-- page title / meta - fed by templateData.Title / .Description -->
     <title>{{if .Title}}{{.Title}}{{else}}Blog{{end}}</title>
     {{if .Description}}
     <meta name="description" content="{{.Description}}">{{end}}
@@ -111,7 +111,7 @@
             color: var(--accent-hover);
         }
 
-        /* .post-body — scoped styles for markdown-rendered HTML */
+        /* .post-body - scoped styles for markdown-rendered HTML */
         .post-body {
             color: var(--text);
             font-family: 'Montserrat', sans-serif;
@@ -382,7 +382,7 @@
             <p style="color:#7a6040; font-style:italic;">Nothing planted here yet. 🌱</p>
             {{end}}
 
-            <!-- pagination — only shown when there is more than one page -->
+            <!-- pagination - only shown when there is more than one page -->
             {{if or .Pagination.HasPrev .Pagination.HasNext}}
             <nav class="flex justify-between mt5 pt4" style="border-top:1px solid #3d3020;">
                 <span>
@@ -445,7 +445,7 @@
 
     {{end}}
 
-    <!-- footer — surface background -->
+    <!-- footer - surface background -->
     {{if .FooterContent}}
     <div style="background: var(--surface);">
         <footer class="mw7 center ph3 ph4-ns pb5 pt4 post-body footer">

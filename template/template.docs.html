@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- page title / meta — fed by templateData.Title / .Description -->
+  <!-- page title / meta - fed by templateData.Title / .Description -->
   <title>{{if .Title}}{{.Title}}{{else}}Docs{{end}}</title>
   {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
   {{if .NoIndex}}<meta name="robots" content="noindex, follow">{{end}}
@@ -182,7 +182,7 @@
     }
     .article-tags-header { margin-top: .75rem; }
 
-    /* ── Article body — scoped styles for markdown-rendered HTML ── */
+    /* ── Article body - scoped styles for markdown-rendered HTML ── */
     .article-body { color: #374151; line-height: 1.7; } /* gray-700 */
     .article-body h1,
     .article-body h2,
@@ -244,7 +244,7 @@
     </div>
   </header>
 
-  <!-- main content column — max-width constrained, centred -->
+  <!-- main content column - max-width constrained, centred -->
   <div class="content-wrapper">
 
     <article>
@@ -253,7 +253,7 @@
       {{if .IsListPage}}
 
       <h1 class="list-heading">
-        {{if .SearchQuery}}Search Results{{else}}Documentation{{end}}{{if .FilterTags}} <span class="list-heading-filter">— tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}</span>{{end}}
+        {{if .SearchQuery}}Search Results{{else}}Documentation{{end}}{{if .FilterTags}} <span class="list-heading-filter">- tagged: {{range $i, $t := .FilterTags}}{{if $i}}, {{end}}{{$t}}{{end}}</span>{{end}}
       </h1>
 
       {{if .SearchQuery}}<p class="muted-search">Results for <em>{{.SearchQuery}}</em></p>{{end}}
@@ -273,7 +273,7 @@
       <p class="muted">No articles yet.</p>
       {{end}}
 
-      <!-- pagination — only shown when there is more than one page -->
+      <!-- pagination - only shown when there is more than one page -->
       {{if or .Pagination.HasPrev .Pagination.HasNext}}
       <nav class="pagination">
         <span>
@@ -315,7 +315,7 @@
 
   </div>
 
-  <!-- footer — content from builtin/footer.md -->
+  <!-- footer - content from builtin/footer.md -->
   {{if .FooterContent}}
   <footer class="site-footer">
     <div class="site-footer-inner article-body">{{.FooterContent}}</div>

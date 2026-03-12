@@ -105,9 +105,9 @@ sources:
 
 A built-in source is always loaded as the lowest-priority layer. It provides default content for:
 
-- `index` — welcome page (replaced by your own `index.md`)
-- `404` — not-found page (replaced by your own `404.md`)
-- `footer` — page footer (replaced by your own `footer.md`)
+- `index` - welcome page (replaced by your own `index.md`)
+- `404` - not-found page (replaced by your own `404.md`)
+- `footer` - page footer (replaced by your own `footer.md`)
 
 See [Writing Posts: Special Posts](writing-posts#special-posts).
 
@@ -115,7 +115,7 @@ See [Writing Posts: Special Posts](writing-posts#special-posts).
 
 Sources are layered in order: user-defined sources first, then the builtin source. When two sources provide a post with the same slug, the first source wins.
 
-Media files (images, etc.) are also resolved through the source chain — first match wins.
+Media files (images, etc.) are also resolved through the source chain - first match wins.
 
 ## Rescan
 
