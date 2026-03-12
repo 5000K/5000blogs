@@ -353,7 +353,7 @@ func (r *MemoryPostRepository) rescan() {
 		return
 	}
 
-	// Snapshot current state under read lock — no file I/O yet.
+	// Snapshot current state under read lock - no file I/O yet.
 	r.postsMu.RLock()
 	snapshot := make(map[string]*Post, len(r.posts))
 	for _, p := range r.posts {

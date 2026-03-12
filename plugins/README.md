@@ -11,7 +11,7 @@ Attaches hover previews to all links in the page.
 - **Internal links** (same origin): fetches `/api/v1/post/{slug}` and shows title, date, and description.
 - **External links**: shows the base domain only.
 
-The preview box uses `<pre>` (styled by the template) for the container and `<strong>`/`<em>`/`<code>` for content — no extra CSS needed.
+The preview box uses `<pre>` (styled by the template) for the container and `<strong>`/`<em>`/`<code>` for content - no extra CSS needed.
 
 ## sort-tables.js
 

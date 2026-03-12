@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// fullConvert runs ExtractMetadata then Convert — the two steps repositories use.
+// fullConvert runs ExtractMetadata then Convert - the two steps repositories use.
 func fullConvert(c *GoldmarkConverter, post *Post, raw []byte) error {
 	body, err := c.ExtractMetadata(post, raw)
 	if err != nil {

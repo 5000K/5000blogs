@@ -1,65 +1,131 @@
-# REST API
+---
+title: API
+description: REST API reference for programmatic access.
+date: 2025-01-10
+tags: [api]
+---
 
-All endpoints are mounted under `/api/v1` and return `application/json`.
+All API endpoints are mounted at `/api/v1`. Responses are JSON.
 
-## GET /api/v1/posts
+## Endpoints
 
-Returns an unordered array of all post slugs (visible and hidden).
+### List posts
 
-```json
-["introduction", "about", "customizing-your-blog"]
+```
+GET /api/v1/posts
+GET /api/v1/posts?tags=go,docker
 ```
 
-## GET /api/v1/post/{name}
+Returns an array of post slugs. Optional `tags` parameter filters by tag (OR logic).
 
-Returns the full metadata for one post. `name` is the slug (filename without `.md`).
+**Response:**
+
+```json
+["hello-world", "guides/setup", "about"]
+```
+
+### Get post metadata
+
+```
+GET /api/v1/post/{slug}
+```
+
+Returns full metadata for a single post. Nested slugs use path syntax: `/api/v1/post/guides/setup`.
+
+**Response:**
 
 ```json
 {
-  "slug": "introduction",
-  "title": "Introduction",
-  "description": "Welcome to the blog.",
-  "date": "2024-01-01T00:00:00Z",
-  "author": "Alice",
+  "slug": "hello-world",
+  "title": "Hello World",
+  "description": "My first post",
+  "date": "2025-06-15T00:00:00Z",
+  "author": "Jane",
+  "tags": ["go", "tutorial"],
   "visible": true,
   "rss_visible": true,
   "noindex": false
 }
 ```
 
-Returns `404` when the slug does not exist. `description`, `author`, and `noindex` are omitted from the response when empty/false.
+### Search posts (substring)
 
-## GET /api/v1/posts/search?q={query}
+```
+GET /api/v1/posts/search?q=setup
+```
 
-Returns **visible** posts whose `title` or `description` contain `query` (case-insensitive). Returns an empty array when nothing matches. Posts with `visible: false` are excluded.
+Case-insensitive substring search on title and description. Returns only visible posts.
+
+**Response:**
 
 ```json
 [
-  { "slug": "introduction", "title": "Introduction", "description": "Welcome to the blog." }
+  {
+    "slug": "guides/setup",
+    "title": "Setup Guide",
+    "description": "How to set up the blog"
+  }
 ]
 ```
 
-`description` is omitted when empty.
+### Full-text search
 
-## GET /api/v1/search?q={query}
-
-Full-text search across all indexed post content (title, description, body). Returns a JSON array of matching slugs ordered by relevance. Returns an empty array for an empty query. Hidden posts are excluded.
-
-```json
-["introduction", "writing-posts"]
+```
+GET /api/v1/search?q=docker+compose
 ```
 
-This endpoint leverages the bleve index when `BlevePostRepository` is in use, falling back to a plain-text scan on `MemoryPostRepository`.
+Full-text search across title, description, and post body content. Returns matching slugs.
 
-## GET /api/v1/stats
+**Response:**
 
-Returns aggregate stats for visible posts only.
+```json
+["setup-docker", "configuration"]
+```
+
+### List tags
+
+```
+GET /api/v1/posts/tags
+```
+
+Returns a sorted list of all tags across visible posts.
+
+**Response:**
+
+```json
+["config", "docker", "go", "setup", "tutorial"]
+```
+
+### Stats
+
+```
+GET /api/v1/stats
+```
+
+Aggregate blog statistics.
+
+**Response:**
 
 ```json
 {
-  "total_posts": 3,
-  "latest_post_date": "2024-06-15T00:00:00Z"
+  "total_posts": 42,
+  "latest_post_date": "2025-06-15T00:00:00Z"
 }
 ```
 
-`latest_post_date` is omitted when no posts exist.
+`latest_post_date` is `null` when no posts have dates.
+
+## Other HTTP endpoints
+
+These are not part of the API but are useful for integration:
+
+| Endpoint | Description |
+|---|---|
+| `/health` | Returns `200 ok` (plain text) |
+| `/feed.xml` | RSS 2.0 feed |
+| `/feed.atom` | Atom 1.0 feed |
+| `/sitemap.xml` | XML sitemap of all visible posts |
+| `/robots.txt` | Auto-generated, includes sitemap URL - can be overwritten by adding a robots.txt to your own post source |
+| `/plain/{slug}` | Plain text version of a post |
+| `/media/{path}` | Media files from post sources |
+| `/{slug}/og-image.png` | Generated OG image for a post |

@@ -7,4 +7,4 @@ services:
       CONFIG_PATH: /config.yml
     volumes:
       - ./config.docker.yml:/config.yml:ro
-      - ./demo/posts:/posts:ro
+      - ./docs:/posts:ro

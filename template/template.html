@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- page title / meta — fed by templateData.Title / .Description -->
+  <!-- page title / meta - fed by templateData.Title / .Description -->
   <title>{{if .Title}}{{.Title}}{{else}}Blog{{end}}</title>
   {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
   {{if .NoIndex}}<meta name="robots" content="noindex, follow">{{end}}
@@ -47,7 +47,7 @@
   <style>
     body { background: #111; }
 
-    /* .post-body — scoped styles for markdown-rendered HTML (no utility classes on generated tags) */
+    /* .post-body - scoped styles for markdown-rendered HTML (no utility classes on generated tags) */
     .post-body { color: #d8d8d8; }
     .post-body h1,
     .post-body h2,
@@ -94,7 +94,7 @@
     </div>
   </header>
 
-  <!-- main content column — max-width constrained, centred -->
+  <!-- main content column - max-width constrained, centred -->
   <div class="mw7 center ph3 ph4-ns pv5 pv6-ns">
 
     <article>
@@ -133,7 +133,7 @@
       <p style="color:#555;">No posts yet.</p>
       {{end}}
 
-      <!-- pagination — only shown when there is more than one page -->
+      <!-- pagination - only shown when there is more than one page -->
       {{if or .Pagination.HasPrev .Pagination.HasNext}}
       <nav class="flex justify-between mt5 pt4" style="border-top:1px solid #1e1e1e;">
         <span>
@@ -181,7 +181,7 @@
 
   </div>
 
-  <!-- footer — content from builtin/footer.md -->
+  <!-- footer - content from builtin/footer.md -->
   {{if .FooterContent}}
   <footer class="mw7 center ph3 ph4-ns pb5 pt0 post-body footer">
     <div class="f7 tc" style="color:#555;">{{.FooterContent}}</div>

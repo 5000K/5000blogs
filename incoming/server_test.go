@@ -185,7 +185,7 @@ func TestCheckLastModified_Returns304WhenFresh(t *testing.T) {
 	modTime := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	// Client claims it has a copy from the same time — should get 304.
+	// Client claims it has a copy from the same time - should get 304.
 	r.Header.Set("If-Modified-Since", modTime.Format(http.TimeFormat))
 
 	served := checkLastModified(w, r, modTime)

@@ -15,7 +15,7 @@ func apiRouter(repo service.PostRepository) chi.Router {
 	r.Get("/posts", apiListPosts(repo))
 	r.Get("/posts/search", apiSearchPosts(repo))
 	r.Get("/posts/tags", apiListTags(repo))
-	r.Get("/post/{name}", apiGetPost(repo))
+	r.Get("/post/*", apiGetPost(repo))
 	r.Get("/search", apiSearch(repo))
 	r.Get("/stats", apiStats(repo))
 	return r
@@ -27,7 +27,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// GET /api/v1/posts — all post slugs, optionally filtered by ?tags=tag1,tag2 (OR).
+// GET /api/v1/posts - all post slugs, optionally filtered by ?tags=tag1,tag2 (OR).
 func apiListPosts(repo service.PostRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var filterTags []string
@@ -49,7 +49,7 @@ func apiListPosts(repo service.PostRepository) http.HandlerFunc {
 	}
 }
 
-// GET /api/v1/posts/tags — sorted list of all tags across visible posts.
+// GET /api/v1/posts/tags - sorted list of all tags across visible posts.
 func apiListTags(repo service.PostRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, repo.AllTags())
@@ -68,11 +68,11 @@ func hasTagMatch(postTags, filter []string) bool {
 	return false
 }
 
-// GET /api/v1/post/{name} — full metadata for a single post.
+// GET /api/v1/post/{name} - full metadata for a single post.
 func apiGetPost(repo service.PostRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := chi.URLParam(r, "name")
-		post := repo.GetBySlug(name)
+		slug := chi.URLParam(r, "*")
+		post := repo.GetBySlug(slug)
 		if post == nil {
 			http.NotFound(w, r)
 			return
@@ -82,7 +82,7 @@ func apiGetPost(repo service.PostRepository) http.HandlerFunc {
 	}
 }
 
-// GET /api/v1/search?q={query} — full-text search; returns matching slugs.
+// GET /api/v1/search?q={query} - full-text search; returns matching slugs.
 func apiSearch(repo service.PostRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
@@ -95,7 +95,7 @@ func apiSearch(repo service.PostRepository) http.HandlerFunc {
 	}
 }
 
-// GET /api/v1/posts/search?q={query} — title/description substring match on visible posts.
+// GET /api/v1/posts/search?q={query} - title/description substring match on visible posts.
 func apiSearchPosts(repo service.PostRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := strings.ToLower(r.URL.Query().Get("q"))
@@ -124,7 +124,7 @@ func apiSearchPosts(repo service.PostRepository) http.HandlerFunc {
 	}
 }
 
-// GET /api/v1/stats — aggregate blog stats.
+// GET /api/v1/stats - aggregate blog stats.
 func apiStats(repo service.PostRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		posts := repo.List()

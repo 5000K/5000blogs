@@ -118,7 +118,7 @@ func TestBuiltinSource_HomeContent(t *testing.T) {
 // --- LayeredSource tests ---
 
 func TestLayeredSource_ListPosts_Priority(t *testing.T) {
-	// First source has index.md; second also has index.md — first wins.
+	// First source has index.md; second also has index.md - first wins.
 	s1 := newStubSource(map[string][]byte{
 		"/user/posts/index.md": []byte("---\ntitle: User Home\n---\n"),
 	})
