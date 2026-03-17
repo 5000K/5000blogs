@@ -1,0 +1,32 @@
+# config for 5000blogs.5000K.org
+address: ":8080"
+
+paths:
+  posts: ""
+  template: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/template.docs.html"
+
+log_level: 'info'
+page_size: 10
+
+blog_name: '5000blogs'
+
+nav_links:
+  - name: 'Pages'
+    url: '/posts'
+
+site_url: 'https://5000blogs.5000K.org'
+feed_description: '5000Blogs - Content'
+feed_size: 20  # number of posts to include in RSS and Atom feeds
+rss_content: 'none'  # 'none' (default), 'text' (plain text), or 'html' (rendered HTML)
+
+og_image:
+  enabled: true
+  bg_color: '#111111'
+  text_color: '#f0f0f0'
+  sub_color: '#999999'
+  accent_color: '#7eb8f7'
+
+sources:
+  - type: git
+    url: "https://github.com/5000K/5000blogs"
+    dir: docs
