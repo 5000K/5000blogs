@@ -1,6 +1,6 @@
 # <img src="./template/icon.png" width="64"/> 5000blogs
 
-> ! 5000blogs is in active testing and development. API and features aren't stable yet.
+> ! 5000blogs is mostly stable regarding API and features. All file operations are exclusively read-only, so the risks are minimal. But it is beta software, so it should not be used if 100% uptime needs to be guaranteed.
 
 ## About
 5000blogs is a lightweight platform for blogging and publishing markdown files.
@@ -182,18 +182,12 @@ For a full markdown reference see the [CommonMark spec](https://spec.commonmark.
 ## Special posts
 There are a few posts that are kind of *special*. They are called *well-known posts*, and here they are:
 
- - home.md - The content of this post will be shown on the main page of your blog. It's your landing page.
+ - index.md - The content of this post will be shown on the main page of your blog. It's your landing page.
  - 404.md - The content of this post will be shown if the user tries to access a post that doesn't exist.
  - footer.md - The content of the footer shown on every page.
 
 There are defaults for these pages, but if you want to fill them with your own content, just add a file with the correct name in your posts folder.
 
-# Roadmap
- - Better image support
+# Planned features
  - CLI-version allowing pre-rendering a full blog into a static webpage
- - Write additional templates to cater towards different styles of blogs
- - Rework post indexing to be more performant (probably by utilizing bleve)
- - Write a few basic client-plugins:
-   - Make table-columns sortable
-   - Mermaid-support using codeblocks
-   - Code-highlighting
+ - Simple plug-in system for server extensions that are out of scope (e.g. analytics, custom parsing, social features, ...)
