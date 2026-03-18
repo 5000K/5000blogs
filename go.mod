@@ -1,4 +1,4 @@
-module 5000blogs
+module github.com/5000K/5000blogs
 
 go 1.26.0
 
