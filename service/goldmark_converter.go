@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"path"
+	"regexp"
 	"strings"
 
 	"5000blogs/config"
@@ -44,7 +45,17 @@ func (c *GoldmarkConverter) ExtractMetadata(post *Post, raw []byte) ([]byte, err
 	return body, nil
 }
 
+var commentPattern = regexp.MustCompile(`%%[\s\S]*?%%`)
+
+func stripComments(src []byte) []byte {
+	return commentPattern.ReplaceAll(src, nil)
+}
+
 func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolver AssetResolver) error {
+	if c.Features.Comments {
+		body = stripComments(body)
+	}
+
 	opts := []goldmark.Option{
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),

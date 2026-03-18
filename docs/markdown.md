@@ -164,6 +164,24 @@ This has a footnote[^1].
 
 Renders as superscript references with a footnote section at the bottom.
 
+### Comments
+
+**Config:** `features.comments: false` (default: off)
+
+Text wrapped in `%%` is stripped from output entirely. Works inline or as a block:
+
+```markdown
+Visible. %%This is an inline comment.%% Still visible.
+
+%%
+This is a block comment.
+
+Block comments can span multiple lines.
+%%
+```
+
+Comments are removed before rendering - they produce no HTML output and do not appear in any content presented to your visitors.
+
 ---
 
 ## Link rewriting

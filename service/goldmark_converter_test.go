@@ -3,6 +3,8 @@ package service
 import (
 	"strings"
 	"testing"
+
+	"5000blogs/config"
 )
 
 // fullConvert runs ExtractMetadata then Convert - the two steps repositories use.
@@ -397,4 +399,58 @@ func fullConvertWithResolver(c *GoldmarkConverter, post *Post, raw []byte, resol
 		return err
 	}
 	return c.Convert(post, body, resolver)
+}
+
+// --- Comments feature ---
+
+func TestStripComments_Inline(t *testing.T) {
+	input := []byte("Hello %%this is a comment%% world.")
+	got := string(stripComments(input))
+	if strings.Contains(got, "comment") {
+		t.Errorf("inline comment not stripped: %q", got)
+	}
+	if !strings.Contains(got, "Hello") || !strings.Contains(got, "world") {
+		t.Errorf("surrounding text should be preserved: %q", got)
+	}
+}
+
+func TestStripComments_Block(t *testing.T) {
+	input := []byte("Before.\n%%\nThis is a block comment.\n\nIt spans multiple lines.\n%%\nAfter.")
+	got := string(stripComments(input))
+	if strings.Contains(got, "block comment") {
+		t.Errorf("block comment not stripped: %q", got)
+	}
+	if !strings.Contains(got, "Before") || !strings.Contains(got, "After") {
+		t.Errorf("surrounding text should be preserved: %q", got)
+	}
+}
+
+func TestGoldmarkConvert_CommentsFeatureStripsComments(t *testing.T) {
+	c := &GoldmarkConverter{Features: config.Features{Comments: true}}
+	post := &Post{}
+	raw := []byte("# Title\n\nVisible. %%hidden comment%% Still visible.\n\n%%\nBlock hidden.\n%%\n\nEnd.\n")
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
+	}
+	html := string(*post.contents)
+	if strings.Contains(html, "hidden") {
+		t.Errorf("comment text should not appear in output: %s", html)
+	}
+	if !strings.Contains(html, "Visible") || !strings.Contains(html, "End") {
+		t.Errorf("non-comment content should be preserved: %s", html)
+	}
+}
+
+func TestGoldmarkConvert_CommentsFeatureDisabled(t *testing.T) {
+	c := &GoldmarkConverter{Features: config.Features{Comments: false}}
+	post := &Post{}
+	raw := []byte("Hello %%comment%% world.\n")
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
+	}
+	// with feature off, %% markers pass through unchanged
+	html := string(*post.contents)
+	if !strings.Contains(html, "comment") {
+		t.Errorf("comment text should appear when feature is disabled: %s", html)
+	}
 }
