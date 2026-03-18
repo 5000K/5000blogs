@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"path"
+	"regexp"
 	"strings"
 
 	"5000blogs/config"
@@ -11,6 +12,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
@@ -43,7 +45,17 @@ func (c *GoldmarkConverter) ExtractMetadata(post *Post, raw []byte) ([]byte, err
 	return body, nil
 }
 
-func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle func(string) string) error {
+var commentPattern = regexp.MustCompile(`%%[\s\S]*?%%`)
+
+func stripComments(src []byte) []byte {
+	return commentPattern.ReplaceAll(src, nil)
+}
+
+func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolver AssetResolver) error {
+	if c.Features.Comments {
+		body = stripComments(body)
+	}
+
 	opts := []goldmark.Option{
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
@@ -52,14 +64,20 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 					slug:      post.slug,
 					postsBase: c.postsBase(),
 					source:    body,
+					resolver:  resolver,
 				}, 100),
 			),
 		),
+		// PostEmbedNode is produced by the link rewriter for .md image destinations;
+		// register its renderer unconditionally so it works without WikiLinks enabled.
+		goldmark.WithRendererOptions(renderer.WithNodeRenderers(
+			util.Prioritized(&wikilinkNodeRenderer{}, 199),
+		)),
 	}
 	if c.Features.WikiLinks {
 		opts = append(opts, goldmark.WithExtensions(&WikiLinkExtension{
-			postsBase:          c.postsBase(),
-			resolveSlugByTitle: resolveSlugByTitle,
+			postsBase: c.postsBase(),
+			resolver:  resolver,
 		}))
 	}
 
@@ -70,7 +88,7 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 	if c.Features.Strikethrough {
 		opts = append(opts, goldmark.WithExtensions(extension.Strikethrough))
 	}
-	
+
 	if c.Features.Autolinks {
 		opts = append(opts, goldmark.WithExtensions(extension.Linkify))
 	}
@@ -78,7 +96,7 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 	if c.Features.TaskList {
 		opts = append(opts, goldmark.WithExtensions(extension.TaskList))
 	}
-	
+
 	if c.Features.Footnotes {
 		opts = append(opts, goldmark.WithExtensions(extension.Footnote))
 	}
@@ -98,11 +116,13 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 }
 
 // goldmarkLinkRewriter is a goldmark AST transformer that rewrites relative
-// link/image destinations, matching the logic of GoMarkdownConverter.
+// link/image destinations. Image nodes pointing at .md files are replaced with
+// PostEmbedNode when the resolver can supply rendered HTML.
 type goldmarkLinkRewriter struct {
 	slug      string
 	postsBase string
 	source    []byte
+	resolver  AssetResolver
 }
 
 func (t *goldmarkLinkRewriter) Transform(node *ast.Document, reader text.Reader, pc parser.Context) {
@@ -124,10 +144,42 @@ func (t *goldmarkLinkRewriter) Transform(node *ast.Document, reader text.Reader,
 			link.Destination = goldmarkRewriteDest(link.Destination, postsDir, mediaDir)
 		case ast.KindImage:
 			img := n.(*ast.Image)
+			raw := string(img.Destination)
+			if t.resolver != nil && path.Ext(strings.SplitN(raw, "#", 2)[0]) == ".md" {
+				if embed := t.tryImageEmbed(raw, postsDir); embed != nil {
+					parent := n.Parent()
+					parent.ReplaceChild(parent, n, embed)
+					return ast.WalkSkipChildren, nil
+				}
+			}
 			img.Destination = goldmarkRewriteDest(img.Destination, postsDir, mediaDir)
 		}
 		return ast.WalkContinue, nil
 	})
+}
+
+// tryImageEmbed resolves a raw .md destination to embedded post HTML.
+// Returns nil when the resolver has no content for that slug.
+func (t *goldmarkLinkRewriter) tryImageEmbed(rawDest, postsDir string) *PostEmbedNode {
+	s := rawDest
+	if idx := strings.IndexByte(s, '?'); idx != -1 {
+		s = s[:idx]
+	}
+	if idx := strings.IndexByte(s, '#'); idx != -1 {
+		s = s[:idx]
+	}
+	rewritten := path.Join(postsDir, s)
+	rewritten = strings.TrimSuffix(rewritten, ".md")
+	slug := strings.TrimPrefix(rewritten, t.postsBase)
+	slug = strings.TrimPrefix(slug, "/")
+	if slug == "" {
+		return nil
+	}
+	html := t.resolver.ResolveEmbedBySlug(slug)
+	if html == nil {
+		return nil
+	}
+	return &PostEmbedNode{HTML: html}
 }
 
 // goldmarkRewriteDest rewrites a relative link destination to an absolute one,

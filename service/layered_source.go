@@ -61,6 +61,8 @@ func (b *BuiltinSource) ReadMedia(_ string) ([]byte, time.Time, error) {
 	return nil, time.Time{}, os.ErrNotExist
 }
 
+func (b *BuiltinSource) ResolveAssetByFilename(_ string) string { return "" }
+
 func (b *BuiltinSource) has(path string) bool {
 	for _, p := range b.paths {
 		if p == path {
@@ -164,4 +166,14 @@ func (l *LayeredSource) ReadMedia(relPath string) ([]byte, time.Time, error) {
 		}
 	}
 	return nil, time.Time{}, fmt.Errorf("layered source: no source has media %q", relPath)
+}
+
+// ResolveAssetByFilename tries each source in order and returns the first non-empty result.
+func (l *LayeredSource) ResolveAssetByFilename(filename string) string {
+	for _, s := range l.sources {
+		if rel := s.ResolveAssetByFilename(filename); rel != "" {
+			return rel
+		}
+	}
+	return ""
 }

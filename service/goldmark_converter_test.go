@@ -3,6 +3,8 @@ package service
 import (
 	"strings"
 	"testing"
+
+	"5000blogs/config"
 )
 
 // fullConvert runs ExtractMetadata then Convert - the two steps repositories use.
@@ -312,5 +314,143 @@ func TestGoldmarkRewriteDest_MediaFiles(t *testing.T) {
 				t.Errorf("want %q, got %q", tc.want, got)
 			}
 		})
+	}
+}
+
+// --- image-style embedded posts ---
+
+func TestGoldmarkEmbed_MdImageWithResolver_RendersEmbeddedHTML(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{slug: "more/host"}
+	resolver := &fullResolver{
+		embedFn: func(slug string) []byte {
+			if slug == "more/child" {
+				return []byte("<p>Child post</p>")
+			}
+			return nil
+		},
+	}
+	raw := []byte("Before\n\n![embed](./child.md)\n\nAfter\n")
+	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
+		t.Fatalf("fullConvertWithResolver: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, "<p>Child post</p>") {
+		t.Errorf("want embedded HTML, got:\n%s", html)
+	}
+	if strings.Contains(html, "<img") {
+		t.Errorf("should not render as img, got:\n%s", html)
+	}
+}
+
+func TestGoldmarkEmbed_MdImageNilResolver_FallsBackToLink(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{slug: "about"}
+	raw := []byte("![alt](./other.md)\n")
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
+	}
+	html := string(*post.contents)
+	// with nil resolver, .md falls back to the rewritten post URL rendered as <img>
+	if !strings.Contains(html, `src="/other"`) {
+		t.Errorf("want rewritten src=/other fallback, got:\n%s", html)
+	}
+}
+
+func TestGoldmarkEmbed_MdImageResolverReturnsNil_FallsBackToLink(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{slug: "about"}
+	// embedFn nil → ResolveEmbedBySlug returns nil → falls back to img
+	resolver := &fullResolver{}
+	raw := []byte("![alt](./other.md)\n")
+	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
+		t.Fatalf("fullConvertWithResolver: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, `src="/other"`) {
+		t.Errorf("want rewritten src fallback, got:\n%s", html)
+	}
+}
+
+func TestGoldmarkEmbed_TopLevelSlugDerivation(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{slug: "index"}
+	resolver := &fullResolver{
+		embedFn: func(slug string) []byte {
+			if slug == "intro" {
+				return []byte("<section>Intro</section>")
+			}
+			return nil
+		},
+	}
+	raw := []byte("![](./intro.md)\n")
+	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
+		t.Fatalf("fullConvertWithResolver: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, "<section>Intro</section>") {
+		t.Errorf("want embedded HTML, got:\n%s", html)
+	}
+}
+
+func fullConvertWithResolver(c *GoldmarkConverter, post *Post, raw []byte, resolver AssetResolver) error {
+	body, err := c.ExtractMetadata(post, raw)
+	if err != nil {
+		return err
+	}
+	return c.Convert(post, body, resolver)
+}
+
+// --- Comments feature ---
+
+func TestStripComments_Inline(t *testing.T) {
+	input := []byte("Hello %%this is a comment%% world.")
+	got := string(stripComments(input))
+	if strings.Contains(got, "comment") {
+		t.Errorf("inline comment not stripped: %q", got)
+	}
+	if !strings.Contains(got, "Hello") || !strings.Contains(got, "world") {
+		t.Errorf("surrounding text should be preserved: %q", got)
+	}
+}
+
+func TestStripComments_Block(t *testing.T) {
+	input := []byte("Before.\n%%\nThis is a block comment.\n\nIt spans multiple lines.\n%%\nAfter.")
+	got := string(stripComments(input))
+	if strings.Contains(got, "block comment") {
+		t.Errorf("block comment not stripped: %q", got)
+	}
+	if !strings.Contains(got, "Before") || !strings.Contains(got, "After") {
+		t.Errorf("surrounding text should be preserved: %q", got)
+	}
+}
+
+func TestGoldmarkConvert_CommentsFeatureStripsComments(t *testing.T) {
+	c := &GoldmarkConverter{Features: config.Features{Comments: true}}
+	post := &Post{}
+	raw := []byte("# Title\n\nVisible. %%hidden comment%% Still visible.\n\n%%\nBlock hidden.\n%%\n\nEnd.\n")
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
+	}
+	html := string(*post.contents)
+	if strings.Contains(html, "hidden") {
+		t.Errorf("comment text should not appear in output: %s", html)
+	}
+	if !strings.Contains(html, "Visible") || !strings.Contains(html, "End") {
+		t.Errorf("non-comment content should be preserved: %s", html)
+	}
+}
+
+func TestGoldmarkConvert_CommentsFeatureDisabled(t *testing.T) {
+	c := &GoldmarkConverter{Features: config.Features{Comments: false}}
+	post := &Post{}
+	raw := []byte("Hello %%comment%% world.\n")
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
+	}
+	// with feature off, %% markers pass through unchanged
+	html := string(*post.contents)
+	if !strings.Contains(html, "comment") {
+		t.Errorf("comment text should appear when feature is disabled: %s", html)
 	}
 }

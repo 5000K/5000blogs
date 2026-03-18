@@ -10,17 +10,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// AssetResolver provides resolution callbacks used during wiki-link conversion.
+// A nil AssetResolver is valid; all methods behave as if nothing is found.
+type AssetResolver interface {
+	// ResolveSlugByTitle maps a post title to its URL slug.
+	// Returns "" when not found.
+	ResolveSlugByTitle(title string) string
+	// ResolveAssetByFilename returns the URL for a media asset found by filename.
+	// Returns "" when not found.
+	ResolveAssetByFilename(filename string) string
+	// ResolveEmbedBySlug returns the rendered HTML for the post with the given slug.
+	// Returns nil when not found. Returns an HTML error comment when recursion is detected.
+	ResolveEmbedBySlug(slug string) []byte
+}
+
 // Converter parses raw post bytes into metadata and rendered HTML on a Post.
 // The two methods are intended to be called in sequence:
 //
 //  1. ExtractMetadata sets post.metadata and post.hash, and returns the markdown body stripped of front matter.
 //  2. Convert renders that body to HTML and sets post.contents and post.plainText.
-//
-// resolveSlugByTitle maps a post title to its URL slug; used for wiki-link resolution.
-// It may be nil when wiki-link support is not needed.
 type Converter interface {
 	ExtractMetadata(post *Post, raw []byte) (body []byte, err error)
-	Convert(post *Post, body []byte, resolveSlugByTitle func(string) string) error
+	Convert(post *Post, body []byte, resolver AssetResolver) error
 }
 
 // blockElements are HTML tags that represent block boundaries and map to newlines in plain text.

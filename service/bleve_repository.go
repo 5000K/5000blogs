@@ -468,28 +468,49 @@ func (r *BlevePostRepository) rescan() {
 		}
 	}
 
-	// Phase 2: build a title→slug index across all current posts, then render HTML.
+	// Phase 2: build title→slug and slug→post indexes across all current posts, then render HTML.
 	titleIndex := make(map[string]string)
+	slugIndex := make(map[string]*Post)
 	for _, p := range snapshot {
+		slugIndex[p.slug] = p
 		if p.metadata != nil && p.metadata.Title != "" {
 			titleIndex[p.metadata.Title] = p.slug
 		}
 	}
 	for _, pr := range toRender {
+		slugIndex[pr.post.slug] = pr.post
 		if pr.post.metadata != nil && pr.post.metadata.Title != "" {
 			titleIndex[pr.post.metadata.Title] = pr.post.slug
 		}
 	}
 	for _, path := range removals {
-		if p, ok := snapshot[path]; ok && p.metadata != nil {
-			delete(titleIndex, p.metadata.Title)
+		if p, ok := snapshot[path]; ok {
+			delete(slugIndex, p.slug)
+			if p.metadata != nil {
+				delete(titleIndex, p.metadata.Title)
+			}
 		}
 	}
 	resolveSlugByTitle := func(title string) string { return titleIndex[title] }
+	baseResolver := &repoAssetResolver{
+		slugByTitle: resolveSlugByTitle,
+		source:      r.source,
+		converter:   r.converter,
+		getBySlug:   func(slug string) *Post { return slugIndex[slug] },
+		log:         r.log,
+	}
 
 	var changes []pendingChange
 	for _, pr := range toRender {
-		if err := r.converter.Convert(pr.post, pr.body, resolveSlugByTitle); err != nil {
+		resolver := &repoAssetResolver{
+			slugByTitle: baseResolver.slugByTitle,
+			source:      baseResolver.source,
+			converter:   baseResolver.converter,
+			getBySlug:   baseResolver.getBySlug,
+			inProgress:  []string{pr.post.slug},
+			log:         baseResolver.log,
+		}
+		if err := r.converter.Convert(pr.post, pr.body, resolver); err != nil {
 			r.log.Error("failed to convert post", "path", pr.path, "err", err)
 			continue
 		}

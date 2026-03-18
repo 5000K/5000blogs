@@ -391,28 +391,49 @@ func (r *MemoryPostRepository) rescan() {
 		}
 	}
 
-	// Phase 2: build a title→slug index across all current posts, then render HTML.
+	// Phase 2: build title→slug and slug→post indexes across all current posts, then render HTML.
 	titleIndex := make(map[string]string)
+	slugIndex := make(map[string]*Post)
 	for _, p := range snapshot {
+		slugIndex[p.slug] = p
 		if p.metadata != nil && p.metadata.Title != "" {
 			titleIndex[p.metadata.Title] = p.slug
 		}
 	}
 	for _, pr := range toRender {
+		slugIndex[pr.post.slug] = pr.post
 		if pr.post.metadata != nil && pr.post.metadata.Title != "" {
 			titleIndex[pr.post.metadata.Title] = pr.post.slug
 		}
 	}
 	for _, path := range removals {
-		if p, ok := snapshot[path]; ok && p.metadata != nil {
-			delete(titleIndex, p.metadata.Title)
+		if p, ok := snapshot[path]; ok {
+			delete(slugIndex, p.slug)
+			if p.metadata != nil {
+				delete(titleIndex, p.metadata.Title)
+			}
 		}
 	}
 	resolveSlugByTitle := func(title string) string { return titleIndex[title] }
+	baseResolver := &repoAssetResolver{
+		slugByTitle: resolveSlugByTitle,
+		source:      r.source,
+		converter:   r.converter,
+		getBySlug:   func(slug string) *Post { return slugIndex[slug] },
+		log:         r.log,
+	}
 
 	var changes []pendingChange
 	for _, pr := range toRender {
-		if err := r.converter.Convert(pr.post, pr.body, resolveSlugByTitle); err != nil {
+		resolver := &repoAssetResolver{
+			slugByTitle: baseResolver.slugByTitle,
+			source:      baseResolver.source,
+			converter:   baseResolver.converter,
+			getBySlug:   baseResolver.getBySlug,
+			inProgress:  []string{pr.post.slug},
+			log:         baseResolver.log,
+		}
+		if err := r.converter.Convert(pr.post, pr.body, resolver); err != nil {
 			r.log.Error("failed to convert post", "path", pr.path, "err", err)
 			continue
 		}
@@ -542,4 +563,72 @@ func (r *MemoryPostRepository) Sitemap() []SitemapEntry {
 		entries = append(entries, SitemapEntry{Slug: d.Slug, LastMod: lastMod})
 	}
 	return entries
+}
+
+// repoAssetResolver implements AssetResolver using a title→slug map and a PostSource.
+type repoAssetResolver struct {
+	slugByTitle func(string) string
+	source      PostSource
+	converter   Converter
+	getBySlug   func(slug string) *Post
+	inProgress  []string // slugs currently being embedded; used for recursion detection
+	log         *slog.Logger
+}
+
+func (r *repoAssetResolver) ResolveSlugByTitle(title string) string {
+	return r.slugByTitle(title)
+}
+
+func (r *repoAssetResolver) ResolveAssetByFilename(filename string) string {
+	rel := r.source.ResolveAssetByFilename(filename)
+	if rel == "" {
+		return ""
+	}
+	return "/media/" + rel
+}
+
+func (r *repoAssetResolver) ResolveEmbedBySlug(slug string) []byte {
+	for _, s := range r.inProgress {
+		if s == slug {
+			r.log.Error("embed recursion detected", "slug", slug)
+			return []byte(fmt.Sprintf("<!-- post %q would be here, but it couldn't be loaded (recursion) -->", slug))
+		}
+	}
+
+	post := r.getBySlug(slug)
+
+	if post == nil {
+		return nil
+	}
+
+	// If the post already has rendered HTML, return it directly.
+	if post.contents != nil {
+		return *post.contents
+	}
+
+	// Post exists but has no rendered contents yet - render it now.
+	buf, err := r.source.ReadPost(post.path)
+	if err != nil {
+		r.log.Error("embed: failed to read post", "slug", slug, "err", err)
+		return nil
+	}
+	tmp := &Post{path: post.path, slug: post.slug}
+	body, err := r.converter.ExtractMetadata(tmp, buf)
+	if err != nil {
+		r.log.Error("embed: failed to extract metadata", "slug", slug, "err", err)
+		return nil
+	}
+	sub := &repoAssetResolver{
+		slugByTitle: r.slugByTitle,
+		source:      r.source,
+		converter:   r.converter,
+		getBySlug:   r.getBySlug,
+		inProgress:  append(append([]string(nil), r.inProgress...), slug),
+		log:         r.log,
+	}
+	if err := r.converter.Convert(tmp, body, sub); err != nil {
+		r.log.Error("embed: failed to convert post", "slug", slug, "err", err)
+		return nil
+	}
+	return *tmp.contents
 }

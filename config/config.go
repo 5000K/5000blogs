@@ -62,6 +62,9 @@ type Features struct {
 
 	// https://michelf.ca/projects/php-markdown/extra/#footnotes
 	Footnotes bool `env:"FEATURE_FOOTNOTES" env-default:"false" yaml:"footnotes"`
+
+	// https://help.obsidian.md/syntax#Comments
+	Comments bool `env:"FEATURE_COMMENTS" env-default:"false" yaml:"comments"`
 }
 
 // FetchResource reads a file from disk or downloads it over HTTP/HTTPS.

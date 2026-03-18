@@ -24,6 +24,10 @@ type PostSource interface {
 	// media file located at relPath relative to the source root.
 	// Returns os.ErrNotExist if the file is not present in this source.
 	ReadMedia(relPath string) ([]byte, time.Time, error)
+	// ResolveAssetByFilename searches for a file matching filename (basename only)
+	// breadth-first from the source root and returns its path relative to the root.
+	// Returns "" when not found.
+	ResolveAssetByFilename(filename string) string
 }
 
 // slugFromSegments builds a slug from path segments relative to a root:
@@ -117,4 +121,35 @@ func (fs *FileSystemSource) ReadMedia(relPath string) ([]byte, time.Time, error)
 		return nil, time.Time{}, err
 	}
 	return data, info.ModTime(), nil
+}
+
+// ResolveAssetByFilename searches breadth-first from the source directory for a
+// file whose basename matches filename, and returns its path relative to fs.dir.
+// Returns "" when no match is found.
+func (fs *FileSystemSource) ResolveAssetByFilename(filename string) string {
+	queue := []string{fs.dir}
+	for len(queue) > 0 {
+		dir := queue[0]
+		queue = queue[1:]
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		var subdirs []string
+		for _, e := range entries {
+			if e.IsDir() {
+				subdirs = append(subdirs, filepath.Join(dir, e.Name()))
+				continue
+			}
+			if e.Name() == filename {
+				rel, err := filepath.Rel(fs.dir, filepath.Join(dir, e.Name()))
+				if err != nil {
+					return filename
+				}
+				return filepath.ToSlash(rel)
+			}
+		}
+		queue = append(queue, subdirs...)
+	}
+	return ""
 }

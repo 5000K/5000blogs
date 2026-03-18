@@ -126,6 +126,11 @@ Resolution: the title is matched against all loaded posts. If found, links to th
 
 Compatible with Obsidian-style wikilinks.
 
+### Embedded posts
+![A](./markdown_embeds.md)
+
+> Actually, this section on embeds was embedded itself - you can look at the original [here](./markdown_embeds.md). Very meta.
+
 ### Autolinks
 
 **Config:** `features.autolinks: false` (default: off)
@@ -158,6 +163,24 @@ This has a footnote[^1].
 ```
 
 Renders as superscript references with a footnote section at the bottom.
+
+### Comments
+
+**Config:** `features.comments: false` (default: off)
+
+Text wrapped in `%%` is stripped from output entirely. Works inline or as a block:
+
+```markdown
+Visible. %%This is an inline comment.%% Still visible.
+
+%%
+This is a block comment.
+
+Block comments can span multiple lines.
+%%
+```
+
+Comments are removed before rendering - they produce no HTML output and do not appear in any content presented to your visitors.
 
 ---
 
