@@ -468,39 +468,35 @@ func (r *BlevePostRepository) rescan() {
 		}
 	}
 
-	// Phase 2: build a title→slug index across all current posts, then render HTML.
+	// Phase 2: build title→slug and slug→post indexes across all current posts, then render HTML.
 	titleIndex := make(map[string]string)
+	slugIndex := make(map[string]*Post)
 	for _, p := range snapshot {
+		slugIndex[p.slug] = p
 		if p.metadata != nil && p.metadata.Title != "" {
 			titleIndex[p.metadata.Title] = p.slug
 		}
 	}
 	for _, pr := range toRender {
+		slugIndex[pr.post.slug] = pr.post
 		if pr.post.metadata != nil && pr.post.metadata.Title != "" {
 			titleIndex[pr.post.metadata.Title] = pr.post.slug
 		}
 	}
 	for _, path := range removals {
-		if p, ok := snapshot[path]; ok && p.metadata != nil {
-			delete(titleIndex, p.metadata.Title)
+		if p, ok := snapshot[path]; ok {
+			delete(slugIndex, p.slug)
+			if p.metadata != nil {
+				delete(titleIndex, p.metadata.Title)
+			}
 		}
 	}
 	resolveSlugByTitle := func(title string) string { return titleIndex[title] }
-	getBySlug := func(slug string) *Post {
-		r.postsMu.RLock()
-		defer r.postsMu.RUnlock()
-		for _, p := range r.posts {
-			if p.slug == slug {
-				return p
-			}
-		}
-		return nil
-	}
 	baseResolver := &repoAssetResolver{
 		slugByTitle: resolveSlugByTitle,
 		source:      r.source,
 		converter:   r.converter,
-		getBySlug:   getBySlug,
+		getBySlug:   func(slug string) *Post { return slugIndex[slug] },
 		log:         r.log,
 	}
 
