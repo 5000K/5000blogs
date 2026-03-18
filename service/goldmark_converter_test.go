@@ -314,3 +314,87 @@ func TestGoldmarkRewriteDest_MediaFiles(t *testing.T) {
 		})
 	}
 }
+
+// --- image-style embedded posts ---
+
+func TestGoldmarkEmbed_MdImageWithResolver_RendersEmbeddedHTML(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{slug: "more/host"}
+	resolver := &fullResolver{
+		embedFn: func(slug string) []byte {
+			if slug == "more/child" {
+				return []byte("<p>Child post</p>")
+			}
+			return nil
+		},
+	}
+	raw := []byte("Before\n\n![embed](./child.md)\n\nAfter\n")
+	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
+		t.Fatalf("fullConvertWithResolver: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, "<p>Child post</p>") {
+		t.Errorf("want embedded HTML, got:\n%s", html)
+	}
+	if strings.Contains(html, "<img") {
+		t.Errorf("should not render as img, got:\n%s", html)
+	}
+}
+
+func TestGoldmarkEmbed_MdImageNilResolver_FallsBackToLink(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{slug: "about"}
+	raw := []byte("![alt](./other.md)\n")
+	if err := fullConvert(c, post, raw); err != nil {
+		t.Fatalf("fullConvert: %v", err)
+	}
+	html := string(*post.contents)
+	// with nil resolver, .md falls back to the rewritten post URL rendered as <img>
+	if !strings.Contains(html, `src="/other"`) {
+		t.Errorf("want rewritten src=/other fallback, got:\n%s", html)
+	}
+}
+
+func TestGoldmarkEmbed_MdImageResolverReturnsNil_FallsBackToLink(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{slug: "about"}
+	// embedFn nil → ResolveEmbedBySlug returns nil → falls back to img
+	resolver := &fullResolver{}
+	raw := []byte("![alt](./other.md)\n")
+	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
+		t.Fatalf("fullConvertWithResolver: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, `src="/other"`) {
+		t.Errorf("want rewritten src fallback, got:\n%s", html)
+	}
+}
+
+func TestGoldmarkEmbed_TopLevelSlugDerivation(t *testing.T) {
+	c := &GoldmarkConverter{}
+	post := &Post{slug: "index"}
+	resolver := &fullResolver{
+		embedFn: func(slug string) []byte {
+			if slug == "intro" {
+				return []byte("<section>Intro</section>")
+			}
+			return nil
+		},
+	}
+	raw := []byte("![](./intro.md)\n")
+	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
+		t.Fatalf("fullConvertWithResolver: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, "<section>Intro</section>") {
+		t.Errorf("want embedded HTML, got:\n%s", html)
+	}
+}
+
+func fullConvertWithResolver(c *GoldmarkConverter, post *Post, raw []byte, resolver AssetResolver) error {
+	body, err := c.ExtractMetadata(post, raw)
+	if err != nil {
+		return err
+	}
+	return c.Convert(post, body, resolver)
+}

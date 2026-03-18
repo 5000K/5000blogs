@@ -19,6 +19,9 @@ type AssetResolver interface {
 	// ResolveAssetByFilename returns the URL for a media asset found by filename.
 	// Returns "" when not found.
 	ResolveAssetByFilename(filename string) string
+	// ResolveEmbedBySlug returns the rendered HTML for the post with the given slug.
+	// Returns nil when not found. Returns an HTML error comment when recursion is detected.
+	ResolveEmbedBySlug(slug string) []byte
 }
 
 // Converter parses raw post bytes into metadata and rendered HTML on a Post.

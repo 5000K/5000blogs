@@ -13,6 +13,21 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
+// PostEmbedNodeKind is the goldmark AST node kind for embedded posts.
+var PostEmbedNodeKind = ast.NewNodeKind("PostEmbed")
+
+// PostEmbedNode holds the pre-rendered HTML of an embedded post.
+type PostEmbedNode struct {
+	ast.BaseBlock
+	HTML []byte
+}
+
+func (n *PostEmbedNode) Kind() ast.NodeKind { return PostEmbedNodeKind }
+
+func (n *PostEmbedNode) Dump(source []byte, level int) {
+	ast.DumpHelper(n, source, level, nil, nil)
+}
+
 // WikiLinkNodeKind is the goldmark AST node kind for [[Title]] wiki-links.
 var WikiLinkNodeKind = ast.NewNodeKind("WikiLink")
 
@@ -58,7 +73,7 @@ func (p *wikilinkInlineParser) Trigger() []byte { return []byte{'!', '['} }
 func (p *wikilinkInlineParser) Parse(parent ast.Node, block text.Reader, pc parser.Context) ast.Node {
 	line, _ := block.PeekLine()
 
-	// ![[filename]] → wiki image
+	// ![[filename]] → post embed (if title resolves to a post) or wiki image
 	if len(line) >= 6 && line[0] == '!' && line[1] == '[' && line[2] == '[' {
 		rest := string(line[3:])
 		end := strings.Index(rest, "]]")
@@ -67,6 +82,13 @@ func (p *wikilinkInlineParser) Parse(parent ast.Node, block text.Reader, pc pars
 		}
 		filename := rest[:end]
 		block.Advance(3 + end + 2) // consume ![[filename]]
+		if p.resolver != nil {
+			if slug := p.resolver.ResolveSlugByTitle(filename); slug != "" {
+				if html := p.resolver.ResolveEmbedBySlug(slug); html != nil {
+					return &PostEmbedNode{HTML: html}
+				}
+			}
+		}
 		return &WikiImageNode{Filename: filename, Src: p.resolveImageSrc(filename)}
 	}
 
@@ -103,12 +125,21 @@ func (p *wikilinkInlineParser) resolveImageSrc(filename string) string {
 	return "/media/" + url.PathEscape(filename)
 }
 
-// wikilinkNodeRenderer renders WikiLinkNode and WikiImageNode.
+// wikilinkNodeRenderer renders WikiLinkNode, WikiImageNode, and PostEmbedNode.
 type wikilinkNodeRenderer struct{}
 
 func (r *wikilinkNodeRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(WikiLinkNodeKind, r.renderLink)
 	reg.Register(WikiImageNodeKind, r.renderImage)
+	reg.Register(PostEmbedNodeKind, r.renderEmbed)
+}
+
+func (r *wikilinkNodeRenderer) renderEmbed(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+	if !entering {
+		return ast.WalkSkipChildren, nil
+	}
+	_, _ = w.Write(n.(*PostEmbedNode).HTML)
+	return ast.WalkSkipChildren, nil
 }
 
 func (r *wikilinkNodeRenderer) renderLink(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {

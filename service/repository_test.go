@@ -553,3 +553,89 @@ func TestSearch_NoMatchReturnsEmptySlice(t *testing.T) {
 		t.Errorf("want 0 results, got %d", len(results))
 	}
 }
+
+// --- embed resolver ---
+
+func TestRepoAssetResolver_ResolveEmbedBySlug_ReturnsHTML(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/child.md": []byte("---\ntitle: Child\n---\n\nHello from child.\n"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	resolver := &repoAssetResolver{
+		slugByTitle: func(string) string { return "" },
+		source:      src,
+		converter:   &GoldmarkConverter{},
+		getBySlug: func(slug string) *Post {
+			repo.postsMu.RLock()
+			defer repo.postsMu.RUnlock()
+			return repo.getBySlug(slug)
+		},
+		inProgress: []string{"host"},
+		log:        slog.Default(),
+	}
+
+	html := resolver.ResolveEmbedBySlug("child")
+	if html == nil {
+		t.Fatal("want non-nil HTML for known slug")
+	}
+	if !strings.Contains(string(html), "Hello from child") {
+		t.Errorf("want post content in HTML, got: %s", html)
+	}
+}
+
+func TestRepoAssetResolver_ResolveEmbedBySlug_UnknownSlugReturnsNil(t *testing.T) {
+	src := newStubSource(map[string][]byte{})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	resolver := &repoAssetResolver{
+		slugByTitle: func(string) string { return "" },
+		source:      src,
+		converter:   &GoldmarkConverter{},
+		getBySlug: func(slug string) *Post {
+			repo.postsMu.RLock()
+			defer repo.postsMu.RUnlock()
+			return repo.getBySlug(slug)
+		},
+		inProgress: nil,
+		log:        slog.Default(),
+	}
+
+	if html := resolver.ResolveEmbedBySlug("missing"); html != nil {
+		t.Errorf("want nil for unknown slug, got: %s", html)
+	}
+}
+
+func TestRepoAssetResolver_ResolveEmbedBySlug_RecursionReturnsComment(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/self.md": []byte("# Self-referencing post\n"),
+	})
+	repo := newTestRepo(newTestConf(10), src)
+	repo.rescan()
+
+	resolver := &repoAssetResolver{
+		slugByTitle: func(string) string { return "" },
+		source:      src,
+		converter:   &GoldmarkConverter{},
+		getBySlug: func(slug string) *Post {
+			repo.postsMu.RLock()
+			defer repo.postsMu.RUnlock()
+			return repo.getBySlug(slug)
+		},
+		inProgress: []string{"self"}, // self is already in progress
+		log:        slog.Default(),
+	}
+
+	html := resolver.ResolveEmbedBySlug("self")
+	if html == nil {
+		t.Fatal("want non-nil (comment) on recursion, got nil")
+	}
+	if !strings.Contains(string(html), "recursion") {
+		t.Errorf("want recursion comment, got: %s", html)
+	}
+	if !strings.Contains(string(html), "<!--") {
+		t.Errorf("want HTML comment syntax, got: %s", html)
+	}
+}

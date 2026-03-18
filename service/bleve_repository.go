@@ -486,10 +486,34 @@ func (r *BlevePostRepository) rescan() {
 		}
 	}
 	resolveSlugByTitle := func(title string) string { return titleIndex[title] }
-	resolver := &repoAssetResolver{slugByTitle: resolveSlugByTitle, source: r.source}
+	getBySlug := func(slug string) *Post {
+		r.postsMu.RLock()
+		defer r.postsMu.RUnlock()
+		for _, p := range r.posts {
+			if p.slug == slug {
+				return p
+			}
+		}
+		return nil
+	}
+	baseResolver := &repoAssetResolver{
+		slugByTitle: resolveSlugByTitle,
+		source:      r.source,
+		converter:   r.converter,
+		getBySlug:   getBySlug,
+		log:         r.log,
+	}
 
 	var changes []pendingChange
 	for _, pr := range toRender {
+		resolver := &repoAssetResolver{
+			slugByTitle: baseResolver.slugByTitle,
+			source:      baseResolver.source,
+			converter:   baseResolver.converter,
+			getBySlug:   baseResolver.getBySlug,
+			inProgress:  []string{pr.post.slug},
+			log:         baseResolver.log,
+		}
 		if err := r.converter.Convert(pr.post, pr.body, resolver); err != nil {
 			r.log.Error("failed to convert post", "path", pr.path, "err", err)
 			continue

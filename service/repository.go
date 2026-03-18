@@ -409,10 +409,28 @@ func (r *MemoryPostRepository) rescan() {
 		}
 	}
 	resolveSlugByTitle := func(title string) string { return titleIndex[title] }
-	resolver := &repoAssetResolver{slugByTitle: resolveSlugByTitle, source: r.source}
+	baseResolver := &repoAssetResolver{
+		slugByTitle: resolveSlugByTitle,
+		source:      r.source,
+		converter:   r.converter,
+		getBySlug: func(slug string) *Post {
+			r.postsMu.RLock()
+			defer r.postsMu.RUnlock()
+			return r.getBySlug(slug)
+		},
+		log: r.log,
+	}
 
 	var changes []pendingChange
 	for _, pr := range toRender {
+		resolver := &repoAssetResolver{
+			slugByTitle: baseResolver.slugByTitle,
+			source:      baseResolver.source,
+			converter:   baseResolver.converter,
+			getBySlug:   baseResolver.getBySlug,
+			inProgress:  []string{pr.post.slug},
+			log:         baseResolver.log,
+		}
 		if err := r.converter.Convert(pr.post, pr.body, resolver); err != nil {
 			r.log.Error("failed to convert post", "path", pr.path, "err", err)
 			continue
@@ -549,6 +567,10 @@ func (r *MemoryPostRepository) Sitemap() []SitemapEntry {
 type repoAssetResolver struct {
 	slugByTitle func(string) string
 	source      PostSource
+	converter   Converter
+	getBySlug   func(slug string) *Post
+	inProgress  []string // slugs currently being embedded; used for recursion detection
+	log         *slog.Logger
 }
 
 func (r *repoAssetResolver) ResolveSlugByTitle(title string) string {
@@ -561,4 +583,50 @@ func (r *repoAssetResolver) ResolveAssetByFilename(filename string) string {
 		return ""
 	}
 	return "/media/" + rel
+}
+
+func (r *repoAssetResolver) ResolveEmbedBySlug(slug string) []byte {
+	for _, s := range r.inProgress {
+		if s == slug {
+			r.log.Error("embed recursion detected", "slug", slug)
+			return []byte(fmt.Sprintf("<!-- post %q would be here, but it couldn't be loaded (recursion) -->", slug))
+		}
+	}
+
+	post := r.getBySlug(slug)
+
+	if post == nil {
+		return nil
+	}
+
+	// If the post already has rendered HTML, return it directly.
+	if post.contents != nil {
+		return *post.contents
+	}
+
+	// Post exists but has no rendered contents yet - render it now.
+	buf, err := r.source.ReadPost(post.path)
+	if err != nil {
+		r.log.Error("embed: failed to read post", "slug", slug, "err", err)
+		return nil
+	}
+	tmp := &Post{path: post.path, slug: post.slug}
+	body, err := r.converter.ExtractMetadata(tmp, buf)
+	if err != nil {
+		r.log.Error("embed: failed to extract metadata", "slug", slug, "err", err)
+		return nil
+	}
+	sub := &repoAssetResolver{
+		slugByTitle: r.slugByTitle,
+		source:      r.source,
+		converter:   r.converter,
+		getBySlug:   r.getBySlug,
+		inProgress:  append(append([]string(nil), r.inProgress...), slug),
+		log:         r.log,
+	}
+	if err := r.converter.Convert(tmp, body, sub); err != nil {
+		r.log.Error("embed: failed to convert post", "slug", slug, "err", err)
+		return nil
+	}
+	return *tmp.contents
 }

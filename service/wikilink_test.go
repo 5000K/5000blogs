@@ -16,6 +16,7 @@ func (r *slugOnlyResolver) ResolveSlugByTitle(title string) string {
 	return r.fn(title)
 }
 func (r *slugOnlyResolver) ResolveAssetByFilename(string) string { return "" }
+func (r *slugOnlyResolver) ResolveEmbedBySlug(string) []byte     { return nil }
 
 // slugResolver creates an AssetResolver from a slug-by-title function.
 func slugResolver(fn func(string) string) AssetResolver {
@@ -260,6 +261,7 @@ func TestWikiImage_DoesNotInterferWithRegularImage(t *testing.T) {
 type fullResolver struct {
 	slugFn  func(string) string
 	assetFn func(string) string
+	embedFn func(string) []byte
 }
 
 func (r *fullResolver) ResolveSlugByTitle(title string) string {
@@ -274,4 +276,110 @@ func (r *fullResolver) ResolveAssetByFilename(filename string) string {
 		return ""
 	}
 	return r.assetFn(filename)
+}
+
+func (r *fullResolver) ResolveEmbedBySlug(slug string) []byte {
+	if r.embedFn == nil {
+		return nil
+	}
+	return r.embedFn(slug)
+}
+
+// --- ![[Post Name]] embed ---
+
+func TestWikiEmbed_KnownPost_RendersEmbeddedHTML(t *testing.T) {
+	post := &Post{slug: "host"}
+	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
+	resolver := &fullResolver{
+		slugFn: func(title string) string {
+			if title == "Embedded Post" {
+				return "embedded"
+			}
+			return ""
+		},
+		embedFn: func(slug string) []byte {
+			if slug == "embedded" {
+				return []byte("<p>Embedded content</p>")
+			}
+			return nil
+		},
+	}
+	body, err := c.ExtractMetadata(post, []byte("![[Embedded Post]]\n"))
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if err := c.Convert(post, body, resolver); err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, "<p>Embedded content</p>") {
+		t.Errorf("want embedded HTML in output, got:\n%s", html)
+	}
+	if strings.Contains(html, `<img`) {
+		t.Errorf("should not render as img, got:\n%s", html)
+	}
+}
+
+func TestWikiEmbed_NoSlugMatch_FallsBackToImage(t *testing.T) {
+	post := &Post{slug: "host"}
+	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
+	// resolver resolves no slugs - embed falls back to WikiImageNode
+	body, err := c.ExtractMetadata(post, []byte("![[photo.png]]\n"))
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if err := c.Convert(post, body, &fullResolver{}); err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, `<img`) {
+		t.Errorf("want img fallback when no slug resolves, got:\n%s", html)
+	}
+}
+
+func TestWikiEmbed_SlugResolvesButEmbedNil_FallsBackToImage(t *testing.T) {
+	post := &Post{slug: "host"}
+	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
+	// slug resolves but embed returns nil (post not ready)
+	resolver := &fullResolver{
+		slugFn: func(title string) string {
+			if title == "Draft" {
+				return "draft"
+			}
+			return ""
+		},
+		// embedFn nil → ResolveEmbedBySlug returns nil
+	}
+	body, err := c.ExtractMetadata(post, []byte("![[Draft]]\n"))
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if err := c.Convert(post, body, resolver); err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, `<img`) {
+		t.Errorf("want img fallback when embed returns nil, got:\n%s", html)
+	}
+}
+
+func TestWikiEmbed_RecursionComment_PassedThrough(t *testing.T) {
+	post := &Post{slug: "self"}
+	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
+	const comment = `<!-- post "self" would be here, but it couldn't be loaded (recursion) -->`
+	resolver := &fullResolver{
+		slugFn:  func(title string) string { return title },
+		embedFn: func(_ string) []byte { return []byte(comment) },
+	}
+	body, err := c.ExtractMetadata(post, []byte("![[self]]\n"))
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if err := c.Convert(post, body, resolver); err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+	html := string(*post.contents)
+	if !strings.Contains(html, "recursion") {
+		t.Errorf("want recursion comment in output, got:\n%s", html)
+	}
 }
