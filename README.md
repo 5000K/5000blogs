@@ -106,19 +106,17 @@ A post is a single markdown file dropped into the posts directory. The filename 
 
 ## Slugs
 
-The "slug" is a name for a file derived from the file path **relative to the source root**, with directory segments joined by `+`. The server supports paths like /posts/directory/hello but internally, it uses these slugs - and it's good to know how they work for some more in-depth configuration.
+The "slug" is a name for a file derived from the file path **relative to the source root**.
 
 | File path (relative to source root) | Slug | URL |
 |---|---|---|
-| `hello.md` | `hello` | `/posts/hello` |
-| `more/hello.md` | `more+hello` | `/posts/more+hello` |
-| `more/things/hello-world.md` | `more+things+hello-world` | `/posts/more+things+hello-world` |
-
-Any literal `+` character in a filename or directory name is replaced with `-` to keep slugs unambiguous.
+| `hello.md` | `hello` | `/hello` |
+| `more/hello.md` | `more/hello` | `/more/hello` |
+| `more/things/hello-world.md` | `more/things/hello-world` | `/more/things/hello-world` |
 
 When multiple sources are configured, the first source that provides a given slug wins. This lets you override individual posts from a git source by placing a file with the same name in a local filesystem source listed earlier.
 
-Simply add a new file in your posts folder ending in `.md`. 5000blogs rescans your folder every minute, so it will automatically update changes and detect new posts without you needing to restart it!
+Simply add a new file in your posts folder ending in `.md`. 5000blogs rescans your folder every minute by default, so it will automatically update changes and detect new posts without you needing to restart it!
 
 ## Front matter
 
