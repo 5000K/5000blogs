@@ -1,13 +1,14 @@
 package incoming
 
 import (
-	"5000blogs/service"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/5000K/5000blogs/service"
 )
 
 // stubRepo is a minimal in-memory PostRepository for handler tests.

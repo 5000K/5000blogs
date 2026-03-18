@@ -1,12 +1,13 @@
 package service
 
 import (
-	"5000blogs/config"
 	"encoding/xml"
 	"log/slog"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
 )
 
 func newTestConf(pageSize int) *config.Config {

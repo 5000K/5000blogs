@@ -1,12 +1,13 @@
 package service
 
 import (
-	"5000blogs/config"
 	"encoding/xml"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
 )
 
 // rssTime -> RSS 2.0 needs RFC 1123Z (e.g. "Mon, 02 Jan 2006 15:04:05 -0700").

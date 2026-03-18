@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"5000blogs/config"
+	"github.com/5000K/5000blogs/config"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"

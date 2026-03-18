@@ -1,13 +1,14 @@
 package incoming
 
 import (
-	"5000blogs/config"
-	"5000blogs/service"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
+	"github.com/5000K/5000blogs/service"
 
 	"github.com/go-chi/chi/v5"
 )

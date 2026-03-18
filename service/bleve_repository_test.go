@@ -1,11 +1,12 @@
 package service
 
 import (
-	"5000blogs/config"
 	"encoding/xml"
 	"log/slog"
 	"testing"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
 )
 
 func newTestBleveRepo(t *testing.T, conf *config.Config, source PostSource) *BlevePostRepository {

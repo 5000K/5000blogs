@@ -1,9 +1,6 @@
 package incoming
 
 import (
-	"5000blogs/config"
-	"5000blogs/service"
-	"5000blogs/view"
 	"bytes"
 	"context"
 	"encoding/xml"
@@ -17,6 +14,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
+	"github.com/5000K/5000blogs/service"
+	"github.com/5000K/5000blogs/view"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

@@ -1,14 +1,15 @@
 package main
 
 import (
-	"5000blogs/config"
-	"5000blogs/incoming"
-	"5000blogs/service"
-	"5000blogs/view"
 	"fmt"
 	"log"
 	"log/slog"
 	"os"
+
+	"github.com/5000K/5000blogs/config"
+	"github.com/5000K/5000blogs/incoming"
+	"github.com/5000K/5000blogs/service"
+	"github.com/5000K/5000blogs/view"
 
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"

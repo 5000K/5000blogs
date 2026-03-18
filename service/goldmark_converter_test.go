@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"5000blogs/config"
+	"github.com/5000K/5000blogs/config"
 )
 
 // fullConvert runs ExtractMetadata then Convert - the two steps repositories use.

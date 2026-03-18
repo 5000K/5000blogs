@@ -1,12 +1,13 @@
 package view
 
 import (
-	"5000blogs/config"
-	"5000blogs/service"
 	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
+
+	"github.com/5000K/5000blogs/config"
+	"github.com/5000K/5000blogs/service"
 )
 
 type navLink struct {

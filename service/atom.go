@@ -1,7 +1,7 @@
 package service
 
 import (
-	"5000blogs/config"
+	"github.com/5000K/5000blogs/config"
 	"encoding/xml"
 	"fmt"
 	"sort"

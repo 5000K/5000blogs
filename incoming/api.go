@@ -1,11 +1,12 @@
 package incoming
 
 import (
-	"5000blogs/service"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/5000K/5000blogs/service"
 
 	"github.com/go-chi/chi/v5"
 )

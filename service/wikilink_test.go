@@ -1,9 +1,10 @@
 package service
 
 import (
-	"5000blogs/config"
 	"strings"
 	"testing"
+
+	"github.com/5000K/5000blogs/config"
 )
 
 // slugOnlyResolver wraps a slug-by-title function as an AssetResolver with no asset support.

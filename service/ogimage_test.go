@@ -1,10 +1,11 @@
 package service
 
 import (
-	"5000blogs/config"
 	"bytes"
 	"image/png"
 	"testing"
+
+	"github.com/5000K/5000blogs/config"
 )
 
 func defaultOGConfig() config.OGImageConfig {

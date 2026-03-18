@@ -1,14 +1,15 @@
 package view
 
 import (
-	"5000blogs/config"
-	"5000blogs/service"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/5000K/5000blogs/config"
+	"github.com/5000K/5000blogs/service"
 )
 
 const minimalTemplate = `<!DOCTYPE html><html><head><title>{{.Title}}</title></head><body>{{.Content}}<footer>{{.FooterContent}}</footer></body></html>`

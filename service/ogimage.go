@@ -1,7 +1,6 @@
 package service
 
 import (
-	"5000blogs/config"
 	"bytes"
 	"container/list"
 	"fmt"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/5000K/5000blogs/config"
 
 	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/font"

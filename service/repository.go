@@ -1,13 +1,14 @@
 package service
 
 import (
-	"5000blogs/config"
 	"fmt"
 	"log/slog"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
 
 	"github.com/robfig/cron/v3"
 )
