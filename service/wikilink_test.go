@@ -6,7 +6,26 @@ import (
 	"testing"
 )
 
-// wikiConvert runs a full convert with wiki-links enabled and a custom resolver.
+// slugOnlyResolver wraps a slug-by-title function as an AssetResolver with no asset support.
+type slugOnlyResolver struct{ fn func(string) string }
+
+func (r *slugOnlyResolver) ResolveSlugByTitle(title string) string {
+	if r.fn == nil {
+		return ""
+	}
+	return r.fn(title)
+}
+func (r *slugOnlyResolver) ResolveAssetByFilename(string) string { return "" }
+
+// slugResolver creates an AssetResolver from a slug-by-title function.
+func slugResolver(fn func(string) string) AssetResolver {
+	if fn == nil {
+		return nil
+	}
+	return &slugOnlyResolver{fn: fn}
+}
+
+// wikiConvert runs a full convert with wiki-links enabled and a slug-by-title resolver.
 func wikiConvert(t *testing.T, post *Post, raw []byte, resolver func(string) string) {
 	t.Helper()
 	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
@@ -14,7 +33,7 @@ func wikiConvert(t *testing.T, post *Post, raw []byte, resolver func(string) str
 	if err != nil {
 		t.Fatalf("ExtractMetadata: %v", err)
 	}
-	if err := c.Convert(post, body, resolver); err != nil {
+	if err := c.Convert(post, body, slugResolver(resolver)); err != nil {
 		t.Fatalf("Convert: %v", err)
 	}
 }
@@ -63,7 +82,7 @@ func TestWikiLink_NilResolver_FallsBackToURLEncodedHref(t *testing.T) {
 	}
 }
 
-// --- nested slug (slug with +) ---
+// --- nested slug (slug with /) ---
 
 func TestWikiLink_NestedSlug_RewritesSlashSeparator(t *testing.T) {
 	resolver := func(title string) string {
@@ -111,7 +130,7 @@ func TestWikiLink_FeatureDisabled_LeftAsLiteral(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExtractMetadata: %v", err)
 	}
-	if err := c.Convert(post, body, func(string) string { return "some-title" }); err != nil {
+	if err := c.Convert(post, body, &slugOnlyResolver{fn: func(string) string { return "some-title" }}); err != nil {
 		t.Fatalf("Convert: %v", err)
 	}
 
@@ -145,12 +164,6 @@ func TestWikiLink_CoexistsWithRegularLinks(t *testing.T) {
 // --- custom postsBase ---
 
 func TestWikiLink_CustomPostsBase_UsedInHref(t *testing.T) {
-	resolver := func(title string) string {
-		if title == "Notes" {
-			return "notes"
-		}
-		return ""
-	}
 	c := &GoldmarkConverter{
 		PostsBase: "/articles/",
 		Features:  config.Features{WikiLinks: true},
@@ -160,6 +173,12 @@ func TestWikiLink_CustomPostsBase_UsedInHref(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExtractMetadata: %v", err)
 	}
+	resolver := &slugOnlyResolver{fn: func(title string) string {
+		if title == "Notes" {
+			return "notes"
+		}
+		return ""
+	}}
 	if err := c.Convert(post, body, resolver); err != nil {
 		t.Fatalf("Convert: %v", err)
 	}
@@ -168,4 +187,91 @@ func TestWikiLink_CustomPostsBase_UsedInHref(t *testing.T) {
 	if !strings.Contains(html, `href="/articles/notes"`) {
 		t.Errorf("want href=/articles/notes, got:\n%s", html)
 	}
+}
+
+// --- wiki images ---
+
+func TestWikiImage_ResolvedAsset_RendersImg(t *testing.T) {
+	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
+	post := &Post{}
+	body, err := c.ExtractMetadata(post, []byte("![[photo.png]]\n"))
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	resolver := &fullResolver{
+		assetFn: func(filename string) string {
+			if filename == "photo.png" {
+				return "/media/images/photo.png"
+			}
+			return ""
+		},
+	}
+	if err := c.Convert(post, body, resolver); err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+
+	html := string(*post.contents)
+	if !strings.Contains(html, `src="/media/images/photo.png"`) {
+		t.Errorf("want src=/media/images/photo.png, got:\n%s", html)
+	}
+	if !strings.Contains(html, `alt="photo.png"`) {
+		t.Errorf("want alt=photo.png, got:\n%s", html)
+	}
+}
+
+func TestWikiImage_UnresolvedAsset_FallsBackToMediaPath(t *testing.T) {
+	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
+	post := &Post{}
+	body, err := c.ExtractMetadata(post, []byte("![[unknown.jpg]]\n"))
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if err := c.Convert(post, body, nil); err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+
+	html := string(*post.contents)
+	if !strings.Contains(html, `src="/media/unknown.jpg"`) {
+		t.Errorf("want fallback src=/media/unknown.jpg, got:\n%s", html)
+	}
+}
+
+func TestWikiImage_DoesNotInterferWithRegularImage(t *testing.T) {
+	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
+	post := &Post{}
+	body, err := c.ExtractMetadata(post, []byte("![alt text](https://example.com/img.png)\n"))
+	if err != nil {
+		t.Fatalf("ExtractMetadata: %v", err)
+	}
+	if err := c.Convert(post, body, nil); err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+
+	html := string(*post.contents)
+	if !strings.Contains(html, `src="https://example.com/img.png"`) {
+		t.Errorf("regular markdown image should be preserved, got:\n%s", html)
+	}
+	if !strings.Contains(html, `alt="alt text"`) {
+		t.Errorf("regular markdown alt text should be preserved, got:\n%s", html)
+	}
+}
+
+// fullResolver is a test AssetResolver providing both slug and asset resolution.
+type fullResolver struct {
+	slugFn  func(string) string
+	assetFn func(string) string
+}
+
+func (r *fullResolver) ResolveSlugByTitle(title string) string {
+	if r.slugFn == nil {
+		return ""
+	}
+	return r.slugFn(title)
+}
+
+func (r *fullResolver) ResolveAssetByFilename(filename string) string {
+	if r.assetFn == nil {
+		return ""
+	}
+	return r.assetFn(filename)
 }

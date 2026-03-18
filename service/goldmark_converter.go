@@ -43,7 +43,7 @@ func (c *GoldmarkConverter) ExtractMetadata(post *Post, raw []byte) ([]byte, err
 	return body, nil
 }
 
-func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle func(string) string) error {
+func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolver AssetResolver) error {
 	opts := []goldmark.Option{
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
@@ -58,8 +58,8 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 	}
 	if c.Features.WikiLinks {
 		opts = append(opts, goldmark.WithExtensions(&WikiLinkExtension{
-			postsBase:          c.postsBase(),
-			resolveSlugByTitle: resolveSlugByTitle,
+			postsBase: c.postsBase(),
+			resolver:  resolver,
 		}))
 	}
 
@@ -70,7 +70,7 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 	if c.Features.Strikethrough {
 		opts = append(opts, goldmark.WithExtensions(extension.Strikethrough))
 	}
-	
+
 	if c.Features.Autolinks {
 		opts = append(opts, goldmark.WithExtensions(extension.Linkify))
 	}
@@ -78,7 +78,7 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolveSlugByTitle 
 	if c.Features.TaskList {
 		opts = append(opts, goldmark.WithExtensions(extension.TaskList))
 	}
-	
+
 	if c.Features.Footnotes {
 		opts = append(opts, goldmark.WithExtensions(extension.Footnote))
 	}

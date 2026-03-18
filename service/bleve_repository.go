@@ -486,10 +486,11 @@ func (r *BlevePostRepository) rescan() {
 		}
 	}
 	resolveSlugByTitle := func(title string) string { return titleIndex[title] }
+	resolver := &repoAssetResolver{slugByTitle: resolveSlugByTitle, source: r.source}
 
 	var changes []pendingChange
 	for _, pr := range toRender {
-		if err := r.converter.Convert(pr.post, pr.body, resolveSlugByTitle); err != nil {
+		if err := r.converter.Convert(pr.post, pr.body, resolver); err != nil {
 			r.log.Error("failed to convert post", "path", pr.path, "err", err)
 			continue
 		}

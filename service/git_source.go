@@ -165,3 +165,39 @@ func (g *GitSource) ReadMedia(relPath string) ([]byte, time.Time, error) {
 	}
 	return data, info.ModTime(), nil
 }
+
+// ResolveAssetByFilename searches breadth-first from the source directory for a
+// file matching filename (basename only) and returns its path relative to the source root.
+// Returns "" when not found.
+func (g *GitSource) ResolveAssetByFilename(filename string) string {
+	root := g.dir
+	if root == "" {
+		root = "."
+	}
+	queue := []string{root}
+	for len(queue) > 0 {
+		dir := queue[0]
+		queue = queue[1:]
+		entries, err := g.fs.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		var subdirs []string
+		for _, e := range entries {
+			p := path.Join(dir, e.Name())
+			if e.IsDir() {
+				subdirs = append(subdirs, p)
+				continue
+			}
+			if e.Name() == filename {
+				rel := p
+				if root != "." && root != "" {
+					rel = strings.TrimPrefix(p, root+"/")
+				}
+				return rel
+			}
+		}
+		queue = append(queue, subdirs...)
+	}
+	return ""
+}
