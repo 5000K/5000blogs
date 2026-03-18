@@ -14,7 +14,7 @@ import (
 
 const minimalTemplate = `<!DOCTYPE html><html><head><title>{{.Title}}</title></head><body>{{.Content}}<footer>{{.FooterContent}}</footer></body></html>`
 
-func newTestRenderer(t *testing.T) *Renderer {
+func newTestRenderer(t *testing.T) *DefaultRenderer {
 	t.Helper()
 	cfg := &config.Config{}
 	r, err := NewRenderer(cfg, []byte(minimalTemplate), slog.Default())

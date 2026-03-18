@@ -40,7 +40,7 @@ func checkLastModified(w http.ResponseWriter, r *http.Request, t time.Time) bool
 	return false
 }
 
-func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator, iconData []byte) {
+func Serve(cfg *config.Config, repo service.PostRepository, renderer view.Renderer, ogGen service.OGImageGenerator, iconData []byte) {
 	srv := &http.Server{
 		Addr:    cfg.ServerAddress,
 		Handler: buildRouter(cfg, repo, renderer, ogGen, iconData),
@@ -61,7 +61,7 @@ func Serve(cfg *config.Config, repo service.PostRepository, renderer *view.Rende
 	}
 }
 
-func buildRouter(cfg *config.Config, repo service.PostRepository, renderer *view.Renderer, ogGen *service.OGImageGenerator, iconData []byte) chi.Router {
+func buildRouter(cfg *config.Config, repo service.PostRepository, renderer view.Renderer, ogGen service.OGImageGenerator, iconData []byte) chi.Router {
 	renderer.SetFooter(func() template.HTML {
 		if post := repo.GetBySlug("footer"); post != nil {
 			if data := post.Data(); len(data.Content) > 0 {

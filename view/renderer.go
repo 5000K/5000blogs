@@ -68,8 +68,16 @@ type paginationData struct {
 	TagParam   string // "&tags=foo,bar" when tag filter is active; empty otherwise
 }
 
-// Renderer loads an HTML template and renders posts through it.
-type Renderer struct {
+type Renderer interface {
+	Serve404(post *service.Post, w http.ResponseWriter)
+	ServePost(post *service.Post, w http.ResponseWriter, pageURL string, ogImageURL string)
+	ServeSearchResults(query string, tags []string, results []service.PostSummary, w http.ResponseWriter, pageURL string)
+	ServePostList(pr service.PageResult, w http.ResponseWriter, pageURL string)
+	SetFooter(fn func() template.HTML)
+}
+
+// DefaultRenderer loads an HTML template and renders posts through it.
+type DefaultRenderer struct {
 	cfg        *config.Config
 	log        *slog.Logger
 	tmpl       *template.Template
@@ -78,11 +86,11 @@ type Renderer struct {
 
 // SetFooter registers a function that returns the rendered footer content.
 // It is called on every request, so changes to the underlying post are picked up automatically.
-func (r *Renderer) SetFooter(fn func() template.HTML) {
+func (r *DefaultRenderer) SetFooter(fn func() template.HTML) {
 	r.footerHTML = fn
 }
 
-func (r *Renderer) footer() template.HTML {
+func (r *DefaultRenderer) footer() template.HTML {
 	if r.footerHTML == nil {
 		return ""
 	}
@@ -91,19 +99,19 @@ func (r *Renderer) footer() template.HTML {
 
 // NewRenderer creates a Renderer using the provided template bytes.
 // Returns an error if the template cannot be parsed.
-func NewRenderer(cfg *config.Config, tmplData []byte, logger *slog.Logger) (*Renderer, error) {
+func NewRenderer(cfg *config.Config, tmplData []byte, logger *slog.Logger) (*DefaultRenderer, error) {
 	tmpl, err := template.New("template.html").Parse(string(tmplData))
 	if err != nil {
 		return nil, fmt.Errorf("view.Renderer: parse template: %w", err)
 	}
-	return &Renderer{
+	return &DefaultRenderer{
 		cfg:  cfg,
 		log:  logger.With("component", "Renderer"),
 		tmpl: tmpl,
 	}, nil
 }
 
-func (r *Renderer) navLinks() []navLink {
+func (r *DefaultRenderer) navLinks() []navLink {
 	links := make([]navLink, len(r.cfg.NavLinks))
 	for i, l := range r.cfg.NavLinks {
 		links[i] = navLink{Name: l.Name, URL: l.URL}
@@ -112,7 +120,7 @@ func (r *Renderer) navLinks() []navLink {
 }
 
 // ogLogoURL returns the absolute URL of the logo if an icon is configured.
-func (r *Renderer) ogLogoURL() string {
+func (r *DefaultRenderer) ogLogoURL() string {
 	if r.cfg.Paths.Icon == "" {
 		return ""
 	}
@@ -121,7 +129,7 @@ func (r *Renderer) ogLogoURL() string {
 
 // Serve404 renders a 404 page with HTTP 404 status. If post is provided and
 // has content it is rendered; otherwise a placeholder title is used.
-func (r *Renderer) Serve404(post *service.Post, w http.ResponseWriter) {
+func (r *DefaultRenderer) Serve404(post *service.Post, w http.ResponseWriter) {
 	td := templateData{
 		Title:         "404 - Page Not Found",
 		OGLogoURL:     r.ogLogoURL(),
@@ -145,7 +153,7 @@ func (r *Renderer) Serve404(post *service.Post, w http.ResponseWriter) {
 // ServePost renders the given post through the HTML template and writes the
 // response. Responds with 404 when the post is nil or has no rendered content.
 // ogImageURL is the absolute URL of the og:image for this post; pass empty string to omit.
-func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL string, ogImageURL string) {
+func (r *DefaultRenderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL string, ogImageURL string) {
 	if post == nil {
 		r.log.Debug("post not found")
 		r.Serve404(nil, w)
@@ -185,7 +193,7 @@ func (r *Renderer) ServePost(post *service.Post, w http.ResponseWriter, pageURL 
 
 // ServeSearchResults renders a list of search results through the HTML template.
 // It reuses the list-page layout; SearchQuery and FilterTags are exposed to the template.
-func (r *Renderer) ServeSearchResults(query string, tags []string, results []service.PostSummary, w http.ResponseWriter, pageURL string) {
+func (r *DefaultRenderer) ServeSearchResults(query string, tags []string, results []service.PostSummary, w http.ResponseWriter, pageURL string) {
 	items := make([]postListItem, 0, len(results))
 	for _, p := range results {
 		item := postListItem{
@@ -221,7 +229,7 @@ func (r *Renderer) ServeSearchResults(query string, tags []string, results []ser
 }
 
 // ServePostList renders a paginated post list through the HTML template.
-func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, pageURL string) {
+func (r *DefaultRenderer) ServePostList(pr service.PageResult, w http.ResponseWriter, pageURL string) {
 	items := make([]postListItem, 0, len(pr.Posts))
 	for _, p := range pr.Posts {
 		item := postListItem{
@@ -266,11 +274,11 @@ func (r *Renderer) ServePostList(pr service.PageResult, w http.ResponseWriter, p
 	r.execute(w, td)
 }
 
-func (r *Renderer) execute(w http.ResponseWriter, td templateData) {
+func (r *DefaultRenderer) execute(w http.ResponseWriter, td templateData) {
 	r.executeStatus(w, td, http.StatusOK)
 }
 
-func (r *Renderer) executeStatus(w http.ResponseWriter, td templateData, status int) {
+func (r *DefaultRenderer) executeStatus(w http.ResponseWriter, td templateData, status int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := r.tmpl.Execute(w, td); err != nil {

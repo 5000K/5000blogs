@@ -63,7 +63,7 @@ func main() {
 		log.Fatalf("failed to create renderer: %v", err)
 	}
 
-	var ogGen *service.OGImageGenerator
+	var ogGen service.OGImageGenerator
 	if cfg.OGImage.Enabled {
 		ogGen, err = service.NewOGImageGenerator(cfg.OGImage, cfg.BlogName, iconData)
 		if err != nil {

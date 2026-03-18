@@ -101,8 +101,13 @@ func (c *ogLRUCache) len() int {
 	return c.list.Len()
 }
 
-// OGImageGenerator generates og:image PNGs for posts and caches them by post hash.
-type OGImageGenerator struct {
+type OGImageGenerator interface {
+	Generate(post *Post) ([]byte, error)
+	Invalidate(hash uint64)
+}
+
+// BuiltinOGImageGenerator generates og:image PNGs for posts and caches them by post hash.
+type BuiltinOGImageGenerator struct {
 	cfg         config.OGImageConfig
 	blogName    string
 	boldFace    font.Face
@@ -115,7 +120,7 @@ type OGImageGenerator struct {
 
 // NewOGImageGenerator creates a generator from the given config.
 // iconData is optional PNG/JPEG bytes for the blog logo; pass nil to omit.
-func NewOGImageGenerator(cfg config.OGImageConfig, blogName string, iconData []byte) (*OGImageGenerator, error) {
+func NewOGImageGenerator(cfg config.OGImageConfig, blogName string, iconData []byte) (*BuiltinOGImageGenerator, error) {
 	boldFont, err := opentype.Parse(gobold.TTF)
 	if err != nil {
 		return nil, fmt.Errorf("ogimage: parse bold font: %w", err)
@@ -138,7 +143,7 @@ func NewOGImageGenerator(cfg config.OGImageConfig, blogName string, iconData []b
 		return nil, fmt.Errorf("ogimage: create small face: %w", err)
 	}
 
-	g := &OGImageGenerator{
+	g := &BuiltinOGImageGenerator{
 		cfg:         cfg,
 		blogName:    blogName,
 		boldFace:    boldFace,
@@ -159,7 +164,7 @@ func NewOGImageGenerator(cfg config.OGImageConfig, blogName string, iconData []b
 
 // Generate returns a PNG for the post, using a cache keyed by post hash.
 // The cache is invalidated automatically when the post's content hash changes.
-func (g *OGImageGenerator) Generate(post *Post) ([]byte, error) {
+func (g *BuiltinOGImageGenerator) Generate(post *Post) ([]byte, error) {
 	if data, ok := g.cache.get(post.hash); ok {
 		return data, nil
 	}
@@ -173,7 +178,7 @@ func (g *OGImageGenerator) Generate(post *Post) ([]byte, error) {
 	return data, nil
 }
 
-func (g *OGImageGenerator) generate(post *Post) ([]byte, error) {
+func (g *BuiltinOGImageGenerator) generate(post *Post) ([]byte, error) {
 	bgColor, err := parseHexColor(g.cfg.BgColor)
 	if err != nil {
 		return nil, fmt.Errorf("ogimage: bg_color: %w", err)
@@ -284,7 +289,7 @@ func (g *OGImageGenerator) generate(post *Post) ([]byte, error) {
 }
 
 // Invalidate removes the cached image for the given post hash, called on post change/removal.
-func (g *OGImageGenerator) Invalidate(hash uint64) {
+func (g *BuiltinOGImageGenerator) Invalidate(hash uint64) {
 	g.cache.delete(hash)
 }
 
