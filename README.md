@@ -1,6 +1,6 @@
 # <img src="./template/icon.png" width="64"/> 5000blogs
 
-> ! 5000blogs is nearly feature-stable, the full release will support the current templating, api and config as far as possible. All file operations are exclusively read-only, so the risks are minimal. But it still is beta software and should be handled with the expectation of downtime and potential small migrations in your custom templates and config being needed. We will document them. But they will probably be needed.
+> ! 5000blogs is nearly feature-stable, but config and API might still change. In the future, there probably will be manual migrations (mostly regarding your config and template) needed towards version 1.0. We will help with them. But they will probably be needed.
 
 ## About
 5000blogs is a lightweight platform for blogging and publishing markdown files.
