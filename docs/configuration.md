@@ -23,11 +23,22 @@ Configuration is loaded from a YAML file (path set by `CONFIG_PATH` env var, def
 
 | YAML key | Env var | Default | Description |
 |---|---|---|---|
-| `paths.posts` | `POSTS_PATH` | `./posts/` | Directory to read posts from (when no `sources` are configured) |
 | `paths.template` | `TEMPLATE_PATH` | GitHub raw URL | Path or URL to the HTML template file |
 | `paths.icon` | `ICON_PATH` | GitHub raw URL | Path or URL to the site icon (PNG). Served at `/favicon.ico` and `/og-logo.png` |
 
 Template and icon accept both local file paths and HTTP(S) URLs. By default they fetch from the official repository, so Docker images don't need to bundle them.
+
+## Sources
+
+```yaml
+sources:
+  - type: filesystem
+    path: "./posts"
+  - type: git
+    url: "https://github.com/user/posts.git"
+```
+
+See [Sources](sources).
 
 ## Feeds
 
@@ -60,17 +71,6 @@ plugins:
 
 List of JavaScript URLs injected into every page via `<script>` tags. See [Plugins](plugins).
 
-## Sources
-
-```yaml
-sources:
-  - type: filesystem
-    path: "./posts"
-  - type: git
-    url: "https://github.com/user/posts.git"
-```
-
-When `sources` is set, `paths.posts` is ignored. See [Sources](sources).
 
 ## Features
 

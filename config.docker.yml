@@ -7,6 +7,11 @@ blog_name: 'My Blog'
 # paths:
 #   icon: './template/icon.png'  # path to a PNG file served as favicon and og:logo
 
+
+sources:
+ - type: filesystem
+   dir: /docs
+
 nav_links:
   - name: 'Posts'
     url: '/posts'

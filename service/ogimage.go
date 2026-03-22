@@ -162,6 +162,10 @@ func NewOGImageGenerator(cfg config.OGImageConfig, blogName string, iconData []b
 	return g, nil
 }
 
+func (g *BuiltinOGImageGenerator) Initialize() error {
+	return nil
+}
+
 // Generate returns a PNG for the post, using a cache keyed by post hash.
 // The cache is invalidated automatically when the post's content hash changes.
 func (g *BuiltinOGImageGenerator) Generate(post *Post) ([]byte, error) {

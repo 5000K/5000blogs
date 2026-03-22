@@ -9,12 +9,33 @@ import (
 	"strings"
 	"time"
 
+	"github.com/5000K/5000blogs/config"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 )
+
+func configToGitAuth(sc config.SourceConfig) (transport.AuthMethod, error) {
+	if sc.SSHKeyPath != "" {
+		auth, err := gitssh.NewPublicKeysFromFile("git", sc.SSHKeyPath, sc.SSHKeyPassphrase)
+		if err != nil {
+			return nil, fmt.Errorf("git source %s: load SSH key: %w", sc.URL, err)
+		}
+		return auth, nil
+	}
+	if sc.AuthToken != "" {
+		user := sc.AuthUser
+		if user == "" {
+			user = "git"
+		}
+		return &githttp.BasicAuth{Username: user, Password: sc.AuthToken}, nil
+	}
+	return nil, nil
+}
 
 // GitSource reads posts from a git repository cloned in-memory.
 // dir is the subdirectory within the repo containing posts (use "." for the root).
@@ -27,23 +48,34 @@ type GitSource struct {
 	log  *slog.Logger
 }
 
-func NewGitSource(url, dir string, auth transport.AuthMethod, logger *slog.Logger) (*GitSource, error) {
+func NewGitSource(logger *slog.Logger) (*GitSource, error) {
 	fs := memfs.New()
-	repo, err := gogit.Clone(memory.NewStorage(), fs, &gogit.CloneOptions{
-		URL:  url,
-		Auth: auth,
+
+	return &GitSource{
+		fs:  fs,
+		log: logger.With("component", "GitSource"),
+	}, nil
+}
+
+func (g *GitSource) Initialize(conf config.SourceConfig) error {
+	g.url = conf.URL
+	g.dir = conf.Dir
+	auth, err := configToGitAuth(conf)
+	if err != nil {
+		return fmt.Errorf("git source auth: %w", err)
+	}
+	g.auth = auth
+
+	g.log.Debug("cloning repository", "url", g.url)
+	repo, err := gogit.Clone(memory.NewStorage(), g.fs, &gogit.CloneOptions{
+		URL:  g.url,
+		Auth: g.auth,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("git clone %s: %w", url, err)
+		return fmt.Errorf("git clone %s: %w", g.url, err)
 	}
-	return &GitSource{
-		url:  url,
-		dir:  dir,
-		auth: auth,
-		repo: repo,
-		fs:   fs,
-		log:  logger.With("component", "GitSource"),
-	}, nil
+	g.repo = repo
+	return nil
 }
 
 func (g *GitSource) Sync() error {

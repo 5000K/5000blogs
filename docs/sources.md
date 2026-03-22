@@ -9,13 +9,7 @@ Sources define where posts are loaded from. Two types are supported: `filesystem
 
 ## Default behavior
 
-When no `sources` array is configured, posts are read from `paths.posts` (default `./posts/`). This is equivalent to:
-
-```yaml
-sources:
-  - type: filesystem
-    path: "./posts/"
-```
+When no `sources` array is configured, only the builtin pages are served. If you want to have any content, you need to define a source.
 
 ## Multiple sources
 

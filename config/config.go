@@ -17,7 +17,6 @@ type Config struct {
 
 	Paths struct {
 		Config string `env:"CONFIG_PATH" env-default:"config.yml"`
-		Posts  string `env:"POSTS_PATH" env-default:"./posts/" yaml:"posts"`
 
 		// default links to the current version in the official repo so that we no longer have to include templates in the dockerfile.
 		Template string `env:"TEMPLATE_PATH" env-default:"https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/template.html" yaml:"template"`
@@ -100,11 +99,9 @@ type NavLink struct {
 // SourceConfig defines a post source. Type is required: "filesystem" or "git".
 type SourceConfig struct {
 	Type string `yaml:"type"`
-	// filesystem
-	Path string `yaml:"path"`
+	Dir  string `yaml:"dir"` // base dir (e.g. fs path, subdirectory within repo, ...)
 	// git
 	URL string `yaml:"url"`
-	Dir string `yaml:"dir"` // subdirectory within the repo (default: ".")
 	// git auth (mutually exclusive: use either token or SSH key, not both)
 	AuthUser         string `yaml:"auth_user"`          // HTTP basic auth username
 	AuthToken        string `yaml:"auth_token"`         // HTTP basic auth password or token
@@ -144,7 +141,7 @@ func (c *Config) Validate() error {
 	for i, s := range c.Sources {
 		switch s.Type {
 		case "filesystem":
-			if s.Path == "" {
+			if s.Dir == "" {
 				return fmt.Errorf("sources[%d]: filesystem source requires path", i)
 			}
 		case "git":

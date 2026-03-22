@@ -25,7 +25,7 @@ func TestValidate(t *testing.T) {
 		{"site_url https", Config{PageSize: 5, FeedSize: 20, SiteURL: "https://example.com", OGImage: OGImageConfig{CacheSize: 128}}, false},
 		{"cache_size zero", Config{PageSize: 10, FeedSize: 20, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 0}}, true},
 		{"cache_size negative", Config{PageSize: 10, FeedSize: 20, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: -1}}, true},
-		{"source filesystem valid", Config{PageSize: 10, FeedSize: 20, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "filesystem", Path: "./posts"}}}, false},
+		{"source filesystem valid", Config{PageSize: 10, FeedSize: 20, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "filesystem", Dir: "./posts"}}}, false},
 		{"source filesystem no path", Config{PageSize: 10, FeedSize: 20, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "filesystem"}}}, true},
 		{"source git valid", Config{PageSize: 10, FeedSize: 20, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "git", URL: "https://github.com/x/y"}}}, false},
 		{"source git no url", Config{PageSize: 10, FeedSize: 20, SiteURL: "http://localhost:8080", OGImage: OGImageConfig{CacheSize: 128}, Sources: []SourceConfig{{Type: "git"}}}, true},

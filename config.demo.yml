@@ -1,9 +1,12 @@
 address: ":8080"
 
 paths:
-  posts: './docs'
   template: './template/template.html'
   icon: './template/icon.png'  # path to a PNG file served as favicon and og:logo
+
+sources:
+ - type: filesystem
+   dir: ./docs
 
 log_level: 'info'
 page_size: 10
@@ -27,10 +30,3 @@ og_image:
   text_color: '#f0f0f0'
   sub_color: '#999999'
   accent_color: '#7eb8f7'
-
-# sources:
-#   - type: filesystem
-#     path: ./demo/posts
-#   - type: git
-#     url: https://github.com/yourname/blog-posts
-#     dir: posts  # optional subdirectory within the repo

@@ -54,13 +54,22 @@ type MemoryPostRepository struct {
 	posts   []*Post
 }
 
-func NewMemoryPostRepository(conf *config.Config, source PostSource, converter Converter, logger *slog.Logger) *MemoryPostRepository {
+func NewMemoryPostRepository(conf config.Config, logger *slog.Logger) *MemoryPostRepository {
 	return &MemoryPostRepository{
-		conf:      conf,
-		source:    source,
-		converter: converter,
-		log:       logger.With("component", "MemoryPostRepository"),
+		conf: &conf,
+		log:  logger.With("component", "MemoryPostRepository"),
 	}
+}
+
+// ReadMedia delegates to the underlying source.
+func (r *MemoryPostRepository) ReadMedia(relPath string) ([]byte, time.Time, error) {
+	return r.source.ReadMedia(relPath)
+}
+
+func (r *MemoryPostRepository) Initialize(source PostSource, converter Converter) error {
+	r.source = source
+	r.converter = converter
+	return nil
 }
 
 func (r *MemoryPostRepository) Get(path string) *Post {
@@ -439,14 +448,14 @@ func (r *MemoryPostRepository) rescan() {
 			continue
 		}
 		if pr.isNew {
-			r.log.Info("added post", "path", pr.path)
+			r.log.Debug("added post", "path", pr.path)
 		} else {
-			r.log.Info("updated post", "path", pr.path)
+			r.log.Debug("updated post", "path", pr.path)
 		}
 		changes = append(changes, pendingChange{path: pr.path, post: pr.post})
 	}
 	for _, path := range removals {
-		r.log.Info("removed post", "path", path)
+		r.log.Debug("removed post", "path", path)
 		changes = append(changes, pendingChange{path: path, post: nil})
 	}
 

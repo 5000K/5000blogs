@@ -28,6 +28,10 @@ func NewGoldmarkConverter(postsBase string, features config.Features) *GoldmarkC
 	return &GoldmarkConverter{PostsBase: postsBase, Features: features}
 }
 
+func (c *GoldmarkConverter) Initialize() error {
+	return nil
+}
+
 func (c *GoldmarkConverter) postsBase() string {
 	if c.PostsBase == "" {
 		return "/"

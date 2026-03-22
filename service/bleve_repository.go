@@ -114,19 +114,23 @@ type BlevePostRepository struct {
 
 }
 
-func NewBlevePostRepository(conf *config.Config, source PostSource, converter Converter, logger *slog.Logger) (*BlevePostRepository, error) {
+func NewBlevePostRepository(conf config.Config, logger *slog.Logger) (*BlevePostRepository, error) {
 	idx, err := newBleveIndex()
 	if err != nil {
 		return nil, fmt.Errorf("BlevePostRepository: create index: %w", err)
 	}
 	return &BlevePostRepository{
-		conf:      conf,
-		source:    source,
-		converter: converter,
-		log:       logger.With("component", "BlevePostRepository"),
-		posts:     make(map[string]*Post),
-		index:     idx,
+		conf:  &conf,
+		log:   logger.With("component", "BlevePostRepository"),
+		posts: make(map[string]*Post),
+		index: idx,
 	}, nil
+}
+
+func (r *BlevePostRepository) Initialize(source PostSource, converter Converter) error {
+	r.source = source
+	r.converter = converter
+	return nil
 }
 
 func (r *BlevePostRepository) Start() error {
@@ -516,14 +520,14 @@ func (r *BlevePostRepository) rescan() {
 			continue
 		}
 		if pr.isNew {
-			r.log.Info("added post", "path", pr.path)
+			r.log.Debug("added post", "path", pr.path)
 		} else {
-			r.log.Info("updated post", "path", pr.path)
+			r.log.Debug("updated post", "path", pr.path)
 		}
 		changes = append(changes, pendingChange{path: pr.path, post: pr.post})
 	}
 	for _, path := range removals {
-		r.log.Info("removed post", "path", path)
+		r.log.Debug("removed post", "path", path)
 		changes = append(changes, pendingChange{path: path, post: nil})
 	}
 

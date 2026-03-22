@@ -99,16 +99,20 @@ func (r *DefaultRenderer) footer() template.HTML {
 
 // NewRenderer creates a Renderer using the provided template bytes.
 // Returns an error if the template cannot be parsed.
-func NewRenderer(cfg *config.Config, tmplData []byte, logger *slog.Logger) (*DefaultRenderer, error) {
+func NewRenderer(cfg config.Config, tmplData []byte, logger *slog.Logger) (*DefaultRenderer, error) {
 	tmpl, err := template.New("template.html").Parse(string(tmplData))
 	if err != nil {
 		return nil, fmt.Errorf("view.Renderer: parse template: %w", err)
 	}
 	return &DefaultRenderer{
-		cfg:  cfg,
+		cfg:  &cfg,
 		log:  logger.With("component", "Renderer"),
 		tmpl: tmpl,
 	}, nil
+}
+
+func (r *DefaultRenderer) Initialize() error {
+	return nil
 }
 
 func (r *DefaultRenderer) navLinks() []navLink {
