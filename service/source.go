@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
 )
 
 type PostSource interface {
@@ -59,8 +61,13 @@ type FileSystemSource struct {
 	log *slog.Logger
 }
 
-func NewFileSystemSource(dir string, logger *slog.Logger) *FileSystemSource {
-	return &FileSystemSource{dir: dir, log: logger.With("component", "FileSystemSource")}
+func NewFileSystemSource(logger *slog.Logger) *FileSystemSource {
+	return &FileSystemSource{log: logger.With("component", "FileSystemSource")}
+}
+
+func (fs *FileSystemSource) Initialize(conf config.SourceConfig) error {
+	fs.dir = conf.Dir
+	return nil
 }
 
 func (fs *FileSystemSource) Sync() error { return nil }

@@ -54,13 +54,22 @@ type MemoryPostRepository struct {
 	posts   []*Post
 }
 
-func NewMemoryPostRepository(conf *config.Config, source PostSource, converter Converter, logger *slog.Logger) *MemoryPostRepository {
+func NewMemoryPostRepository(conf config.Config, logger *slog.Logger) *MemoryPostRepository {
 	return &MemoryPostRepository{
-		conf:      conf,
-		source:    source,
-		converter: converter,
-		log:       logger.With("component", "MemoryPostRepository"),
+		conf: &conf,
+		log:  logger.With("component", "MemoryPostRepository"),
 	}
+}
+
+// ReadMedia delegates to the underlying source.
+func (r *MemoryPostRepository) ReadMedia(relPath string) ([]byte, time.Time, error) {
+	return r.source.ReadMedia(relPath)
+}
+
+func (r *MemoryPostRepository) Initialize(source PostSource, converter Converter) error {
+	r.source = source
+	r.converter = converter
+	return nil
 }
 
 func (r *MemoryPostRepository) Get(path string) *Post {

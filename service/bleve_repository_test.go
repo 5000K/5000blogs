@@ -11,10 +11,18 @@ import (
 
 func newTestBleveRepo(t *testing.T, conf *config.Config, source PostSource) *BlevePostRepository {
 	t.Helper()
-	repo, err := NewBlevePostRepository(conf, source, &GoldmarkConverter{}, slog.Default())
+	repo, err := NewBlevePostRepository(*conf, slog.Default())
+
 	if err != nil {
 		t.Fatalf("NewBlevePostRepository: %v", err)
 	}
+
+	err = repo.Initialize(source, &GoldmarkConverter{})
+
+	if err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+
 	return repo
 }
 

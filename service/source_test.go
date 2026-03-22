@@ -7,12 +7,19 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
 )
 
 func newFSSource(t *testing.T) (*FileSystemSource, string) {
 	t.Helper()
 	dir := t.TempDir()
-	return NewFileSystemSource(dir, slog.Default()), dir
+	src := NewFileSystemSource(slog.Default())
+
+	if err := src.Initialize(config.SourceConfig{Dir: dir}); err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+	return src, dir
 }
 
 func writeFile(t *testing.T, dir, name, content string) string {
@@ -76,7 +83,8 @@ func TestFileSystemSource_ListPosts_RecursesSubdirectories(t *testing.T) {
 }
 
 func TestFileSystemSource_ListPosts_MissingDir(t *testing.T) {
-	fs := NewFileSystemSource("/nonexistent/dir", slog.Default())
+	fs := NewFileSystemSource(slog.Default())
+	fs.Initialize(config.SourceConfig{Dir: "/non/existent/directory"})
 	_, err := fs.ListPosts()
 	if err == nil {
 		t.Error("want error for missing directory")

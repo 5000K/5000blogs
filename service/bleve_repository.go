@@ -114,19 +114,23 @@ type BlevePostRepository struct {
 
 }
 
-func NewBlevePostRepository(conf *config.Config, source PostSource, converter Converter, logger *slog.Logger) (*BlevePostRepository, error) {
+func NewBlevePostRepository(conf config.Config, logger *slog.Logger) (*BlevePostRepository, error) {
 	idx, err := newBleveIndex()
 	if err != nil {
 		return nil, fmt.Errorf("BlevePostRepository: create index: %w", err)
 	}
 	return &BlevePostRepository{
-		conf:      conf,
-		source:    source,
-		converter: converter,
-		log:       logger.With("component", "BlevePostRepository"),
-		posts:     make(map[string]*Post),
-		index:     idx,
+		conf:  &conf,
+		log:   logger.With("component", "BlevePostRepository"),
+		posts: make(map[string]*Post),
+		index: idx,
 	}, nil
+}
+
+func (r *BlevePostRepository) Initialize(source PostSource, converter Converter) error {
+	r.source = source
+	r.converter = converter
+	return nil
 }
 
 func (r *BlevePostRepository) Start() error {
