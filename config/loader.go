@@ -47,6 +47,12 @@ func NewConfigLoader() (*ConfigLoader, error) {
 		return nil, err
 	}
 
+	err = core.Validate()
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &ConfigLoader{
 		base: base,
 		core: core,
@@ -63,6 +69,16 @@ func (loader *ConfigLoader) Load(prefix string, target any) error {
 		return err
 	}
 
+	sub, err := loader.getRawSub(prefix)
+
+	if err != nil {
+		return nil // rely on values set by ReadEnv
+	}
+
+	return cleanenv.ParseYAML(bytes.NewReader(sub), target)
+}
+
+func (loader *ConfigLoader) LoadSlice(prefix string, target any) error {
 	sub, err := loader.getRawSub(prefix)
 
 	if err != nil {

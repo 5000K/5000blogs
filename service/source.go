@@ -67,6 +67,7 @@ func NewFileSystemSource(logger *slog.Logger) *FileSystemSource {
 
 func (fs *FileSystemSource) Initialize(conf config.SourceConfig) error {
 	fs.dir = conf.Dir
+	fs.log.Debug("initialized FileSystemSource", "dir", fs.dir)
 	return nil
 }
 

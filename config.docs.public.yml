@@ -2,7 +2,6 @@
 address: ":8080"
 
 paths:
-  posts: ""
   template: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/template.docs.html"
 
 log_level: 'info'

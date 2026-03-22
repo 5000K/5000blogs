@@ -520,14 +520,14 @@ func (r *BlevePostRepository) rescan() {
 			continue
 		}
 		if pr.isNew {
-			r.log.Info("added post", "path", pr.path)
+			r.log.Debug("added post", "path", pr.path)
 		} else {
-			r.log.Info("updated post", "path", pr.path)
+			r.log.Debug("updated post", "path", pr.path)
 		}
 		changes = append(changes, pendingChange{path: pr.path, post: pr.post})
 	}
 	for _, path := range removals {
-		r.log.Info("removed post", "path", path)
+		r.log.Debug("removed post", "path", path)
 		changes = append(changes, pendingChange{path: path, post: nil})
 	}
 

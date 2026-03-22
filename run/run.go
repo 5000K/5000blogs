@@ -9,13 +9,6 @@ import (
 	"github.com/5000K/5000blogs/view"
 )
 
-var i = 0
-
-func nextI() int {
-	i++
-	return i
-}
-
 func Run(ctx modules.RuntimeContext) error {
 	baseConf := ctx.Loader.BaseConfig()
 
@@ -44,6 +37,13 @@ func Run(ctx modules.RuntimeContext) error {
 	}
 
 	repo, err := constructPostRepository(ctx, source, converter)
+
+	if err != nil {
+		return err
+	}
+
+	err = repo.Start()
+	defer repo.Stop()
 
 	if err != nil {
 		return err
@@ -203,20 +203,10 @@ func constructConverter(ctx modules.RuntimeContext) (service.Converter, error) {
 func constructSource(ctx modules.RuntimeContext) (service.PostSource, error) {
 	var sourceConfigs []config.SourceConfig
 
-	err := ctx.Loader.Load("sources", sourceConfigs)
+	err := ctx.Loader.LoadSlice("sources", &sourceConfigs)
 
 	if err != nil {
 		return nil, err
-	}
-
-	if len(sourceConfigs) == 0 {
-		cfg := ctx.Loader.BaseConfig()
-
-		// default to source path
-		sourceConfigs = append(sourceConfigs, config.SourceConfig{
-			Type: "filesystem",
-			Path: cfg.Paths.Posts,
-		})
 	}
 
 	sourceModules := make([]service.PostSource, 0, len(sourceConfigs)+1)
@@ -247,6 +237,8 @@ func constructSource(ctx modules.RuntimeContext) (service.PostSource, error) {
 	}
 
 	sourceModules = append(sourceModules, service.NewBuiltinSource())
+
+	ctx.Log.Debug("loaded and initialized layered post source", "sources_count", len(sourceModules))
 
 	return service.NewLayeredSource(sourceModules...), nil
 }
