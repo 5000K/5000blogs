@@ -16,7 +16,7 @@ import (
 )
 
 // postDoc is the bleve-indexed representation of a post.
-// Tags are stored lowercase for case-insensitive matching.
+// Tags and MetaTags are stored lowercase for case-insensitive matching.
 // Visible and RSSVisible are stored as "true"/"false" keyword strings.
 type postDoc struct {
 	Path        string    `json:"path"`
@@ -26,6 +26,7 @@ type postDoc struct {
 	Date        time.Time `json:"date"`
 	Author      string    `json:"author"`
 	Tags        []string  `json:"tags"`
+	MetaTags    []string  `json:"meta_tags"`
 	Content     string    `json:"content"`
 	Visible     string    `json:"visible"`
 	RSSVisible  string    `json:"rss_visible"`
@@ -45,6 +46,13 @@ func toPostDoc(p *Post) postDoc {
 	for i, t := range d.Tags {
 		tags[i] = strings.ToLower(t)
 	}
+	var metaTags []string
+	if p.metadata != nil {
+		metaTags = make([]string, len(p.metadata.MetaTags))
+		for i, t := range p.metadata.MetaTags {
+			metaTags[i] = strings.ToLower(t)
+		}
+	}
 	content := ""
 	if plain := p.PlainText(); plain != nil {
 		content = string(plain)
@@ -57,6 +65,7 @@ func toPostDoc(p *Post) postDoc {
 		Date:        d.Date,
 		Author:      d.Author,
 		Tags:        tags,
+		MetaTags:    metaTags,
 		Content:     content,
 		Visible:     boolKw(d.Visible),
 		RSSVisible:  boolKw(d.RSSVisible),
@@ -80,6 +89,7 @@ func newBleveIndex() (bleve.Index, error) {
 	docMapping.AddFieldMappingsAt("content", text)
 	docMapping.AddFieldMappingsAt("author", keyword)
 	docMapping.AddFieldMappingsAt("tags", keyword)
+	docMapping.AddFieldMappingsAt("meta_tags", keyword)
 	docMapping.AddFieldMappingsAt("date", dt)
 	docMapping.AddFieldMappingsAt("mod_time", dt)
 	docMapping.AddFieldMappingsAt("visible", keyword)
@@ -236,6 +246,10 @@ func (r *BlevePostRepository) GetPage(page int, tags []string) PageResult {
 			continue
 		}
 		d := p.Data()
+		var metaTags []string
+		if p.metadata != nil {
+			metaTags = p.metadata.MetaTags
+		}
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,
 			Title:       d.Title,
@@ -243,6 +257,7 @@ func (r *BlevePostRepository) GetPage(page int, tags []string) PageResult {
 			Date:        d.Date,
 			Author:      d.Author,
 			Tags:        d.Tags,
+			MetaTags:    metaTags,
 		})
 	}
 
@@ -285,6 +300,9 @@ func (r *BlevePostRepository) buildPageRequests(tags []string, size int) (*bleve
 		tq := bleve.NewTermQuery(strings.ToLower(tag))
 		tq.SetField("tags")
 		tagQ.AddShould(tq)
+		mtq := bleve.NewTermQuery(strings.ToLower(tag))
+		mtq.SetField("meta_tags")
+		tagQ.AddShould(mtq)
 	}
 	conjQ := bleve.NewConjunctionQuery(visQ, tagQ)
 
@@ -325,6 +343,10 @@ func (r *BlevePostRepository) Search(query string) []PostSummary {
 			continue
 		}
 		d := p.Data()
+		var metaTags []string
+		if p.metadata != nil {
+			metaTags = p.metadata.MetaTags
+		}
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,
 			Title:       d.Title,
@@ -332,6 +354,7 @@ func (r *BlevePostRepository) Search(query string) []PostSummary {
 			Date:        d.Date,
 			Author:      d.Author,
 			Tags:        d.Tags,
+			MetaTags:    metaTags,
 		})
 	}
 	return summaries

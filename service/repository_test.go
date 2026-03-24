@@ -468,6 +468,89 @@ func TestPostSummary_IncludesTags(t *testing.T) {
 	}
 }
 
+// --- MetaTags ---
+
+func TestGetPage_MetaTagFilter_MatchesMetaTagOnly(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", MetaTags: []string{"hidden"}}, []byte("x")),
+		NewPost("posts/b.md", &Metadata{Title: "B", Tags: []string{"visible"}}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, []string{"hidden"})
+	if page.TotalPosts != 1 {
+		t.Errorf("want 1 post matching meta-tag, got %d", page.TotalPosts)
+	}
+	if page.Posts[0].Slug != "a" {
+		t.Errorf("want slug 'a', got %q", page.Posts[0].Slug)
+	}
+}
+
+func TestGetPage_MetaTagFilter_MetaTagsNotInTags(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", Tags: []string{"show"}, MetaTags: []string{"hidden"}}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, nil)
+	if len(page.Posts) != 1 {
+		t.Fatal("want 1 post")
+	}
+	// Tags should only contain visible tags, not meta-tags
+	if len(page.Posts[0].Tags) != 1 || page.Posts[0].Tags[0] != "show" {
+		t.Errorf("PostSummary.Tags should only contain visible tags, got %v", page.Posts[0].Tags)
+	}
+	// MetaTags should carry the hidden tag
+	if len(page.Posts[0].MetaTags) != 1 || page.Posts[0].MetaTags[0] != "hidden" {
+		t.Errorf("PostSummary.MetaTags should contain hidden tag, got %v", page.Posts[0].MetaTags)
+	}
+}
+
+func TestGetPage_MetaTagFilter_CaseInsensitive(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", MetaTags: []string{"Hidden"}}, []byte("x")),
+	}
+
+	page := repo.GetPage(1, []string{"hidden"})
+	if page.TotalPosts != 1 {
+		t.Errorf("meta-tag filter should be case-insensitive, got %d posts", page.TotalPosts)
+	}
+}
+
+func TestFeedPosts_MetaTagFilter_MatchesMetaTagOnly(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Title: "A", MetaTags: []string{"hidden"}}, []byte("x")),
+		NewPost("posts/b.md", &Metadata{Title: "B", Tags: []string{"visible"}}, []byte("x")),
+	}
+
+	posts := repo.FeedPosts([]string{"hidden"}, "")
+	if len(posts) != 1 {
+		t.Errorf("want 1 feed post matching meta-tag, got %d", len(posts))
+	}
+	if posts[0].slug != "a" {
+		t.Errorf("want slug 'a', got %q", posts[0].slug)
+	}
+}
+
+func TestAllTags_ExcludesMetaTags(t *testing.T) {
+	repo := newTestRepo(newTestConf(10), newStubSource(nil))
+	repo.posts = []*Post{
+		NewPost("posts/a.md", &Metadata{Tags: []string{"visible"}, MetaTags: []string{"hidden"}}, []byte("x")),
+	}
+
+	tags := repo.AllTags()
+	for _, tag := range tags {
+		if tag == "hidden" {
+			t.Error("AllTags should not include meta-tags")
+		}
+	}
+	if len(tags) != 1 || tags[0] != "visible" {
+		t.Errorf("want only visible tag, got %v", tags)
+	}
+}
+
 // --- Search ---
 
 func TestSearch_MatchesTitle(t *testing.T) {

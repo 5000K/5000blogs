@@ -193,6 +193,10 @@ func (r *MemoryPostRepository) GetPage(page int, tags []string) PageResult {
 	summaries := make([]PostSummary, 0, len(pagePosts))
 	for _, p := range pagePosts {
 		d := p.Data()
+		var metaTags []string
+		if p.metadata != nil {
+			metaTags = p.metadata.MetaTags
+		}
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,
 			Title:       d.Title,
@@ -200,6 +204,7 @@ func (r *MemoryPostRepository) GetPage(page int, tags []string) PageResult {
 			Date:        d.Date,
 			Author:      d.Author,
 			Tags:        d.Tags,
+			MetaTags:    metaTags,
 		})
 	}
 
@@ -245,6 +250,10 @@ func (r *MemoryPostRepository) Search(query string) []PostSummary {
 		if strings.Contains(strings.ToLower(d.Title), q) ||
 			strings.Contains(strings.ToLower(d.Description), q) ||
 			strings.Contains(plain, q) {
+			var metaTags []string
+			if p.metadata != nil {
+				metaTags = p.metadata.MetaTags
+			}
 			results = append(results, PostSummary{
 				Slug:        d.Slug,
 				Title:       d.Title,
@@ -252,6 +261,7 @@ func (r *MemoryPostRepository) Search(query string) []PostSummary {
 				Date:        d.Date,
 				Author:      d.Author,
 				Tags:        d.Tags,
+				MetaTags:    metaTags,
 			})
 		}
 	}
@@ -293,12 +303,19 @@ func (r *MemoryPostRepository) FeedPosts(tags []string, query string) []*Post {
 }
 
 // hasAnyTag reports whether p has at least one of the given tags.
+// Both Tags and MetaTags are checked so meta-tags can be used for filtering
+// without being shown to users in rendered output.
 func hasAnyTag(p *Post, tags []string) bool {
 	if p.metadata == nil {
 		return false
 	}
 	for _, want := range tags {
 		for _, have := range p.metadata.Tags {
+			if strings.EqualFold(have, want) {
+				return true
+			}
+		}
+		for _, have := range p.metadata.MetaTags {
 			if strings.EqualFold(have, want) {
 				return true
 			}
