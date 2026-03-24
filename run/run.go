@@ -36,7 +36,7 @@ func Run(ctx modules.RuntimeContext) error {
 		return err
 	}
 
-	repo, err := constructPostRepository(ctx, source, converter)
+	repo, err := constructPostIndexer(ctx, source, converter)
 
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func Run(ctx modules.RuntimeContext) error {
 	return nil
 }
 
-func constructPostRepository(ctx modules.RuntimeContext, source service.PostSource, converter service.Converter) (service.PostRepository, error) {
+func constructPostIndexer(ctx modules.RuntimeContext, source service.PostSource, converter service.Converter) (service.PostIndexer, error) {
 	var conf = config.TypeConfig{
 		Type: "bleve",
 	}

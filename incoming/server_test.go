@@ -15,7 +15,7 @@ import (
 
 // plainRouter is a minimal router containing only the /plain/* handler,
 // used to test that route in isolation without a full config/renderer setup.
-func plainRouter(repo service.PostRepository) chi.Router {
+func plainRouter(repo service.PostIndexer) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/plain/*", func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "*")
@@ -35,7 +35,7 @@ func plainRouter(repo service.PostRepository) chi.Router {
 	return r
 }
 
-func doPlainRequest(t *testing.T, repo service.PostRepository, slug string) *httptest.ResponseRecorder {
+func doPlainRequest(t *testing.T, repo service.PostIndexer, slug string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/plain/"+slug, nil)
 	w := httptest.NewRecorder()
@@ -121,7 +121,7 @@ func TestPlainEndpoint_PostWithoutPlainText(t *testing.T) {
 
 // --- /feed.atom ---
 
-func doAtomRequest(t *testing.T, repo service.PostRepository) *httptest.ResponseRecorder {
+func doAtomRequest(t *testing.T, repo service.PostIndexer) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/feed.atom", nil)
 	w := httptest.NewRecorder()

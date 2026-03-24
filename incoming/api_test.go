@@ -11,7 +11,7 @@ import (
 	"github.com/5000K/5000blogs/service"
 )
 
-// stubRepo is a minimal in-memory PostRepository for handler tests.
+// stubRepo is a minimal in-memory PostIndexer for handler tests.
 type stubRepo struct {
 	posts []*service.Post
 }
@@ -72,7 +72,7 @@ func newPost(slug, title, description string) *service.Post {
 	}, []byte("<p>content</p>"))
 }
 
-func doRequest(t *testing.T, repo service.PostRepository, method, path string) *httptest.ResponseRecorder {
+func doRequest(t *testing.T, repo service.PostIndexer, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(method, path, nil)
 	w := httptest.NewRecorder()

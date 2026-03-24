@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func apiRouter(repo service.PostRepository) chi.Router {
+func apiRouter(repo service.PostIndexer) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/posts", apiListPosts(repo))
 	r.Get("/posts/search", apiSearchPosts(repo))
@@ -29,7 +29,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 // GET /api/v1/posts - all post slugs, optionally filtered by ?tags=tag1,tag2 (OR).
-func apiListPosts(repo service.PostRepository) http.HandlerFunc {
+func apiListPosts(repo service.PostIndexer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var filterTags []string
 		if t := r.URL.Query().Get("tags"); t != "" {
@@ -51,7 +51,7 @@ func apiListPosts(repo service.PostRepository) http.HandlerFunc {
 }
 
 // GET /api/v1/posts/tags - sorted list of all tags across visible posts.
-func apiListTags(repo service.PostRepository) http.HandlerFunc {
+func apiListTags(repo service.PostIndexer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, repo.AllTags())
 	}
@@ -70,7 +70,7 @@ func hasTagMatch(postTags, filter []string) bool {
 }
 
 // GET /api/v1/post/{name} - full metadata for a single post.
-func apiGetPost(repo service.PostRepository) http.HandlerFunc {
+func apiGetPost(repo service.PostIndexer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "*")
 		post := repo.GetBySlug(slug)
@@ -84,7 +84,7 @@ func apiGetPost(repo service.PostRepository) http.HandlerFunc {
 }
 
 // GET /api/v1/search?q={query} - full-text search; returns matching slugs.
-func apiSearch(repo service.PostRepository) http.HandlerFunc {
+func apiSearch(repo service.PostIndexer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
 		results := repo.Search(q)
@@ -97,7 +97,7 @@ func apiSearch(repo service.PostRepository) http.HandlerFunc {
 }
 
 // GET /api/v1/posts/search?q={query} - title/description substring match on visible posts.
-func apiSearchPosts(repo service.PostRepository) http.HandlerFunc {
+func apiSearchPosts(repo service.PostIndexer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := strings.ToLower(r.URL.Query().Get("q"))
 		posts := repo.List()
@@ -126,7 +126,7 @@ func apiSearchPosts(repo service.PostRepository) http.HandlerFunc {
 }
 
 // GET /api/v1/stats - aggregate blog stats.
-func apiStats(repo service.PostRepository) http.HandlerFunc {
+func apiStats(repo service.PostIndexer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		posts := repo.List()
 		var count int

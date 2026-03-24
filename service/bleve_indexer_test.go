@@ -9,12 +9,12 @@ import (
 	"github.com/5000K/5000blogs/config"
 )
 
-func newTestBleveRepo(t *testing.T, conf *config.Config, source PostSource) *BlevePostRepository {
+func newTestBleveRepo(t *testing.T, conf *config.Config, source PostSource) *BlevePostIndexer {
 	t.Helper()
-	repo, err := NewBlevePostRepository(*conf, slog.Default())
+	repo, err := NewBlevePostIndexer(*conf, slog.Default())
 
 	if err != nil {
-		t.Fatalf("NewBlevePostRepository: %v", err)
+		t.Fatalf("NewBlevePostIndexer: %v", err)
 	}
 
 	err = repo.Initialize(source, &GoldmarkConverter{})
@@ -315,11 +315,11 @@ func TestBleve_Sitemap_OnlyVisiblePosts(t *testing.T) {
 	}
 }
 
-// --- ImplementsPostRepository ---
+// --- ImplementsPostIndexer ---
 
 func TestBleve_ImplementsInterface(t *testing.T) {
 	repo := newTestBleveRepo(t, newTestConf(10), newStubSource(nil))
-	var _ PostRepository = repo
+	var _ PostIndexer = repo
 }
 
 // --- Search ---

@@ -13,7 +13,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-type PostRepository interface {
+type PostIndexer interface {
 	Get(path string) *Post
 	GetBySlug(slug string) *Post
 	List() []*Post
@@ -35,8 +35,8 @@ type SitemapEntry struct {
 	LastMod time.Time
 }
 
-// MemoryPostRepository is an in-memory implementation of PostRepository.
-type MemoryPostRepository struct {
+// MemoryPostIndexer is an in-memory implementation of PostIndexer.
+type MemoryPostIndexer struct {
 	conf      *config.Config
 	source    PostSource
 	converter Converter
@@ -54,32 +54,32 @@ type MemoryPostRepository struct {
 	posts   []*Post
 }
 
-func NewMemoryPostRepository(conf config.Config, logger *slog.Logger) *MemoryPostRepository {
-	return &MemoryPostRepository{
+func NewMemoryPostIndexer(conf config.Config, logger *slog.Logger) *MemoryPostIndexer {
+	return &MemoryPostIndexer{
 		conf: &conf,
-		log:  logger.With("component", "MemoryPostRepository"),
+		log:  logger.With("component", "MemoryPostIndexer"),
 	}
 }
 
 // ReadMedia delegates to the underlying source.
-func (r *MemoryPostRepository) ReadMedia(relPath string) ([]byte, time.Time, error) {
+func (r *MemoryPostIndexer) ReadMedia(relPath string) ([]byte, time.Time, error) {
 	return r.source.ReadMedia(relPath)
 }
 
-func (r *MemoryPostRepository) Initialize(source PostSource, converter Converter) error {
+func (r *MemoryPostIndexer) Initialize(source PostSource, converter Converter) error {
 	r.source = source
 	r.converter = converter
 	return nil
 }
 
-func (r *MemoryPostRepository) Get(path string) *Post {
+func (r *MemoryPostIndexer) Get(path string) *Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	return r.get(path)
 }
 
 // get is the unlocked version of Get; callers must hold at least postsMu.RLock.
-func (r *MemoryPostRepository) get(path string) *Post {
+func (r *MemoryPostIndexer) get(path string) *Post {
 	for _, p := range r.posts {
 		if p.path == path {
 			return p
@@ -88,14 +88,14 @@ func (r *MemoryPostRepository) get(path string) *Post {
 	return nil
 }
 
-func (r *MemoryPostRepository) GetBySlug(slug string) *Post {
+func (r *MemoryPostIndexer) GetBySlug(slug string) *Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	return r.getBySlug(slug)
 }
 
 // getBySlug is the unlocked version of GetBySlug.
-func (r *MemoryPostRepository) getBySlug(slug string) *Post {
+func (r *MemoryPostIndexer) getBySlug(slug string) *Post {
 	for _, p := range r.posts {
 		if p.slug == slug {
 			return p
@@ -104,7 +104,7 @@ func (r *MemoryPostRepository) getBySlug(slug string) *Post {
 	return nil
 }
 
-func (r *MemoryPostRepository) List() []*Post {
+func (r *MemoryPostIndexer) List() []*Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	cp := make([]*Post, len(r.posts))
@@ -112,13 +112,13 @@ func (r *MemoryPostRepository) List() []*Post {
 	return cp
 }
 
-func (r *MemoryPostRepository) Count() int {
+func (r *MemoryPostIndexer) Count() int {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	return len(r.posts)
 }
 
-func (r *MemoryPostRepository) Start() error {
+func (r *MemoryPostIndexer) Start() error {
 	r.log.Info("starting repository")
 	r.rescan()
 
@@ -131,14 +131,14 @@ func (r *MemoryPostRepository) Start() error {
 	return nil
 }
 
-func (r *MemoryPostRepository) Stop() {
+func (r *MemoryPostIndexer) Stop() {
 	r.log.Info("stopping repository")
 	if r.scheduler != nil {
 		r.scheduler.Stop()
 	}
 }
 
-func (r *MemoryPostRepository) GetPage(page int, tags []string) PageResult {
+func (r *MemoryPostIndexer) GetPage(page int, tags []string) PageResult {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 
@@ -230,7 +230,7 @@ func (r *MemoryPostRepository) GetPage(page int, tags []string) PageResult {
 
 // Search returns summaries of all visible posts whose title, description, or
 // plain-text body contains query (case-insensitive). No pagination is applied.
-func (r *MemoryPostRepository) Search(query string) []PostSummary {
+func (r *MemoryPostIndexer) Search(query string) []PostSummary {
 	if query == "" {
 		return []PostSummary{}
 	}
@@ -273,7 +273,7 @@ func (r *MemoryPostRepository) Search(query string) []PostSummary {
 
 // FeedPosts returns all RSS-visible posts, optionally filtered by tags (OR logic)
 // and/or a full-text search query (case-insensitive match on title, description, body).
-func (r *MemoryPostRepository) FeedPosts(tags []string, query string) []*Post {
+func (r *MemoryPostIndexer) FeedPosts(tags []string, query string) []*Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	q := strings.ToLower(query)
@@ -325,7 +325,7 @@ func hasAnyTag(p *Post, tags []string) bool {
 }
 
 // AllTags returns a sorted, deduplicated list of all tags across visible posts.
-func (r *MemoryPostRepository) AllTags() []string {
+func (r *MemoryPostIndexer) AllTags() []string {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	seen := make(map[string]struct{})
@@ -347,7 +347,7 @@ func (r *MemoryPostRepository) AllTags() []string {
 
 // LastModified returns the most recent file-modtime across all visible posts.
 // Returns zero time when there are no posts.
-func (r *MemoryPostRepository) LastModified() time.Time {
+func (r *MemoryPostIndexer) LastModified() time.Time {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	var latest time.Time
@@ -365,7 +365,7 @@ type pendingChange struct {
 	post *Post // non-nil: add or replace; nil: remove
 }
 
-func (r *MemoryPostRepository) rescan() {
+func (r *MemoryPostIndexer) rescan() {
 	r.log.Debug("rescanning posts")
 	r.rescanMu.Lock()
 	defer r.rescanMu.Unlock()
@@ -503,7 +503,7 @@ func (r *MemoryPostRepository) rescan() {
 
 // extractMetadataForNew reads and extracts metadata for a brand-new post.
 // Returns the post (with metadata set), the markdown body, and whether it succeeded.
-func (r *MemoryPostRepository) extractMetadataForNew(path string) (*Post, []byte, bool) {
+func (r *MemoryPostIndexer) extractMetadataForNew(path string) (*Post, []byte, bool) {
 	modTime, err := r.source.StatPost(path)
 	if err != nil {
 		r.log.Error("failed to stat post", "path", path, "err", err)
@@ -525,7 +525,7 @@ func (r *MemoryPostRepository) extractMetadataForNew(path string) (*Post, []byte
 
 // extractMetadataIfChanged reads and extracts metadata when the on-disk post
 // differs from existing. Returns nil when the post is unchanged.
-func (r *MemoryPostRepository) extractMetadataIfChanged(path string, existing *Post) (*Post, []byte, bool) {
+func (r *MemoryPostIndexer) extractMetadataIfChanged(path string, existing *Post) (*Post, []byte, bool) {
 	var modTime time.Time
 	if r.conf.SkipUnchangedModTime {
 		var err error
@@ -562,7 +562,7 @@ func (r *MemoryPostRepository) extractMetadataIfChanged(path string, existing *P
 	return post, body, true
 }
 
-func (r *MemoryPostRepository) remove(path string) {
+func (r *MemoryPostIndexer) remove(path string) {
 	for i, p := range r.posts {
 		if p.path == path {
 			r.posts = append(r.posts[:i], r.posts[i+1:]...)
@@ -573,7 +573,7 @@ func (r *MemoryPostRepository) remove(path string) {
 
 // Sitemap returns one entry per visible post for use in sitemap.xml.
 // LastMod is the post's date when set, otherwise its file modification time.
-func (r *MemoryPostRepository) Sitemap() []SitemapEntry {
+func (r *MemoryPostIndexer) Sitemap() []SitemapEntry {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 

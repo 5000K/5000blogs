@@ -19,13 +19,13 @@ func newTestConf(pageSize int) *config.Config {
 	return cfg
 }
 
-func newTestRepo(conf *config.Config, source PostSource) *MemoryPostRepository {
-	repo := NewMemoryPostRepository(*conf, slog.Default())
+func newTestRepo(conf *config.Config, source PostSource) *MemoryPostIndexer {
+	repo := NewMemoryPostIndexer(*conf, slog.Default())
 
 	err := repo.Initialize(source, &GoldmarkConverter{})
 
 	if err != nil {
-		panic("failed to initialize MemoryPostRepository: " + err.Error())
+		panic("failed to initialize MemoryPostIndexer: " + err.Error())
 	}
 
 	return repo
