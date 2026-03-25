@@ -18,7 +18,7 @@ type ServerConfig struct {
 	Timeout       int    `env:"SERVER_TIMEOUT" env-default:"60" yaml:"timeout"`
 }
 
-func Listen(conf config.ConfigLoader, modules []ServerModule) error {
+func Listen(conf *config.ConfigLoader, modules []ServerModule) error {
 	var serverConf ServerConfig
 	conf.Load("", &serverConf)
 
@@ -28,7 +28,7 @@ func Listen(conf config.ConfigLoader, modules []ServerModule) error {
 	r.Use(middleware.Timeout(time.Duration(serverConf.Timeout) * time.Second))
 
 	for _, module := range modules {
-		module.RegisterRoutes(r, &conf)
+		module.RegisterRoutes(r, conf)
 	}
 
 	return http.ListenAndServe(serverConf.ServerAddress, r)

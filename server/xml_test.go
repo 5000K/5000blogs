@@ -13,7 +13,7 @@ import (
 
 func xmlRouter(indexer *stubIndexer, siteURL string) chi.Router {
 	r := chi.NewRouter()
-	m := NewFeedModule(indexer)
+	m := NewXmlFeedModule(indexer)
 	cfg := config.Config{SiteURL: siteURL}
 	_ = m.RegisterRoutes(r, config.NewConfigLoaderFromConfig(cfg))
 	return r

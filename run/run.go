@@ -3,8 +3,8 @@ package run
 import (
 	"github.com/5000K/5000blogs/config"
 	"github.com/5000K/5000blogs/core"
-	"github.com/5000K/5000blogs/incoming"
 	"github.com/5000K/5000blogs/modules"
+	"github.com/5000K/5000blogs/server"
 	"github.com/5000K/5000blogs/service"
 	"github.com/5000K/5000blogs/view"
 )
@@ -36,14 +36,14 @@ func Run(ctx modules.RuntimeContext) error {
 		return err
 	}
 
-	repo, err := constructPostIndexer(ctx, source, converter)
+	indexer, err := constructPostIndexer(ctx, source, converter)
 
 	if err != nil {
 		return err
 	}
 
-	err = repo.Start()
-	defer repo.Stop()
+	err = indexer.Start()
+	defer indexer.Stop()
 
 	if err != nil {
 		return err
@@ -55,9 +55,28 @@ func Run(ctx modules.RuntimeContext) error {
 		return err
 	}
 
-	incoming.Serve(&baseConf, repo, renderer, generator, favicon)
+	modules, err := getModules(ctx.Loader, indexer, renderer, generator, favicon)
 
-	return nil
+	if err != nil {
+		return err
+	}
+
+	return server.Listen(ctx.Loader, modules)
+}
+
+func getModules(loader *config.ConfigLoader, indexer service.PostIndexer, renderer view.Renderer, generator service.OGImageGenerator, favicon []byte) ([]server.ServerModule, error) {
+	var modules []server.ServerModule
+
+	// TODO: make this dynamic based on config
+	modules = append(modules, server.NewHealthModule())
+	modules = append(modules, server.NewHomeModule(indexer, generator, renderer))
+	modules = append(modules, server.NewXmlFeedModule(indexer))
+	modules = append(modules, server.NewIconModule(favicon))
+	modules = append(modules, server.NewPlainModule(indexer))
+	modules = append(modules, server.NewPostFeedModule(indexer, renderer))
+	modules = append(modules, server.NewDynamicModule(indexer, generator, renderer))
+
+	return modules, nil
 }
 
 func constructPostIndexer(ctx modules.RuntimeContext, source service.PostSource, converter service.Converter) (service.PostIndexer, error) {

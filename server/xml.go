@@ -15,7 +15,7 @@ type XmlFeedModule struct {
 	indexer service.PostIndexer
 }
 
-func NewFeedModule(indexer service.PostIndexer) *XmlFeedModule {
+func NewXmlFeedModule(indexer service.PostIndexer) *XmlFeedModule {
 	return &XmlFeedModule{indexer: indexer}
 }
 
