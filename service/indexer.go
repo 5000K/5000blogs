@@ -17,6 +17,8 @@ type PostIndexer interface {
 	Get(path string) *Post
 	GetBySlug(slug string) *Post
 	List() []*Post
+	ListFiltered(filter PostFilter) []*Post
+	ListFilteredPaged(filter PostFilter, pageSize int, page int) *PageResult
 	Count() int
 	GetPage(page int, tags []string) PageResult
 	AllTags() []string
@@ -110,6 +112,108 @@ func (r *MemoryPostIndexer) List() []*Post {
 	cp := make([]*Post, len(r.posts))
 	copy(cp, r.posts)
 	return cp
+}
+
+// ListFiltered returns all visible posts matching the filter, sorted by date descending.
+func (r *MemoryPostIndexer) ListFiltered(filter PostFilter) []*Post {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	q := strings.ToLower(filter.Query)
+	out := make([]*Post, 0, len(r.posts))
+	for _, p := range r.posts {
+		if !p.IsVisible() {
+			continue
+		}
+		if len(filter.Tags) > 0 && !hasAnyTag(p, filter.Tags) {
+			continue
+		}
+		if q != "" {
+			d := p.Data()
+			plain := ""
+			if pt := p.PlainText(); pt != nil {
+				plain = strings.ToLower(string(pt))
+			}
+			if !strings.Contains(strings.ToLower(d.Title), q) &&
+				!strings.Contains(strings.ToLower(d.Description), q) &&
+				!strings.Contains(plain, q) {
+				continue
+			}
+		}
+		out = append(out, p)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		di, dj := time.Time{}, time.Time{}
+		if out[i].metadata != nil {
+			di = out[i].metadata.Date
+		}
+		if out[j].metadata != nil {
+			dj = out[j].metadata.Date
+		}
+		return di.After(dj)
+	})
+	return out
+}
+
+// ListFilteredPaged returns a page of visible posts matching the filter.
+func (r *MemoryPostIndexer) ListFilteredPaged(filter PostFilter, pageSize int, page int) *PageResult {
+	all := r.ListFiltered(filter)
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	total := len(all)
+	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+	start := (page - 1) * pageSize
+	var pagePosts []*Post
+	if start < total {
+		end := start + pageSize
+		if end > total {
+			end = total
+		}
+		pagePosts = all[start:end]
+	}
+	summaries := make([]PostSummary, 0, len(pagePosts))
+	for _, p := range pagePosts {
+		d := p.Data()
+		var metaTags []string
+		if p.metadata != nil {
+			metaTags = p.metadata.MetaTags
+		}
+		summaries = append(summaries, PostSummary{
+			Slug:        d.Slug,
+			Title:       d.Title,
+			Description: d.Description,
+			Date:        d.Date,
+			Author:      d.Author,
+			Tags:        d.Tags,
+			MetaTags:    metaTags,
+		})
+	}
+	tagParam := ""
+	if len(filter.Tags) > 0 {
+		tagParam = "&tags=" + strings.Join(filter.Tags, ",")
+	}
+	return &PageResult{
+		Posts:      summaries,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPosts: total,
+		TotalPages: totalPages,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
+		FilterTags: filter.Tags,
+		TagParam:   tagParam,
+	}
 }
 
 func (r *MemoryPostIndexer) Count() int {

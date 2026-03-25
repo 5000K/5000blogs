@@ -198,6 +198,159 @@ func (r *BlevePostIndexer) List() []*Post {
 	return out
 }
 
+// buildFilterRequests constructs count and page search requests for the given PostFilter.
+// Always requires visible=true; optionally adds tag and full-text constraints.
+func (r *BlevePostIndexer) buildFilterRequests(filter PostFilter, pageSize int) (count, page *bleve.SearchRequest) {
+	visQ := bleve.NewTermQuery("true")
+	visQ.SetField("visible")
+
+	hasTag := len(filter.Tags) > 0
+	hasQuery := filter.Query != ""
+
+	if !hasTag && !hasQuery {
+		countReq := bleve.NewSearchRequest(visQ)
+		countReq.Size = 0
+		pageReq := bleve.NewSearchRequestOptions(visQ, pageSize, 0, false)
+		pageReq.SortBy([]string{"-date"})
+		return countReq, pageReq
+	}
+
+	tagQ := bleve.NewBooleanQuery()
+	if hasTag {
+		for _, tag := range filter.Tags {
+			tq := bleve.NewTermQuery(strings.ToLower(tag))
+			tq.SetField("tags")
+			tagQ.AddShould(tq)
+			mtq := bleve.NewTermQuery(strings.ToLower(tag))
+			mtq.SetField("meta_tags")
+			tagQ.AddShould(mtq)
+		}
+	}
+
+	if hasTag && !hasQuery {
+		conjQ := bleve.NewConjunctionQuery(visQ, tagQ)
+		countReq := bleve.NewSearchRequest(conjQ)
+		countReq.Size = 0
+		pageReq := bleve.NewSearchRequestOptions(conjQ, pageSize, 0, false)
+		pageReq.SortBy([]string{"-date"})
+		return countReq, pageReq
+	}
+
+	matchQ := bleve.NewMatchQuery(filter.Query)
+	if !hasTag {
+		conjQ := bleve.NewConjunctionQuery(visQ, matchQ)
+		countReq := bleve.NewSearchRequest(conjQ)
+		countReq.Size = 0
+		pageReq := bleve.NewSearchRequestOptions(conjQ, pageSize, 0, false)
+		pageReq.SortBy([]string{"-date"})
+		return countReq, pageReq
+	}
+
+	conjQ := bleve.NewConjunctionQuery(visQ, tagQ, matchQ)
+	countReq := bleve.NewSearchRequest(conjQ)
+	countReq.Size = 0
+	pageReq := bleve.NewSearchRequestOptions(conjQ, pageSize, 0, false)
+	pageReq.SortBy([]string{"-date"})
+	return countReq, pageReq
+}
+
+// ListFiltered returns all visible posts matching the filter, sorted by date descending.
+func (r *BlevePostIndexer) ListFiltered(filter PostFilter) []*Post {
+	_, req := r.buildFilterRequests(filter, 10000)
+
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+
+	result, err := r.index.Search(req)
+	if err != nil {
+		r.log.Error("bleve ListFiltered query failed", "err", err)
+		return nil
+	}
+	out := make([]*Post, 0, len(result.Hits))
+	for _, hit := range result.Hits {
+		if p, ok := r.posts[hit.ID]; ok {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// ListFilteredPaged returns a page of visible posts matching the filter.
+func (r *BlevePostIndexer) ListFilteredPaged(filter PostFilter, pageSize int, page int) *PageResult {
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	countReq, pageReq := r.buildFilterRequests(filter, pageSize)
+
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+
+	countResult, err := r.index.Search(countReq)
+	if err != nil {
+		r.log.Error("bleve ListFilteredPaged count failed", "err", err)
+		return &PageResult{Page: 1, PageSize: pageSize, TotalPages: 1}
+	}
+	total := int(countResult.Total)
+	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+
+	pageReq.From = (page - 1) * pageSize
+	pageResult, err := r.index.Search(pageReq)
+	if err != nil {
+		r.log.Error("bleve ListFilteredPaged page query failed", "err", err)
+		return &PageResult{Page: page, PageSize: pageSize, TotalPosts: total, TotalPages: totalPages}
+	}
+
+	summaries := make([]PostSummary, 0, len(pageResult.Hits))
+	for _, hit := range pageResult.Hits {
+		p, ok := r.posts[hit.ID]
+		if !ok {
+			continue
+		}
+		d := p.Data()
+		var metaTags []string
+		if p.metadata != nil {
+			metaTags = p.metadata.MetaTags
+		}
+		summaries = append(summaries, PostSummary{
+			Slug:        d.Slug,
+			Title:       d.Title,
+			Description: d.Description,
+			Date:        d.Date,
+			Author:      d.Author,
+			Tags:        d.Tags,
+			MetaTags:    metaTags,
+		})
+	}
+
+	tagParam := ""
+	if len(filter.Tags) > 0 {
+		tagParam = "&tags=" + strings.Join(filter.Tags, ",")
+	}
+
+	return &PageResult{
+		Posts:      summaries,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPosts: total,
+		TotalPages: totalPages,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
+		FilterTags: filter.Tags,
+		TagParam:   tagParam,
+	}
+}
+
 func (r *BlevePostIndexer) Count() int {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()

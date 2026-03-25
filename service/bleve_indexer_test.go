@@ -386,3 +386,180 @@ func TestBleve_Search_NoMatchReturnsEmptySlice(t *testing.T) {
 		t.Errorf("want 0 results, got %d", len(results))
 	}
 }
+
+// --- ListFiltered ---
+
+func TestBleve_ListFiltered_VisibleOnly(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/visible.md": []byte("---\ntitle: Visible\n---\n# body"),
+		"posts/hidden.md":  []byte("---\ntitle: Hidden\nvisible: false\n---\n# body"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.ListFiltered(PostFilter{})
+	if len(results) != 1 {
+		t.Fatalf("want 1 visible post, got %d", len(results))
+	}
+	if results[0].slug != "visible" {
+		t.Errorf("want slug 'visible', got %q", results[0].slug)
+	}
+}
+
+func TestBleve_ListFiltered_TagFilter(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/go.md":   []byte("---\ntitle: Go\ntags: [go]\n---\n# body"),
+		"posts/rust.md": []byte("---\ntitle: Rust\ntags: [rust]\n---\n# body"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.ListFiltered(PostFilter{Tags: []string{"go"}})
+	if len(results) != 1 {
+		t.Fatalf("want 1 post, got %d", len(results))
+	}
+	if results[0].slug != "go" {
+		t.Errorf("want slug 'go', got %q", results[0].slug)
+	}
+}
+
+func TestBleve_ListFiltered_QueryFilter(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/a.md": []byte("---\ntitle: Alpaca Post\n---\n# body"),
+		"posts/b.md": []byte("---\ntitle: Banana Post\n---\n# body"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.ListFiltered(PostFilter{Query: "alpaca"})
+	if len(results) != 1 {
+		t.Fatalf("want 1 post, got %d", len(results))
+	}
+	if results[0].slug != "a" {
+		t.Errorf("want slug 'a', got %q", results[0].slug)
+	}
+}
+
+func TestBleve_ListFiltered_TagAndQueryFilter(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/a.md": []byte("---\ntitle: Alpaca Go\ntags: [go]\n---\n# body"),
+		"posts/b.md": []byte("---\ntitle: Alpaca Rust\ntags: [rust]\n---\n# body"),
+		"posts/c.md": []byte("---\ntitle: Other Go\ntags: [go]\n---\n# body"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	results := repo.ListFiltered(PostFilter{Tags: []string{"go"}, Query: "alpaca"})
+	if len(results) != 1 {
+		t.Fatalf("want 1 post, got %d", len(results))
+	}
+	if results[0].slug != "a" {
+		t.Errorf("want slug 'a', got %q", results[0].slug)
+	}
+}
+
+func TestBleve_ListFiltered_SortedByDateDescending(t *testing.T) {
+	older := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
+	newer := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+	repo := newTestBleveRepo(t, newTestConf(10), newStubSource(nil))
+	oldPost := NewPost("posts/old.md", &Metadata{Title: "Old", Date: older}, []byte("x"))
+	newPost := NewPost("posts/new.md", &Metadata{Title: "New", Date: newer}, []byte("x"))
+	repo.posts["posts/old.md"] = oldPost
+	repo.posts["posts/new.md"] = newPost
+	_ = repo.index.Index("posts/old.md", toPostDoc(oldPost))
+	_ = repo.index.Index("posts/new.md", toPostDoc(newPost))
+
+	results := repo.ListFiltered(PostFilter{})
+	if len(results) != 2 {
+		t.Fatalf("want 2 posts, got %d", len(results))
+	}
+	if results[0].slug != "new" {
+		t.Errorf("want newest first, got %q", results[0].slug)
+	}
+}
+
+// --- ListFilteredPaged ---
+
+func TestBleve_ListFilteredPaged_Pagination(t *testing.T) {
+	repo := newTestBleveRepo(t, newTestConf(1), newStubSource(nil)) // Config.PageSize=1, must NOT be used
+	for _, slug := range []string{"a", "b", "c", "d"} {
+		p := NewPost("posts/"+slug+".md", &Metadata{}, []byte("x"))
+		repo.posts["posts/"+slug+".md"] = p
+		_ = repo.index.Index("posts/"+slug+".md", toPostDoc(p))
+	}
+
+	result := repo.ListFilteredPaged(PostFilter{}, 2, 1)
+	if result.TotalPosts != 4 {
+		t.Errorf("want TotalPosts=4, got %d", result.TotalPosts)
+	}
+	if result.TotalPages != 2 {
+		t.Errorf("want TotalPages=2, got %d", result.TotalPages)
+	}
+	if len(result.Posts) != 2 {
+		t.Errorf("want 2 posts on page 1, got %d", len(result.Posts))
+	}
+	if !result.HasNext {
+		t.Error("page 1 should have next")
+	}
+	if result.HasPrev {
+		t.Error("page 1 should not have prev")
+	}
+
+	result2 := repo.ListFilteredPaged(PostFilter{}, 2, 2)
+	if len(result2.Posts) != 2 {
+		t.Errorf("want 2 posts on page 2, got %d", len(result2.Posts))
+	}
+	if result2.HasNext {
+		t.Error("page 2 should not have next")
+	}
+	if !result2.HasPrev {
+		t.Error("page 2 should have prev")
+	}
+}
+
+func TestBleve_ListFilteredPaged_UsesProvidedPageSizeNotConfig(t *testing.T) {
+	repo := newTestBleveRepo(t, newTestConf(1), newStubSource(nil)) // Config.PageSize=1
+	for _, slug := range []string{"a", "b", "c"} {
+		p := NewPost("posts/"+slug+".md", &Metadata{}, []byte("x"))
+		repo.posts["posts/"+slug+".md"] = p
+		_ = repo.index.Index("posts/"+slug+".md", toPostDoc(p))
+	}
+
+	result := repo.ListFilteredPaged(PostFilter{}, 10, 1)
+	if len(result.Posts) != 3 {
+		t.Errorf("want all 3 posts on one page (pageSize=10), got %d", len(result.Posts))
+	}
+}
+
+func TestBleve_ListFilteredPaged_PageClamping(t *testing.T) {
+	repo := newTestBleveRepo(t, newTestConf(10), newStubSource(nil))
+	p := NewPost("posts/a.md", &Metadata{}, []byte("x"))
+	repo.posts["posts/a.md"] = p
+	_ = repo.index.Index("posts/a.md", toPostDoc(p))
+
+	high := repo.ListFilteredPaged(PostFilter{}, 10, 99)
+	if high.Page != 1 {
+		t.Errorf("page 99 should clamp to 1, got %d", high.Page)
+	}
+	low := repo.ListFilteredPaged(PostFilter{}, 10, 0)
+	if low.Page != 1 {
+		t.Errorf("page 0 should clamp to 1, got %d", low.Page)
+	}
+}
+
+func TestBleve_ListFilteredPaged_WithFilter(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/go.md":   []byte("---\ntitle: Go\ntags: [go]\n---\n# body"),
+		"posts/rust.md": []byte("---\ntitle: Rust\ntags: [rust]\n---\n# body"),
+	})
+	repo := newTestBleveRepo(t, newTestConf(10), src)
+	repo.rescan()
+
+	result := repo.ListFilteredPaged(PostFilter{Tags: []string{"go"}}, 10, 1)
+	if result.TotalPosts != 1 {
+		t.Errorf("want 1 post, got %d", result.TotalPosts)
+	}
+	if len(result.Posts) != 1 || result.Posts[0].Slug != "go" {
+		t.Errorf("want slug 'go', got %v", result.Posts)
+	}
+}
