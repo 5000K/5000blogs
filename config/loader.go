@@ -89,6 +89,11 @@ func (loader *ConfigLoader) LoadSlice(prefix string, target any) error {
 }
 
 func (loader *ConfigLoader) getRawSub(prefix string) ([]byte, error) {
+
+	if prefix == "" {
+		return yaml.Marshal(loader.base)
+	}
+
 	if v, ok := loader.base[prefix]; ok {
 		return yaml.Marshal(v)
 	} else {

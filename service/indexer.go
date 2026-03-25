@@ -611,7 +611,7 @@ func (r *repoAssetResolver) ResolveAssetByFilename(filename string) string {
 	if rel == "" {
 		return ""
 	}
-	return "/media/" + rel
+	return "/" + rel
 }
 
 func (r *repoAssetResolver) ResolveEmbedBySlug(slug string) []byte {

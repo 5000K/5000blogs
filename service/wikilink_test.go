@@ -203,7 +203,7 @@ func TestWikiImage_ResolvedAsset_RendersImg(t *testing.T) {
 	resolver := &fullResolver{
 		assetFn: func(filename string) string {
 			if filename == "photo.png" {
-				return "/media/images/photo.png"
+				return "/images/photo.png"
 			}
 			return ""
 		},
@@ -213,8 +213,8 @@ func TestWikiImage_ResolvedAsset_RendersImg(t *testing.T) {
 	}
 
 	html := string(*post.contents)
-	if !strings.Contains(html, `src="/media/images/photo.png"`) {
-		t.Errorf("want src=/media/images/photo.png, got:\n%s", html)
+	if !strings.Contains(html, `src="/images/photo.png"`) {
+		t.Errorf("want src=/images/photo.png, got:\n%s", html)
 	}
 	if !strings.Contains(html, `alt="photo.png"`) {
 		t.Errorf("want alt=photo.png, got:\n%s", html)
@@ -233,8 +233,8 @@ func TestWikiImage_UnresolvedAsset_FallsBackToMediaPath(t *testing.T) {
 	}
 
 	html := string(*post.contents)
-	if !strings.Contains(html, `src="/media/unknown.jpg"`) {
-		t.Errorf("want fallback src=/media/unknown.jpg, got:\n%s", html)
+	if !strings.Contains(html, `src="/unknown.jpg"`) {
+		t.Errorf("want fallback src=/unknown.jpg, got:\n%s", html)
 	}
 }
 
