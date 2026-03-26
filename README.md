@@ -1,3 +1,5 @@
+**You are looking at the development branch. Look at the [stable branch](https://github.com/5000K/5000blogs/tree/stable) for the current release version.**
+
 # <img src="./template/icon.png" width="64"/> 5000blogs
 
 > ! 5000blogs is nearly feature-stable, but config and API might still change. In the future, there probably will be manual migrations (mostly regarding your config and template) needed towards version 1.0. We will help with them. But they will probably be needed.
