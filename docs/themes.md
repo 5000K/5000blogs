@@ -16,7 +16,22 @@ paths:
   theme: "./my-theme.css"
 ```
 
-The file must contain a single `:root { }` block that defines the variables below. Variables not defined fall back to the template's own defaults (if any).
+The file should contain a single `:root { }` block that defines the variables below. It should define all variables to be portable across different templates. For dynamic light/dark mode support, multiple `:root` blocks are reasonable.
+
+## Built-in themes
+
+| Theme file | Description |
+|---|---|
+| `theme.base.css` | Dark theme - blue accent, matches `template.html` |
+| `theme.garden.css` | Warm earthy dark theme - serif headings, amber accent, matches `template.garden.html` |
+| `theme.docs.css` | Light documentation theme - indigo accent, matches `template.docs.html` |
+
+Reference a built-in theme by URL:
+
+```yaml
+paths:
+  theme: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/theme.base.css"
+```
 
 ## Variable reference
 
@@ -50,6 +65,7 @@ The file must contain a single `:root { }` block that defines the variables belo
 | `--spacing-page-h` | Horizontal page padding at narrow viewports |
 | `--spacing-page-h-wide` | Horizontal page padding at wider viewports |
 | `--spacing-page-v` | Vertical padding at the top and bottom of the content area |
+| `--gap-base` | Minimum meaningful gap between elements. Used directly or as a multiplier (e.g. `calc(var(--gap-base) * 2)`) for spacing between nav items, form controls, list rows, and similar compound layouts |
 
 ### Shape
 
@@ -97,6 +113,7 @@ The file must contain a single `:root { }` block that defines the variables belo
   --spacing-page-h:       1rem;
   --spacing-page-h-wide:  1.5rem;
   --spacing-page-v:       2.5rem;
+  --gap-base:             0.5rem;
 
   /* Shape */
   --radius-sm:            0.25rem;

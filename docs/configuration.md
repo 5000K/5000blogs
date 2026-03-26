@@ -25,8 +25,11 @@ Configuration is loaded from a YAML file (path set by `CONFIG_PATH` env var, def
 |---|---|---|---|
 | `paths.template` | `TEMPLATE_PATH` | GitHub raw URL | Path or URL to the HTML template file |
 | `paths.icon` | `ICON_PATH` | GitHub raw URL | Path or URL to the site icon (PNG). Served at `/favicon.ico` and `/og-logo.png` |
+| `paths.theme` | `THEME_PATH` | `""` | Path or URL to a CSS theme file. Injected before template styles. Empty = no theme |
 
-Template and icon accept both local file paths and HTTP(S) URLs. By default they fetch from the official repository, so Docker images don't need to bundle them.
+All three accept local file paths and HTTP(S) URLs. By default template and icon are fetched from the official repository; theme is opt-in.
+
+See [Themes](themes) for the full CSS variable reference.
 
 ## Sources
 

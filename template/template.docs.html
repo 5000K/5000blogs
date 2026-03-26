@@ -40,192 +40,215 @@
   {{end}}
 
   <style>
-    /* ── Reset & base ── */
+    /* Template-local derived variables */
+    :root {
+      /* Input background inside the dark header: midpoint between header-bg and header-brand */
+      --_header-input-bg: color-mix(in srgb, var(--color-header-bg) 75%, var(--color-header-brand));
+      /* Blockquote tint: very faint accent wash over the page background */
+      --_blockquote-bg:   color-mix(in srgb, var(--color-bg) 88%, var(--color-accent));
+      /* Tag hover: tag-bg mixed toward accent for a slightly deeper tint */
+      --_tag-bg-hover:    color-mix(in srgb, var(--color-tag-bg) 70%, var(--color-accent));
+    }
+
+    /* Reset & base */
     *, *::before, *::after { box-sizing: border-box; }
 
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-      font-size: 1rem;
+      font-family: var(--font-body);
+      font-size: var(--font-size-base);
       line-height: 1.5;
       font-weight: 400;
-      background: #f9fafb; /* gray-50 */
-      color: #1f2937;      /* gray-800 */
+      background: var(--color-bg);
+      color: var(--color-text);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
 
-    a { color: #4f46e5; text-decoration: none; }
+    a { color: var(--color-accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    /* ── Header / navbar ── */
+    /* Layout */
+    .content-col {
+      max-width: var(--content-width);
+      margin: 0 auto;
+      padding-left: var(--spacing-page-h);
+      padding-right: var(--spacing-page-h);
+    }
+    @media (min-width: 30em) {
+      .content-col {
+        padding-left: var(--spacing-page-h-wide);
+        padding-right: var(--spacing-page-h-wide);
+      }
+    }
+    .content-body {
+      padding-top: var(--spacing-page-v);
+      padding-bottom: calc(var(--spacing-page-v) * 1.5);
+    }
+
+    /* Header / navbar */
     .site-header {
-      background: #111827; /* gray-900 */
-      border-bottom: 1px solid #374151; /* gray-700 */
+      background: var(--color-header-bg);
+      border-bottom: 1px solid var(--color-header-border);
     }
     .site-header-inner {
-      max-width: 56rem;
+      max-width: var(--content-width);
       margin: 0 auto;
-      padding: .75rem 1.5rem;
+      padding: .75rem var(--spacing-page-h-wide);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
     .site-header-brand {
-      color: #f9fafb;
+      color: var(--color-header-brand);
+      font-family: var(--font-heading);
       font-weight: 600;
       font-size: 1.125rem;
       letter-spacing: -.015em;
       text-decoration: none;
     }
-    .site-header-brand:hover { text-decoration: none; color: #e5e7eb; }
-    .site-header-nav { display: flex; align-items: center; gap: 1.5rem; }
-    .site-header-nav a { color: #9ca3af; font-size: .875rem; text-decoration: none; }
-    .site-header-nav a:hover { color: #f9fafb; text-decoration: none; }
+    .site-header-brand:hover { text-decoration: none; opacity: .85; }
+    .site-header-nav { display: flex; align-items: center; gap: calc(var(--gap-base) * 3); }
+    .site-header-nav > a { color: var(--color-header-nav); font-size: .875rem; text-decoration: none; }
+    .site-header-nav > a:hover { color: var(--color-header-brand); text-decoration: none; }
 
-    /* ── Main content wrapper ── */
-    .content-wrapper {
-      max-width: 56rem;
-      margin: 0 auto;
-      padding: 2.5rem 1.5rem 4rem;
-    }
-
-    /* ── Search form (in header) ── */
-    .search-form { display: flex; gap: .375rem; margin: 0; }
+    /* Search form (in header) */
+    .search-form { display: flex; gap: calc(var(--gap-base) * .75); margin: 0; }
     .search-input {
       width: 14rem;
       font-size: .8125rem;
       padding: .375rem .625rem;
-      background: #1f2937; /* gray-800 */
-      border: 1px solid #374151; /* gray-700 */
-      border-radius: .375rem;
-      color: #e5e7eb;
+      background: var(--_header-input-bg);
+      border: 1px solid var(--color-header-border);
+      border-radius: var(--radius-md);
+      color: var(--color-header-brand);
+      font-family: var(--font-body);
       outline: none;
     }
-    .search-input::placeholder { color: #6b7280; }
-    .search-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,.25); }
+    .search-input::placeholder { color: var(--color-header-nav); }
+    .search-input:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+    }
     .search-btn {
       font-size: .8125rem;
       padding: .375rem .75rem;
-      background: #4f46e5; /* indigo-600 */
-      color: #ffffff;
+      background: var(--color-accent);
+      color: var(--color-header-brand);
       border: none;
-      border-radius: .375rem;
+      border-radius: var(--radius-md);
       cursor: pointer;
-      font-family: inherit;
+      font-family: var(--font-body);
     }
-    .search-btn:hover { background: #4338ca; } /* indigo-700 */
+    .search-btn:hover { background: var(--color-accent-hover); }
 
-    /* ── Article list ── */
+    /* Article list */
     .doc-list { list-style: none; padding: 0; margin: 0; }
     .doc-list-item {
       padding: 1.25rem 0;
-      border-bottom: 1px solid #e5e7eb; /* gray-200 */
+      border-bottom: 1px solid var(--color-border);
     }
-    .doc-list-item:first-child { border-top: 1px solid #e5e7eb; }
+    .doc-list-item:first-child { border-top: 1px solid var(--color-border); }
     .doc-list-title {
       display: block;
       font-size: 1rem;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-heading);
       text-decoration: none;
       margin-bottom: .25rem;
     }
-    .doc-list-title:hover { color: #4f46e5; text-decoration: none; }
-    .doc-list-desc { font-size: .875rem; color: #6b7280; margin: 0; }
+    .doc-list-title:hover { color: var(--color-accent); text-decoration: none; }
+    .doc-list-desc { font-size: .875rem; color: var(--color-text-muted); margin: 0; }
     .doc-list-tags { margin: .5rem 0 0; }
 
-    /* ── Tags ── */
+    /* Tags */
     .tag {
       display: inline-block;
       font-size: .75rem;
       padding: .125rem .5rem;
-      background: #e0e7ff; /* indigo-100 */
-      color: #4f46e5;       /* indigo-600 */
-      border-radius: .25rem;
+      background: var(--color-tag-bg);
+      color: var(--color-tag-text);
+      border-radius: var(--radius-sm);
       margin-right: .25rem;
       text-decoration: none;
     }
-    .tag:hover { background: #c7d2fe; text-decoration: none; }
+    .tag:hover { background: var(--_tag-bg-hover); text-decoration: none; }
 
-    /* ── Empty / search results ── */
-    .muted { color: #6b7280; font-size: .875rem; }
-    .muted-search { color: #6b7280; font-size: .875rem; margin-bottom: 1rem; }
+    /* Muted text */
+    .muted        { color: var(--color-text-muted); font-size: .875rem; }
+    .muted-search { color: var(--color-text-muted); font-size: .875rem; margin-bottom: 1rem; }
 
-    /* ── Pagination ── */
+    /* Pagination */
     .pagination {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 2.5rem;
+      margin-top: var(--spacing-page-v);
       padding-top: 1.25rem;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid var(--color-border);
       font-size: .875rem;
     }
-    .pagination a { color: #4f46e5; font-weight: 500; }
+    .pagination a { color: var(--color-accent); font-weight: 500; }
     .pagination a:hover { text-decoration: underline; }
-    .pagination-info { color: #9ca3af; }
+    .pagination-info { color: var(--color-text-dim); }
 
-    /* ── List page header ── */
-    .list-heading { font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0 0 1.25rem; }
-    .list-heading-filter { font-size: 1rem; font-weight: 400; color: #6b7280; }
+    /* List page header */
+    .list-heading { font-size: 1.5rem; font-weight: 700; color: var(--color-text-heading); font-family: var(--font-heading); margin: 0 0 1.25rem; }
+    .list-heading-filter { font-size: 1rem; font-weight: 400; color: var(--color-text-muted); }
 
-    /* ── Single article header ── */
+    /* Single article header */
     .article-header { margin-bottom: 2rem; }
     .article-title {
       font-size: 1.875rem;
       font-weight: 700;
-      color: #111827;
+      color: var(--color-text-heading);
+      font-family: var(--font-heading);
       line-height: 1.25;
       margin: 0 0 .75rem;
     }
     .article-tags-header { margin-top: .75rem; }
 
-    /* ── Article body - scoped styles for markdown-rendered HTML ── */
-    .article-body { color: #374151; line-height: 1.7; } /* gray-700 */
+    /* Article body - scoped styles for markdown-rendered HTML */
+    .article-body { color: var(--color-text); line-height: 1.7; font-family: var(--font-body); }
     .article-body h1,
     .article-body h2,
     .article-body h3,
-    .article-body h4 { color: #111827; font-weight: 600; line-height: 1.25; margin-top: 2rem; margin-bottom: .5rem; }
+    .article-body h4 { color: var(--color-text-heading); font-family: var(--font-heading); font-weight: 600; line-height: 1.25; margin-top: 2rem; margin-bottom: .5rem; }
     .article-body h1 { font-size: 1.75rem; }
-    .article-body h2 { font-size: 1.375rem; border-bottom: 1px solid #e5e7eb; padding-bottom: .35rem; }
+    .article-body h2 { font-size: 1.375rem; border-bottom: 1px solid var(--color-border); padding-bottom: .35rem; }
     .article-body h3 { font-size: 1.125rem; }
     .article-body p  { margin-top: 0; margin-bottom: 1rem; }
-    .article-body a  { color: #4f46e5; }
+    .article-body a  { color: var(--color-accent); }
     .article-body a:hover { text-decoration: underline; }
-    .article-body strong { color: #111827; }
-    .article-body em    { color: #4b5563; }
-    .article-body code  { background: #f3f4f6; color: #1f2937; padding: .1em .35em; border-radius: .25rem; font-size: .875em; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; border: 1px solid #e5e7eb; }
-    .article-body pre   { background: #111827; padding: 1rem 1.25rem; border-radius: .5rem; overflow-x: auto; margin-bottom: 1.25rem; }
-    .article-body pre code { background: none; border: none; padding: 0; font-size: .85em; color: #e5e7eb; }
-    .article-body blockquote { border-left: 3px solid #4f46e5; margin: 0 0 1rem; padding: .5rem 0 .5rem 1rem; color: #6b7280; background: #f5f3ff; border-radius: 0 .25rem .25rem 0; }
+    .article-body strong { color: var(--color-text-heading); }
+    .article-body em     { color: var(--color-text-muted); }
+    .article-body code   { background: var(--color-code-bg); color: var(--color-code-text); padding: .1em .35em; border-radius: var(--radius-sm); font-size: .875em; font-family: var(--font-mono); border: 1px solid var(--color-border); }
+    .article-body pre    { background: var(--color-header-bg); padding: 1rem 1.25rem; border-radius: var(--radius-lg); overflow-x: auto; margin-bottom: 1.25rem; }
+    .article-body pre code { background: none; border: none; padding: 0; font-size: .85em; color: var(--color-header-brand); font-family: var(--font-mono); }
+    .article-body blockquote { border-left: 3px solid var(--color-accent); margin: 0 0 1rem; padding: .5rem 0 .5rem 1rem; color: var(--color-text-muted); background: var(--_blockquote-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
     .article-body blockquote p { margin-bottom: 0; }
     .article-body ul,
     .article-body ol  { padding-left: 1.5rem; margin-bottom: 1rem; }
     .article-body li  { margin-bottom: .25rem; }
-    .article-body hr  { border: none; border-top: 1px solid #e5e7eb; margin: 2rem 0; }
-    .article-body img { max-width: 100%; height: auto; border-radius: .375rem; }
+    .article-body hr  { border: none; border-top: 1px solid var(--color-border); margin: 2rem 0; }
+    .article-body img { max-width: 100%; height: auto; border-radius: var(--radius-md); }
     .article-body table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
     .article-body th,
-    .article-body td  { border: 1px solid #e5e7eb; padding: .5rem .75rem; text-align: left; }
-    .article-body th  { background: #f3f4f6; color: #111827; font-weight: 600; }
+    .article-body td  { border: 1px solid var(--color-border); padding: .5rem .75rem; text-align: left; }
+    .article-body th  { background: var(--color-surface); color: var(--color-text-heading); font-weight: 600; }
 
-    /* ── Footer ── */
-    .site-footer {
-      max-width: 56rem;
-      margin: 0 auto;
-      padding: 0 1.5rem 2.5rem;
-    }
+    /* Footer */
     .site-footer-inner {
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid var(--color-border);
       padding-top: 1.25rem;
+      padding-bottom: calc(var(--spacing-page-v));
       font-size: .75rem;
-      color: #9ca3af;
+      color: var(--color-text-dim);
       text-align: center;
     }
-    .site-footer-inner a { color: #6b7280; }
-    .site-footer-inner a:hover { color: #4f46e5; }
+    .site-footer-inner a { color: var(--color-text-muted); }
+    .site-footer-inner a:hover { color: var(--color-accent); }
   </style>
 </head>
 <body>
@@ -244,12 +267,11 @@
     </div>
   </header>
 
-  <!-- main content column - max-width constrained, centred -->
-  <div class="content-wrapper">
+  <div class="content-col content-body">
 
     <article>
 
-      <!-- ── LIST VIEW (IsListPage = true) ── -->
+      <!-- LIST VIEW (IsListPage = true) -->
       {{if .IsListPage}}
 
       <h1 class="list-heading">
@@ -258,7 +280,7 @@
 
       {{if .SearchQuery}}<p class="muted-search">Results for <em>{{.SearchQuery}}</em></p>{{end}}
 
-      <!-- article list; each item: title and optional description -->
+      <!-- article list -->
       {{if .Posts}}
       <ul class="doc-list">
         {{range .Posts}}
@@ -273,7 +295,7 @@
       <p class="muted">No articles yet.</p>
       {{end}}
 
-      <!-- pagination - only shown when there is more than one page -->
+      <!-- pagination -->
       {{if or .Pagination.HasPrev .Pagination.HasNext}}
       <nav class="pagination">
         <span>
@@ -290,7 +312,7 @@
       </nav>
       {{end}}
 
-      <!-- ── SINGLE ARTICLE VIEW (IsListPage = false) ── -->
+      <!-- SINGLE ARTICLE VIEW (IsListPage = false) -->
       {{else}}
 
       <!-- article title -->
@@ -315,10 +337,9 @@
 
   </div>
 
-  <!-- footer - content from builtin/footer.md -->
   {{if .FooterContent}}
-  <footer class="site-footer">
-    <div class="site-footer-inner article-body">{{.FooterContent}}</div>
+  <footer>
+    <div class="content-col site-footer-inner article-body">{{.FooterContent}}</div>
   </footer>
   {{end}}
 
