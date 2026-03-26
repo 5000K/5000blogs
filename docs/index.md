@@ -7,7 +7,7 @@ rss-visible: false
 
 ## What it is
 
-5000blogs is a single-binary server for serving markdown files. The project focus is on doing one thing well: serving static markdowns. It is opiniated towards blogs - with features like feed generation, author and date metadata, or social media previews. But can be used to serve all kinds of "a bunch of markdown files".
+5000blogs is a single-binary server for serving markdown files. The project focus is on doing one thing well: serving static markdowns. It is opiniated towards blogs - with features like feed generation, author and date metadata, or social media previews. But can be used to serve all kinds of "a bunch of markdown files" - like this docs page.
 
 ## What it does
 
