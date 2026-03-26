@@ -53,6 +53,7 @@ Put `.md` files in `./posts/` - they appear on your blog instantly.
 | [Markdown](markdown) | CommonMark and available extensions |
 | [Feeds](feeds) | RSS 2.0 and Atom 1.0 configuration |
 | [Templates](templates) | HTML template engine and data contract |
+| [Themes](themes) | Theming of templates |
 | [OG Images](og-images) | Auto-generated Open Graph images |
 | [API](api) | REST API reference |
 | [Plugins](plugins) | JavaScript plugins |

@@ -5,6 +5,10 @@ date: 2026-03-26
 tags: [config, templates, themes]
 ---
 
+5000blogs recommends a specific structure for keeping templates and themes separate. Themes are a set of css variables that will be injected into the templates <head> block. They should be used by the template everywhere applicable to allow users to apply different styles to a template.
+
+Templates are free to use any subset of variables that apply to them (e.g. some templates might be more opiniated towards their layout, so they skip on things like the content width). It is recommended to at least use the theme for all coloring, since that will be what a user will care about the most.
+
 A theme is a `:root { }` CSS block injected into the page before any template styles. Templates are written against these variables, so swapping the theme block changes the look without touching the template.
 
 ## Applying a theme
@@ -18,13 +22,15 @@ paths:
 
 The file should contain a single `:root { }` block that defines the variables below. It should define all variables to be portable across different templates. For dynamic light/dark mode support, multiple `:root` blocks are reasonable.
 
+As a starting point, we recommend to use theme.docs.css for a static theme, or theme.base.css for a theme that supports a light and a dark variant depending on the browsers setting.
+
 ## Built-in themes
 
 | Theme file | Description |
 |---|---|
-| `theme.base.css` | Adaptive light/dark - blue accent, matches `template.html` |
-| `theme.garden.css` | Warm earthy dark theme - serif headings, amber accent, matches `template.garden.html` |
-| `theme.docs.css` | Light documentation theme - indigo accent, matches `template.docs.html` |
+| `theme.base.css` | Adaptive light/dark - blue accent |
+| `theme.garden.css` | Warm earthy dark theme - serif headings, amber accent |
+| `theme.docs.css` | Light documentation theme - indigo accent, used by the [official docs](https://5000blogs.5000k.org/themes) |
 
 Reference a built-in theme by URL:
 
