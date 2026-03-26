@@ -11,6 +11,10 @@ This repo contains a full engine capable of driving your markdown-based blog, in
 
 It was built and tested to be easily able to reach a score of 100 in every category of chrome lighthouse tests, automatically generate social media preview images, rss and atom feeds, sitemaps, robots.txt and anything else you might want for optimal SEO.
 
+
+## Documentation
+Currently, we have full documentation for using [5000blogs as a blog server](./docs/config.md). We will publish documentation for using 5000blogs as a library once our API is stable, probably once we are nearing version `1.0`.
+
 # Run a demo
 
 > assumes a terminal opened within the cloned repository, with go or docker set up
