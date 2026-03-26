@@ -9,6 +9,13 @@ import (
 	"github.com/5000K/5000blogs/view"
 )
 
+type Runtime struct {
+	Renderer         view.Renderer
+	OGImageGenerator service.OGImageGenerator
+	PostIndexer      service.PostIndexer
+	Favicon          []byte
+}
+
 func Run(ctx modules.RuntimeContext) error {
 	baseConf := ctx.Loader.BaseConfig()
 
@@ -69,6 +76,7 @@ func getModules(loader *config.ConfigLoader, indexer service.PostIndexer, render
 
 	// TODO: make this dynamic based on config
 	modules = append(modules, server.NewHealthModule())
+	modules = append(modules, server.NewApiModule(indexer))
 	modules = append(modules, server.NewHomeModule(indexer, generator, renderer))
 	modules = append(modules, server.NewXmlFeedModule(indexer))
 	modules = append(modules, server.NewIconModule(favicon))

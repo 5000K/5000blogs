@@ -56,6 +56,8 @@ func (m *PostFeedModule) RegisterRoutes(r chi.Router, conf *config.ConfigLoader)
 		}
 	}
 
+	cfg := conf.BaseConfig()
+
 	for _, feedConf := range feedConfigs {
 		feedConf := feedConf
 		r.Get("/"+feedConf.Name, func(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +74,7 @@ func (m *PostFeedModule) RegisterRoutes(r chi.Router, conf *config.ConfigLoader)
 
 			filter := filterFromRequest(r, feedConf)
 
-			pageResult := m.indexer.ListFilteredPaged(filter, 20, pageInt)
+			pageResult := m.indexer.ListFilteredPaged(filter, cfg.FeedSize, pageInt)
 
 			if pageResult == nil {
 				http.NotFound(w, r)

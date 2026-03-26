@@ -52,15 +52,35 @@ func (s *stubIndexer) ListFiltered(filter service.PostFilter) []*service.Post {
 func (s *stubIndexer) ListFilteredPaged(filter service.PostFilter, pageSize int, page int) *service.PageResult {
 	all := s.ListFiltered(filter)
 	total := len(all)
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
 	start := (page - 1) * pageSize
 	if start >= total {
-		return &service.PageResult{}
+		return &service.PageResult{Page: page, PageSize: pageSize, TotalPosts: total, TotalPages: totalPages}
 	}
 	end := start + pageSize
 	if end > total {
 		end = total
 	}
-	return &service.PageResult{Posts: toSummaries(all[start:end])}
+	return &service.PageResult{
+		Posts:      toSummaries(all[start:end]),
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPosts: total,
+		TotalPages: totalPages,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
+	}
 }
 
 func (s *stubIndexer) GetPage(page int, tags []string) service.PageResult {
@@ -79,17 +99,17 @@ func toSummaries(posts []*service.Post) []service.PostSummary {
 	return out
 }
 
-func (s *stubIndexer) AllTags() []string                          { return nil }
+func (s *stubIndexer) AllTags() []string { return nil }
 func (s *stubIndexer) FeedPosts([]string, string) []*service.Post {
 	if s.feedPosts != nil {
 		return s.feedPosts
 	}
 	return s.posts
 }
-func (s *stubIndexer) LastModified() time.Time                    { return s.lastModified }
-func (s *stubIndexer) Sitemap() []service.SitemapEntry            { return s.sitemap }
-func (s *stubIndexer) Start() error                               { return nil }
-func (s *stubIndexer) Stop()                                      {}
+func (s *stubIndexer) LastModified() time.Time         { return s.lastModified }
+func (s *stubIndexer) Sitemap() []service.SitemapEntry { return s.sitemap }
+func (s *stubIndexer) Start() error                    { return nil }
+func (s *stubIndexer) Stop()                           {}
 func (s *stubIndexer) ReadMedia(_ string) ([]byte, time.Time, error) {
 	return nil, time.Time{}, errors.New("not found")
 }
