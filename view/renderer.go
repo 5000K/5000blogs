@@ -1,6 +1,7 @@
 package view
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -98,8 +99,14 @@ func (r *DefaultRenderer) footer() template.HTML {
 }
 
 // NewRenderer creates a Renderer using the provided template bytes.
+// If themeCSS is non-nil its contents are injected as the first <style> block
+// in the template, before any template-defined styles. Injection happens once
+// at construction time so there is no per-request overhead.
 // Returns an error if the template cannot be parsed.
-func NewRenderer(cfg config.Config, tmplData []byte, logger *slog.Logger) (*DefaultRenderer, error) {
+func NewRenderer(cfg config.Config, tmplData []byte, themeCSS []byte, logger *slog.Logger) (*DefaultRenderer, error) {
+	if len(themeCSS) > 0 {
+		tmplData = injectTheme(tmplData, themeCSS)
+	}
 	tmpl, err := template.New("template.html").Parse(string(tmplData))
 	if err != nil {
 		return nil, fmt.Errorf("view.Renderer: parse template: %w", err)
@@ -109,6 +116,31 @@ func NewRenderer(cfg config.Config, tmplData []byte, logger *slog.Logger) (*Defa
 		log:  logger.With("component", "Renderer"),
 		tmpl: tmpl,
 	}, nil
+}
+
+// injectTheme inserts a <style> block containing themeCSS immediately after
+// the opening <head> tag so that CSS custom properties declared in the theme
+// are available to all subsequent stylesheet rules in the template.
+func injectTheme(tmplData, themeCSS []byte) []byte {
+	const marker = "<head>"
+	idx := bytes.Index(tmplData, []byte(marker))
+	if idx == -1 {
+		// No <head> found - prepend the block before the rest of the document.
+		var buf bytes.Buffer
+		buf.WriteString("<style>\n")
+		buf.Write(themeCSS)
+		buf.WriteString("\n</style>\n")
+		buf.Write(tmplData)
+		return buf.Bytes()
+	}
+	insert := idx + len(marker)
+	var buf bytes.Buffer
+	buf.Write(tmplData[:insert])
+	buf.WriteString("\n  <style>\n")
+	buf.Write(themeCSS)
+	buf.WriteString("\n  </style>")
+	buf.Write(tmplData[insert:])
+	return buf.Bytes()
 }
 
 func (r *DefaultRenderer) Initialize() error {

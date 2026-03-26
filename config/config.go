@@ -21,6 +21,7 @@ type Config struct {
 		// default links to the current version in the official repo so that we no longer have to include templates in the dockerfile.
 		Template string `env:"TEMPLATE_PATH" env-default:"https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/template.html" yaml:"template"`
 		Icon     string `env:"ICON_PATH" env-default:"https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/icon.png" yaml:"icon"`
+		Theme    string `env:"THEME_PATH" env-default:"" yaml:"theme"`
 	} `yaml:"paths"`
 
 	RescanCron           string `env:"RESCAN_CRON" env-default:"* * * * *" yaml:"rescan_cron"`

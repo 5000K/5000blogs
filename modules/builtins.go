@@ -64,7 +64,16 @@ func Renderers(loader *config.ConfigLoader, log *slog.Logger) ModuleMapRegistry[
 				return nil, err
 			}
 
-			return view.NewRenderer(loader.BaseConfig(), tmplData, log)
+			var themeCSS []byte
+			if p := loader.BaseConfig().Paths.Theme; p != "" {
+				themeCSS, err = config.FetchResource(p)
+				if err != nil {
+					log.Error("failed to load theme", "path", p, "error", err)
+					return nil, err
+				}
+			}
+
+			return view.NewRenderer(loader.BaseConfig(), tmplData, themeCSS, log)
 		},
 	})
 }

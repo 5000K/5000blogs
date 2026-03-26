@@ -17,7 +17,7 @@ const minimalTemplate = `<!DOCTYPE html><html><head><title>{{.Title}}</title></h
 func newTestRenderer(t *testing.T) *DefaultRenderer {
 	t.Helper()
 	cfg := &config.Config{}
-	r, err := NewRenderer(*cfg, []byte(minimalTemplate), slog.Default())
+	r, err := NewRenderer(*cfg, []byte(minimalTemplate), nil, slog.Default())
 	if err != nil {
 		t.Fatalf("NewRenderer: %v", err)
 	}

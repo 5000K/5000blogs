@@ -35,4 +35,5 @@ local.*
 
 5000blogs
 
+# stupid workaround for our (5000k) internal dev setup, please don't ask ^^'
 **.vsix
