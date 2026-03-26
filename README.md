@@ -13,7 +13,7 @@ It was built and tested to be easily able to reach a score of 100 in every categ
 
 
 ## Documentation
-Currently, we have full documentation for using [5000blogs as a blog server](./docs/config.md). We will publish documentation for using 5000blogs as a library once our API is stable, probably once we are nearing version `1.0`.
+Currently, we have full documentation for using [5000blogs as a blog server](./docs/config.md) (which is powered by 5000blogs). We will publish documentation for using 5000blogs as a library once our API is stable, probably once we are nearing version `1.0`.
 
 # Run a demo
 
