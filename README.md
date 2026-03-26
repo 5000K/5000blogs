@@ -68,6 +68,4 @@ nav_links:
     url: '/posts'
 ```
 
-All other defaults should work to get you starteed, you can take a look at everything you can configure and customize [here](./docs/configuration.md).
-
 For full instructions, read our [Docs](https://5000blogs.5000k.org).
