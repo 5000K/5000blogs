@@ -10,7 +10,6 @@ RUN CGO_ENABLED=0 go build -o /5000blogs .
 FROM alpine:latest
 
 COPY --from=builder /5000blogs /5000blogs
-COPY template/ /static/
 
 WORKDIR /
 

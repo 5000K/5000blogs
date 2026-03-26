@@ -1,7 +1,8 @@
 address: ":8080"
 
 paths:
-  template: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/template.docs.html"
+  template: ./template/template.docs.html
+  theme: ./template/theme.docs.css
 
 sources:
  - type: filesystem

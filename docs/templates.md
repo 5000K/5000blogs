@@ -20,16 +20,32 @@ Default: fetched from the official GitHub repository (`template.html`, dark them
 
 Template is parsed once at startup. Changes require a restart.
 
+## Themes
+
+Templates are written against a set of CSS custom properties (variables). A theme is a plain CSS file that defines these properties in a `:root {}` block. It is injected as the first `<style>` block in the page, before any template styles, so every rule in the template that references a variable picks up the theme value automatically.
+
+Set a theme independently of the template:
+
+```yaml
+paths:
+  template: "./my-template.html"
+  theme: "./my-theme.css"
+```
+
+`paths.theme` accepts local file paths and HTTP(S) URLs. It will default to theme.base.css in the /template directory of the repo.
+
+For the canonical variable list see [Themes](themes).
+
 ## Built-in templates
 
-| Template | Description |
-|---|---|
-| `template.html` | Dark theme, Tachyons CSS. Full-featured default |
-| `template.garden.html` | Warm/earthy theme with serif fonts and card layout |
-| `template.docs.html` | Light documentation theme, clean and minimal |
-| `template.raw.html` | Unstyled skeleton with all variables. Starting point for custom templates |
+| Template | Matching theme | Description |
+|---|---|---|
+| `template.html` | `theme.base.css` | Adaptive light/dark, Tachyons CSS. Full-featured default |
+| `template.garden.html` | `theme.garden.css` | Warm/earthy theme with serif fonts and card layout |
+| `template.docs.html` | `theme.docs.css` | Light documentation theme, clean and minimal |
+| `template.raw.html` | - | Unstyled skeleton with all variables. Starting point for custom templates |
 
-Use a URL to reference built-in variants directly:
+You can use a URL to reference built-in variants directly:
 
 ```yaml
 paths:

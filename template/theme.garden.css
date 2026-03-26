@@ -1,0 +1,43 @@
+/* theme.garden.css - warm earthy dark theme, matches template.garden.html */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Colors */
+  --color-bg:             #1a1510;
+  --color-surface:        #13100b;
+  --color-border:         #3d3020;
+  --color-text:           #d4b896;
+  --color-text-heading:   #f0e0c0;
+  --color-text-muted:     #9e8060;
+  --color-text-dim:       #7a6040;
+  --color-header-bg:      #13100b;
+  --color-header-border:  #3d3020;
+  --color-header-brand:   #f0e0c0;
+  --color-header-nav:     #9e8060;
+  --color-accent:         #c87c4a;
+  --color-accent-hover:   #dc9860;
+  --color-tag-bg:         #2c1e10;
+  --color-tag-text:       #c87c4a;
+  --color-code-bg:        #130f09;
+  --color-code-text:      #c8a068;
+
+  /* Layout */
+  --content-width:        48rem;
+  --spacing-page-h:       1rem;
+  --spacing-page-h-wide:  1.5rem;
+  --spacing-page-v:       2.5rem;
+  --gap-base:             0.5rem;
+
+  /* Shape */
+  --radius-sm:            4px;
+  --radius-md:            6px;
+  --radius-lg:            8px;
+
+  /* Typography */
+  --font-body:            'Montserrat', sans-serif;
+  --font-heading:         'Newsreader', Georgia, serif;
+  --font-mono:            'JetBrains Mono', 'Fira Code', Menlo, monospace;
+  --font-size-base:       1rem;
+}
