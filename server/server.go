@@ -26,7 +26,7 @@ func Listen(conf *config.ConfigLoader, modules []ServerModule, logger *slog.Logg
 	conf.Load("", &serverConf)
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger) // todo: migrate to goware/httplog
+	r.Use(RequestLogger(logger))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(time.Duration(serverConf.Timeout) * time.Second))
 
