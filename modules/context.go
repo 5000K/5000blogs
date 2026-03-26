@@ -8,7 +8,7 @@ import (
 
 type RuntimeContext struct {
 	Converters        ModuleRegistry[ConverterModule]
-	PostRepositories  ModuleRegistry[PostRepositoryModule]
+	PostRepositories  ModuleRegistry[PostIndexerModule]
 	PostSources       ModuleRegistry[PostSourceModule]
 	OGImageGenerators ModuleRegistry[OGImageGeneratorModule]
 	Renderers         ModuleRegistry[RendererModule]

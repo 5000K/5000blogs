@@ -17,13 +17,13 @@ func Converters(loader *config.ConfigLoader) ModuleMapRegistry[ConverterModule] 
 	})
 }
 
-func PostRepositories(loader *config.ConfigLoader, log *slog.Logger) ModuleMapRegistry[PostRepositoryModule] {
-	return NewModuleMapRegistry(map[string]ModuleCreator[PostRepositoryModule]{
-		"inmemory": func() (PostRepositoryModule, error) {
-			return service.NewMemoryPostRepository(loader.BaseConfig(), log), nil
+func PostRepositories(loader *config.ConfigLoader, log *slog.Logger) ModuleMapRegistry[PostIndexerModule] {
+	return NewModuleMapRegistry(map[string]ModuleCreator[PostIndexerModule]{
+		"inmemory": func() (PostIndexerModule, error) {
+			return service.NewMemoryPostIndexer(loader.BaseConfig(), log), nil
 		},
-		"bleve": func() (PostRepositoryModule, error) {
-			return service.NewBlevePostRepository(loader.BaseConfig(), log)
+		"bleve": func() (PostIndexerModule, error) {
+			return service.NewBlevePostIndexer(loader.BaseConfig(), log)
 		},
 	})
 }

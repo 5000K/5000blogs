@@ -101,11 +101,11 @@ func newBleveIndex() (bleve.Index, error) {
 	return bleve.NewUsing("", m, bleve.Config.DefaultIndexType, bleve.Config.DefaultMemKVStore, nil)
 }
 
-// BlevePostRepository is a PostRepository backed by an in-memory bleve index.
+// BlevePostIndexer is a PostIndexer backed by an in-memory bleve index.
 // It enables full-text search across all post content and metadata, at the cost
-// of additional memory compared to the slice-based MemoryPostRepository.
+// of additional memory compared to the slice-based MemoryPostIndexer.
 // GetPage and GetBySlug leverage the index; other lookups use a complementary map.
-type BlevePostRepository struct {
+type BlevePostIndexer struct {
 	conf      *config.Config
 	source    PostSource
 	converter Converter
@@ -124,39 +124,39 @@ type BlevePostRepository struct {
 
 }
 
-func NewBlevePostRepository(conf config.Config, logger *slog.Logger) (*BlevePostRepository, error) {
+func NewBlevePostIndexer(conf config.Config, logger *slog.Logger) (*BlevePostIndexer, error) {
 	idx, err := newBleveIndex()
 	if err != nil {
-		return nil, fmt.Errorf("BlevePostRepository: create index: %w", err)
+		return nil, fmt.Errorf("BlevePostIndexer: create index: %w", err)
 	}
-	return &BlevePostRepository{
+	return &BlevePostIndexer{
 		conf:  &conf,
-		log:   logger.With("component", "BlevePostRepository"),
+		log:   logger.With("component", "BlevePostIndexer"),
 		posts: make(map[string]*Post),
 		index: idx,
 	}, nil
 }
 
-func (r *BlevePostRepository) Initialize(source PostSource, converter Converter) error {
+func (r *BlevePostIndexer) Initialize(source PostSource, converter Converter) error {
 	r.source = source
 	r.converter = converter
 	return nil
 }
 
-func (r *BlevePostRepository) Start() error {
+func (r *BlevePostIndexer) Start() error {
 	r.log.Info("starting repository")
 	r.rescan()
 
 	r.scheduler = cron.New()
 	_, err := r.scheduler.AddFunc(r.conf.RescanCron, r.rescan)
 	if err != nil {
-		return fmt.Errorf("BlevePostRepository.Start: invalid rescan cron expression %q: %w", r.conf.RescanCron, err)
+		return fmt.Errorf("BlevePostIndexer.Start: invalid rescan cron expression %q: %w", r.conf.RescanCron, err)
 	}
 	r.scheduler.Start()
 	return nil
 }
 
-func (r *BlevePostRepository) Stop() {
+func (r *BlevePostIndexer) Stop() {
 	r.log.Info("stopping repository")
 	if r.scheduler != nil {
 		r.scheduler.Stop()
@@ -164,17 +164,17 @@ func (r *BlevePostRepository) Stop() {
 }
 
 // ReadMedia delegates to the underlying source.
-func (r *BlevePostRepository) ReadMedia(relPath string) ([]byte, time.Time, error) {
+func (r *BlevePostIndexer) ReadMedia(relPath string) ([]byte, time.Time, error) {
 	return r.source.ReadMedia(relPath)
 }
 
-func (r *BlevePostRepository) Get(path string) *Post {
+func (r *BlevePostIndexer) Get(path string) *Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	return r.posts[path]
 }
 
-func (r *BlevePostRepository) GetBySlug(slug string) *Post {
+func (r *BlevePostIndexer) GetBySlug(slug string) *Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 
@@ -188,7 +188,7 @@ func (r *BlevePostRepository) GetBySlug(slug string) *Post {
 	return r.posts[result.Hits[0].ID]
 }
 
-func (r *BlevePostRepository) List() []*Post {
+func (r *BlevePostIndexer) List() []*Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	out := make([]*Post, 0, len(r.posts))
@@ -198,13 +198,166 @@ func (r *BlevePostRepository) List() []*Post {
 	return out
 }
 
-func (r *BlevePostRepository) Count() int {
+// buildFilterRequests constructs count and page search requests for the given PostFilter.
+// Always requires visible=true; optionally adds tag and full-text constraints.
+func (r *BlevePostIndexer) buildFilterRequests(filter PostFilter, pageSize int) (count, page *bleve.SearchRequest) {
+	visQ := bleve.NewTermQuery("true")
+	visQ.SetField("visible")
+
+	hasTag := len(filter.Tags) > 0
+	hasQuery := filter.Query != ""
+
+	if !hasTag && !hasQuery {
+		countReq := bleve.NewSearchRequest(visQ)
+		countReq.Size = 0
+		pageReq := bleve.NewSearchRequestOptions(visQ, pageSize, 0, false)
+		pageReq.SortBy([]string{"-date"})
+		return countReq, pageReq
+	}
+
+	tagQ := bleve.NewBooleanQuery()
+	if hasTag {
+		for _, tag := range filter.Tags {
+			tq := bleve.NewTermQuery(strings.ToLower(tag))
+			tq.SetField("tags")
+			tagQ.AddShould(tq)
+			mtq := bleve.NewTermQuery(strings.ToLower(tag))
+			mtq.SetField("meta_tags")
+			tagQ.AddShould(mtq)
+		}
+	}
+
+	if hasTag && !hasQuery {
+		conjQ := bleve.NewConjunctionQuery(visQ, tagQ)
+		countReq := bleve.NewSearchRequest(conjQ)
+		countReq.Size = 0
+		pageReq := bleve.NewSearchRequestOptions(conjQ, pageSize, 0, false)
+		pageReq.SortBy([]string{"-date"})
+		return countReq, pageReq
+	}
+
+	matchQ := bleve.NewMatchQuery(filter.Query)
+	if !hasTag {
+		conjQ := bleve.NewConjunctionQuery(visQ, matchQ)
+		countReq := bleve.NewSearchRequest(conjQ)
+		countReq.Size = 0
+		pageReq := bleve.NewSearchRequestOptions(conjQ, pageSize, 0, false)
+		pageReq.SortBy([]string{"-date"})
+		return countReq, pageReq
+	}
+
+	conjQ := bleve.NewConjunctionQuery(visQ, tagQ, matchQ)
+	countReq := bleve.NewSearchRequest(conjQ)
+	countReq.Size = 0
+	pageReq := bleve.NewSearchRequestOptions(conjQ, pageSize, 0, false)
+	pageReq.SortBy([]string{"-date"})
+	return countReq, pageReq
+}
+
+// ListFiltered returns all visible posts matching the filter, sorted by date descending.
+func (r *BlevePostIndexer) ListFiltered(filter PostFilter) []*Post {
+	_, req := r.buildFilterRequests(filter, 10000)
+
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+
+	result, err := r.index.Search(req)
+	if err != nil {
+		r.log.Error("bleve ListFiltered query failed", "err", err)
+		return nil
+	}
+	out := make([]*Post, 0, len(result.Hits))
+	for _, hit := range result.Hits {
+		if p, ok := r.posts[hit.ID]; ok {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// ListFilteredPaged returns a page of visible posts matching the filter.
+func (r *BlevePostIndexer) ListFilteredPaged(filter PostFilter, pageSize int, page int) *PageResult {
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	countReq, pageReq := r.buildFilterRequests(filter, pageSize)
+
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+
+	countResult, err := r.index.Search(countReq)
+	if err != nil {
+		r.log.Error("bleve ListFilteredPaged count failed", "err", err)
+		return &PageResult{Page: 1, PageSize: pageSize, TotalPages: 1}
+	}
+	total := int(countResult.Total)
+	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+
+	pageReq.From = (page - 1) * pageSize
+	pageResult, err := r.index.Search(pageReq)
+	if err != nil {
+		r.log.Error("bleve ListFilteredPaged page query failed", "err", err)
+		return &PageResult{Page: page, PageSize: pageSize, TotalPosts: total, TotalPages: totalPages}
+	}
+
+	summaries := make([]PostSummary, 0, len(pageResult.Hits))
+	for _, hit := range pageResult.Hits {
+		p, ok := r.posts[hit.ID]
+		if !ok {
+			continue
+		}
+		d := p.Data()
+		var metaTags []string
+		if p.metadata != nil {
+			metaTags = p.metadata.MetaTags
+		}
+		summaries = append(summaries, PostSummary{
+			Slug:        d.Slug,
+			Title:       d.Title,
+			Description: d.Description,
+			Date:        d.Date,
+			Author:      d.Author,
+			Tags:        d.Tags,
+			MetaTags:    metaTags,
+		})
+	}
+
+	tagParam := ""
+	if len(filter.Tags) > 0 {
+		tagParam = "&tags=" + strings.Join(filter.Tags, ",")
+	}
+
+	return &PageResult{
+		Posts:      summaries,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPosts: total,
+		TotalPages: totalPages,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
+		FilterTags: filter.Tags,
+		TagParam:   tagParam,
+	}
+}
+
+func (r *BlevePostIndexer) Count() int {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	return len(r.posts)
 }
 
-func (r *BlevePostRepository) GetPage(page int, tags []string) PageResult {
+func (r *BlevePostIndexer) GetPage(page int, tags []string) PageResult {
 	size := r.conf.PageSize
 	if size <= 0 {
 		size = 10
@@ -283,7 +436,7 @@ func (r *BlevePostRepository) GetPage(page int, tags []string) PageResult {
 
 // buildPageRequests constructs the count and page search requests for GetPage.
 // Using a helper avoids the need to name the bleve.Query interface directly.
-func (r *BlevePostRepository) buildPageRequests(tags []string, size int) (*bleve.SearchRequest, *bleve.SearchRequest) {
+func (r *BlevePostIndexer) buildPageRequests(tags []string, size int) (*bleve.SearchRequest, *bleve.SearchRequest) {
 	visQ := bleve.NewTermQuery("true")
 	visQ.SetField("visible")
 
@@ -315,7 +468,7 @@ func (r *BlevePostRepository) buildPageRequests(tags []string, size int) (*bleve
 
 // Search returns summaries of visible posts matching query via full-text search.
 // Returns an empty slice when query is empty.
-func (r *BlevePostRepository) Search(query string) []PostSummary {
+func (r *BlevePostIndexer) Search(query string) []PostSummary {
 	if query == "" {
 		return []PostSummary{}
 	}
@@ -361,7 +514,7 @@ func (r *BlevePostRepository) Search(query string) []PostSummary {
 }
 
 // AllTags returns a sorted, deduplicated list of all tags across visible posts.
-func (r *BlevePostRepository) AllTags() []string {
+func (r *BlevePostIndexer) AllTags() []string {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	seen := make(map[string]struct{})
@@ -382,7 +535,7 @@ func (r *BlevePostRepository) AllTags() []string {
 }
 
 // LastModified returns the most recent mod-time across visible posts.
-func (r *BlevePostRepository) LastModified() time.Time {
+func (r *BlevePostIndexer) LastModified() time.Time {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	var latest time.Time
@@ -395,7 +548,7 @@ func (r *BlevePostRepository) LastModified() time.Time {
 }
 
 // Sitemap returns one entry per visible post for use in sitemap.xml.
-func (r *BlevePostRepository) Sitemap() []SitemapEntry {
+func (r *BlevePostIndexer) Sitemap() []SitemapEntry {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	entries := make([]SitemapEntry, 0, len(r.posts))
@@ -415,7 +568,7 @@ func (r *BlevePostRepository) Sitemap() []SitemapEntry {
 
 // FeedPosts returns all RSS-visible posts, optionally filtered by tags (OR logic)
 // and/or a full-text search query (case-insensitive match on title, description, body).
-func (r *BlevePostRepository) FeedPosts(tags []string, query string) []*Post {
+func (r *BlevePostIndexer) FeedPosts(tags []string, query string) []*Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	q := strings.ToLower(query)
@@ -444,7 +597,7 @@ func (r *BlevePostRepository) FeedPosts(tags []string, query string) []*Post {
 	return filtered
 }
 
-func (r *BlevePostRepository) rescan() {
+func (r *BlevePostIndexer) rescan() {
 	r.log.Debug("rescanning posts")
 	r.rescanMu.Lock()
 	defer r.rescanMu.Unlock()
@@ -579,7 +732,7 @@ func (r *BlevePostRepository) rescan() {
 
 // extractMetadataForNew reads and extracts metadata for a brand-new post.
 // Returns the post (with metadata set), the markdown body, and whether it succeeded.
-func (r *BlevePostRepository) extractMetadataForNew(path string) (*Post, []byte, bool) {
+func (r *BlevePostIndexer) extractMetadataForNew(path string) (*Post, []byte, bool) {
 	modTime, err := r.source.StatPost(path)
 	if err != nil {
 		r.log.Error("failed to stat post", "path", path, "err", err)
@@ -601,7 +754,7 @@ func (r *BlevePostRepository) extractMetadataForNew(path string) (*Post, []byte,
 
 // extractMetadataIfChanged reads and extracts metadata when the on-disk post
 // differs from existing. Returns nil when the post is unchanged.
-func (r *BlevePostRepository) extractMetadataIfChanged(path string, existing *Post) (*Post, []byte, bool) {
+func (r *BlevePostIndexer) extractMetadataIfChanged(path string, existing *Post) (*Post, []byte, bool) {
 	var modTime time.Time
 	if r.conf.SkipUnchangedModTime {
 		var err error

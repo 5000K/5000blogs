@@ -13,10 +13,12 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-type PostRepository interface {
+type PostIndexer interface {
 	Get(path string) *Post
 	GetBySlug(slug string) *Post
 	List() []*Post
+	ListFiltered(filter PostFilter) []*Post
+	ListFilteredPaged(filter PostFilter, pageSize int, page int) *PageResult
 	Count() int
 	GetPage(page int, tags []string) PageResult
 	AllTags() []string
@@ -35,8 +37,8 @@ type SitemapEntry struct {
 	LastMod time.Time
 }
 
-// MemoryPostRepository is an in-memory implementation of PostRepository.
-type MemoryPostRepository struct {
+// MemoryPostIndexer is an in-memory implementation of PostIndexer.
+type MemoryPostIndexer struct {
 	conf      *config.Config
 	source    PostSource
 	converter Converter
@@ -54,32 +56,32 @@ type MemoryPostRepository struct {
 	posts   []*Post
 }
 
-func NewMemoryPostRepository(conf config.Config, logger *slog.Logger) *MemoryPostRepository {
-	return &MemoryPostRepository{
+func NewMemoryPostIndexer(conf config.Config, logger *slog.Logger) *MemoryPostIndexer {
+	return &MemoryPostIndexer{
 		conf: &conf,
-		log:  logger.With("component", "MemoryPostRepository"),
+		log:  logger.With("component", "MemoryPostIndexer"),
 	}
 }
 
 // ReadMedia delegates to the underlying source.
-func (r *MemoryPostRepository) ReadMedia(relPath string) ([]byte, time.Time, error) {
+func (r *MemoryPostIndexer) ReadMedia(relPath string) ([]byte, time.Time, error) {
 	return r.source.ReadMedia(relPath)
 }
 
-func (r *MemoryPostRepository) Initialize(source PostSource, converter Converter) error {
+func (r *MemoryPostIndexer) Initialize(source PostSource, converter Converter) error {
 	r.source = source
 	r.converter = converter
 	return nil
 }
 
-func (r *MemoryPostRepository) Get(path string) *Post {
+func (r *MemoryPostIndexer) Get(path string) *Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	return r.get(path)
 }
 
 // get is the unlocked version of Get; callers must hold at least postsMu.RLock.
-func (r *MemoryPostRepository) get(path string) *Post {
+func (r *MemoryPostIndexer) get(path string) *Post {
 	for _, p := range r.posts {
 		if p.path == path {
 			return p
@@ -88,14 +90,14 @@ func (r *MemoryPostRepository) get(path string) *Post {
 	return nil
 }
 
-func (r *MemoryPostRepository) GetBySlug(slug string) *Post {
+func (r *MemoryPostIndexer) GetBySlug(slug string) *Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	return r.getBySlug(slug)
 }
 
 // getBySlug is the unlocked version of GetBySlug.
-func (r *MemoryPostRepository) getBySlug(slug string) *Post {
+func (r *MemoryPostIndexer) getBySlug(slug string) *Post {
 	for _, p := range r.posts {
 		if p.slug == slug {
 			return p
@@ -104,7 +106,7 @@ func (r *MemoryPostRepository) getBySlug(slug string) *Post {
 	return nil
 }
 
-func (r *MemoryPostRepository) List() []*Post {
+func (r *MemoryPostIndexer) List() []*Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	cp := make([]*Post, len(r.posts))
@@ -112,13 +114,115 @@ func (r *MemoryPostRepository) List() []*Post {
 	return cp
 }
 
-func (r *MemoryPostRepository) Count() int {
+// ListFiltered returns all visible posts matching the filter, sorted by date descending.
+func (r *MemoryPostIndexer) ListFiltered(filter PostFilter) []*Post {
+	r.postsMu.RLock()
+	defer r.postsMu.RUnlock()
+	q := strings.ToLower(filter.Query)
+	out := make([]*Post, 0, len(r.posts))
+	for _, p := range r.posts {
+		if !p.IsVisible() {
+			continue
+		}
+		if len(filter.Tags) > 0 && !hasAnyTag(p, filter.Tags) {
+			continue
+		}
+		if q != "" {
+			d := p.Data()
+			plain := ""
+			if pt := p.PlainText(); pt != nil {
+				plain = strings.ToLower(string(pt))
+			}
+			if !strings.Contains(strings.ToLower(d.Title), q) &&
+				!strings.Contains(strings.ToLower(d.Description), q) &&
+				!strings.Contains(plain, q) {
+				continue
+			}
+		}
+		out = append(out, p)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		di, dj := time.Time{}, time.Time{}
+		if out[i].metadata != nil {
+			di = out[i].metadata.Date
+		}
+		if out[j].metadata != nil {
+			dj = out[j].metadata.Date
+		}
+		return di.After(dj)
+	})
+	return out
+}
+
+// ListFilteredPaged returns a page of visible posts matching the filter.
+func (r *MemoryPostIndexer) ListFilteredPaged(filter PostFilter, pageSize int, page int) *PageResult {
+	all := r.ListFiltered(filter)
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	total := len(all)
+	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+	start := (page - 1) * pageSize
+	var pagePosts []*Post
+	if start < total {
+		end := start + pageSize
+		if end > total {
+			end = total
+		}
+		pagePosts = all[start:end]
+	}
+	summaries := make([]PostSummary, 0, len(pagePosts))
+	for _, p := range pagePosts {
+		d := p.Data()
+		var metaTags []string
+		if p.metadata != nil {
+			metaTags = p.metadata.MetaTags
+		}
+		summaries = append(summaries, PostSummary{
+			Slug:        d.Slug,
+			Title:       d.Title,
+			Description: d.Description,
+			Date:        d.Date,
+			Author:      d.Author,
+			Tags:        d.Tags,
+			MetaTags:    metaTags,
+		})
+	}
+	tagParam := ""
+	if len(filter.Tags) > 0 {
+		tagParam = "&tags=" + strings.Join(filter.Tags, ",")
+	}
+	return &PageResult{
+		Posts:      summaries,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPosts: total,
+		TotalPages: totalPages,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
+		FilterTags: filter.Tags,
+		TagParam:   tagParam,
+	}
+}
+
+func (r *MemoryPostIndexer) Count() int {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	return len(r.posts)
 }
 
-func (r *MemoryPostRepository) Start() error {
+func (r *MemoryPostIndexer) Start() error {
 	r.log.Info("starting repository")
 	r.rescan()
 
@@ -131,14 +235,14 @@ func (r *MemoryPostRepository) Start() error {
 	return nil
 }
 
-func (r *MemoryPostRepository) Stop() {
+func (r *MemoryPostIndexer) Stop() {
 	r.log.Info("stopping repository")
 	if r.scheduler != nil {
 		r.scheduler.Stop()
 	}
 }
 
-func (r *MemoryPostRepository) GetPage(page int, tags []string) PageResult {
+func (r *MemoryPostIndexer) GetPage(page int, tags []string) PageResult {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 
@@ -230,7 +334,7 @@ func (r *MemoryPostRepository) GetPage(page int, tags []string) PageResult {
 
 // Search returns summaries of all visible posts whose title, description, or
 // plain-text body contains query (case-insensitive). No pagination is applied.
-func (r *MemoryPostRepository) Search(query string) []PostSummary {
+func (r *MemoryPostIndexer) Search(query string) []PostSummary {
 	if query == "" {
 		return []PostSummary{}
 	}
@@ -273,7 +377,7 @@ func (r *MemoryPostRepository) Search(query string) []PostSummary {
 
 // FeedPosts returns all RSS-visible posts, optionally filtered by tags (OR logic)
 // and/or a full-text search query (case-insensitive match on title, description, body).
-func (r *MemoryPostRepository) FeedPosts(tags []string, query string) []*Post {
+func (r *MemoryPostIndexer) FeedPosts(tags []string, query string) []*Post {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	q := strings.ToLower(query)
@@ -325,7 +429,7 @@ func hasAnyTag(p *Post, tags []string) bool {
 }
 
 // AllTags returns a sorted, deduplicated list of all tags across visible posts.
-func (r *MemoryPostRepository) AllTags() []string {
+func (r *MemoryPostIndexer) AllTags() []string {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	seen := make(map[string]struct{})
@@ -347,7 +451,7 @@ func (r *MemoryPostRepository) AllTags() []string {
 
 // LastModified returns the most recent file-modtime across all visible posts.
 // Returns zero time when there are no posts.
-func (r *MemoryPostRepository) LastModified() time.Time {
+func (r *MemoryPostIndexer) LastModified() time.Time {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 	var latest time.Time
@@ -365,7 +469,7 @@ type pendingChange struct {
 	post *Post // non-nil: add or replace; nil: remove
 }
 
-func (r *MemoryPostRepository) rescan() {
+func (r *MemoryPostIndexer) rescan() {
 	r.log.Debug("rescanning posts")
 	r.rescanMu.Lock()
 	defer r.rescanMu.Unlock()
@@ -503,7 +607,7 @@ func (r *MemoryPostRepository) rescan() {
 
 // extractMetadataForNew reads and extracts metadata for a brand-new post.
 // Returns the post (with metadata set), the markdown body, and whether it succeeded.
-func (r *MemoryPostRepository) extractMetadataForNew(path string) (*Post, []byte, bool) {
+func (r *MemoryPostIndexer) extractMetadataForNew(path string) (*Post, []byte, bool) {
 	modTime, err := r.source.StatPost(path)
 	if err != nil {
 		r.log.Error("failed to stat post", "path", path, "err", err)
@@ -525,7 +629,7 @@ func (r *MemoryPostRepository) extractMetadataForNew(path string) (*Post, []byte
 
 // extractMetadataIfChanged reads and extracts metadata when the on-disk post
 // differs from existing. Returns nil when the post is unchanged.
-func (r *MemoryPostRepository) extractMetadataIfChanged(path string, existing *Post) (*Post, []byte, bool) {
+func (r *MemoryPostIndexer) extractMetadataIfChanged(path string, existing *Post) (*Post, []byte, bool) {
 	var modTime time.Time
 	if r.conf.SkipUnchangedModTime {
 		var err error
@@ -562,7 +666,7 @@ func (r *MemoryPostRepository) extractMetadataIfChanged(path string, existing *P
 	return post, body, true
 }
 
-func (r *MemoryPostRepository) remove(path string) {
+func (r *MemoryPostIndexer) remove(path string) {
 	for i, p := range r.posts {
 		if p.path == path {
 			r.posts = append(r.posts[:i], r.posts[i+1:]...)
@@ -573,7 +677,7 @@ func (r *MemoryPostRepository) remove(path string) {
 
 // Sitemap returns one entry per visible post for use in sitemap.xml.
 // LastMod is the post's date when set, otherwise its file modification time.
-func (r *MemoryPostRepository) Sitemap() []SitemapEntry {
+func (r *MemoryPostIndexer) Sitemap() []SitemapEntry {
 	r.postsMu.RLock()
 	defer r.postsMu.RUnlock()
 
@@ -611,7 +715,7 @@ func (r *repoAssetResolver) ResolveAssetByFilename(filename string) string {
 	if rel == "" {
 		return ""
 	}
-	return "/media/" + rel
+	return "/" + rel
 }
 
 func (r *repoAssetResolver) ResolveEmbedBySlug(slug string) []byte {

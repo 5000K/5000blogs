@@ -221,8 +221,8 @@ func TestGoldmarkConvert_RelativeImageRewrittenToMedia(t *testing.T) {
 		t.Fatalf("fullConvert: %v", err)
 	}
 	html := string(*post.contents)
-	if !strings.Contains(html, `src="/media/more/funny.png"`) {
-		t.Errorf("want src=/media/more/funny.png in HTML, got:\n%s", html)
+	if !strings.Contains(html, `src="/more/funny.png"`) {
+		t.Errorf("want src=/more/funny.png in HTML, got:\n%s", html)
 	}
 }
 
@@ -234,8 +234,8 @@ func TestGoldmarkConvert_RelativeImageTopLevelPost(t *testing.T) {
 		t.Fatalf("fullConvert: %v", err)
 	}
 	html := string(*post.contents)
-	if !strings.Contains(html, `src="/media/banner.jpg"`) {
-		t.Errorf("want src=/media/banner.jpg in HTML, got:\n%s", html)
+	if !strings.Contains(html, `src="/banner.jpg"`) {
+		t.Errorf("want src=/banner.jpg in HTML, got:\n%s", html)
 	}
 }
 
@@ -250,7 +250,7 @@ func TestGoldmarkRewriteDest_AbsoluteURLUnchanged(t *testing.T) {
 		"mailto:user@example.com",
 	}
 	for _, c := range cases {
-		got := string(goldmarkRewriteDest([]byte(c), "/more/", "/media/more/"))
+		got := string(goldmarkRewriteDest([]byte(c), "/more/", "/more/"))
 		if got != c {
 			t.Errorf("goldmarkRewriteDest(%q): want unchanged, got %q", c, got)
 		}
@@ -271,7 +271,7 @@ func TestGoldmarkRewriteDest_SimpleRelative(t *testing.T) {
 		{"./notes", "/more/", "/more/notes"},
 	}
 	for _, tc := range cases {
-		got := string(goldmarkRewriteDest([]byte(tc.dest), tc.postsDir, "/media/more/"))
+		got := string(goldmarkRewriteDest([]byte(tc.dest), tc.postsDir, "/more/"))
 		if got != tc.want {
 			t.Errorf("goldmarkRewriteDest(%q, %q): want %q, got %q", tc.dest, tc.postsDir, tc.want, got)
 		}
@@ -279,14 +279,14 @@ func TestGoldmarkRewriteDest_SimpleRelative(t *testing.T) {
 }
 
 func TestGoldmarkRewriteDest_WithFragment(t *testing.T) {
-	got := string(goldmarkRewriteDest([]byte("./example.md#section"), "/more/", "/media/more/"))
+	got := string(goldmarkRewriteDest([]byte("./example.md#section"), "/more/", "/more/"))
 	if got != "/more/example#section" {
 		t.Errorf("want /more/example#section, got %q", got)
 	}
 }
 
 func TestGoldmarkRewriteDest_WithQuery(t *testing.T) {
-	got := string(goldmarkRewriteDest([]byte("./example.md?foo=bar"), "/more/", "/media/more/"))
+	got := string(goldmarkRewriteDest([]byte("./example.md?foo=bar"), "/more/", "/more/"))
 	if got != "/more/example?foo=bar" {
 		t.Errorf("want /more/example?foo=bar, got %q", got)
 	}
@@ -300,12 +300,12 @@ func TestGoldmarkRewriteDest_MediaFiles(t *testing.T) {
 		mediaDir string
 		want     string
 	}{
-		{"png in subdir", "./funny.png", "/more/", "/media/more/", "/media/more/funny.png"},
-		{"jpg at root", "./photo.jpg", "/", "/media/", "/media/photo.jpg"},
-		{"parent dir traversal", "../banner.gif", "/more/", "/media/more/", "/media/banner.gif"},
-		{"nested media", "assets/image.svg", "/more/", "/media/more/", "/media/more/assets/image.svg"},
-		{"media with fragment", "./img.png#L1", "/", "/media/", "/media/img.png#L1"},
-		{"video", "./demo.mp4", "/more/", "/media/more/", "/media/more/demo.mp4"},
+		{"png in subdir", "./funny.png", "/more/", "/more/", "/more/funny.png"},
+		{"jpg at root", "./photo.jpg", "/", "/", "/photo.jpg"},
+		{"parent dir traversal", "../banner.gif", "/more/", "/more/", "/banner.gif"},
+		{"nested media", "assets/image.svg", "/more/", "/more/", "/more/assets/image.svg"},
+		{"media with fragment", "./img.png#L1", "/", "/", "/img.png#L1"},
+		{"video", "./demo.mp4", "/more/", "/more/", "/more/demo.mp4"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {

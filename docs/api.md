@@ -11,28 +11,67 @@ All API endpoints are mounted at `/api/v1`. Responses are JSON.
 
 ### List posts
 
+Returns an array of post slugs for all visible posts. Results match what is shown on the default post list (same visibility and ordering rules).
+
 ```
 GET /api/v1/posts
-GET /api/v1/posts?tags=go,docker
+GET /api/v1/posts?tags=tag1,tag2
+GET /api/v1/posts?q=Query%20Text
+GET /api/v1/posts?q=Query%20Text&tags=tag1,tag2
 ```
 
-Returns an array of post slugs. Optional `tags` parameter filters by tag (OR logic).
+- `tags` - comma-separated list; returns posts that have at least one matching tag
+- `q` - case-insensitive full-text search on title, description, and body
 
-**Response:**
+Example response:
 
 ```json
-["hello-world", "guides/setup", "about"]
+["hello-world", "getting-started", "my-second-post"]
+```
+
+### List posts (paginated)
+
+Same filtering as `/api/v1/posts`, but paginated. Page size matches the configured `page_size`.
+
+```
+GET /api/v1/posts/page/1
+GET /api/v1/posts/page/1?tags=tag1,tag2
+GET /api/v1/posts/page/1?q=Query%20Text
+GET /api/v1/posts/page/1?q=Query%20Text&tags=tag1,tag2
+```
+
+Example response:
+
+```json
+{
+  "posts": [
+    {
+      "slug": "hello-world",
+      "title": "Hello World",
+      "description": "My first post",
+      "date": "2025-06-15T00:00:00Z",
+      "author": "Jane",
+      "tags": ["go", "tutorial"]
+    }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total_posts": 42,
+  "total_pages": 5,
+  "has_prev": false,
+  "has_next": true
+}
 ```
 
 ### Get post metadata
+
+Returns metadata of a single post by slug. Returns `404` when the slug is not found.
 
 ```
 GET /api/v1/post/{slug}
 ```
 
-Returns full metadata for a single post. Nested slugs use path syntax: `/api/v1/post/guides/setup`.
-
-**Response:**
+Example response:
 
 ```json
 {
@@ -48,76 +87,43 @@ Returns full metadata for a single post. Nested slugs use path syntax: `/api/v1/
 }
 ```
 
-### Search posts (substring)
-
-```
-GET /api/v1/posts/search?q=setup
-```
-
-Case-insensitive substring search on title and description. Returns only visible posts.
-
-**Response:**
-
-```json
-[
-  {
-    "slug": "guides/setup",
-    "title": "Setup Guide",
-    "description": "How to set up the blog"
-  }
-]
-```
-
-### Full-text search
-
-```
-GET /api/v1/search?q=docker+compose
-```
-
-Full-text search across title, description, and post body content. Returns matching slugs.
-
-**Response:**
-
-```json
-["setup-docker", "configuration"]
-```
-
 ### List tags
 
+Returns a sorted array of all tags used across visible posts.
+
 ```
-GET /api/v1/posts/tags
+GET /api/v1/tags
 ```
 
-Returns a sorted list of all tags across visible posts.
-
-**Response:**
+Example response:
 
 ```json
-["config", "docker", "go", "setup", "tutorial"]
+["go", "rust", "tutorial", "web"]
 ```
 
-### Stats
+### Basic stats
+
+Returns basic statistics about the server.
 
 ```
 GET /api/v1/stats
 ```
 
-Aggregate blog statistics.
-
-**Response:**
+Example response:
 
 ```json
 {
-  "total_posts": 42,
-  "latest_post_date": "2025-06-15T00:00:00Z"
+  "last_change": "2025-06-15T12:34:56Z",
+  "visible_post_count": 42
 }
 ```
 
-`latest_post_date` is `null` when no posts have dates.
+- `last_change` - timestamp of the most recently modified visible post
+- `visible_post_count` - number of posts with `visible: true` (default)
 
-## Other HTTP endpoints
+## Other relevant HTTP endpoints
 
-These are not part of the API but are useful for integration:
+These are not part of the API but useful for integration:
 
 | Endpoint | Description |
 |---|---|

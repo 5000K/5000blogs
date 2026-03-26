@@ -3,11 +3,18 @@ package run
 import (
 	"github.com/5000K/5000blogs/config"
 	"github.com/5000K/5000blogs/core"
-	"github.com/5000K/5000blogs/incoming"
 	"github.com/5000K/5000blogs/modules"
+	"github.com/5000K/5000blogs/server"
 	"github.com/5000K/5000blogs/service"
 	"github.com/5000K/5000blogs/view"
 )
+
+type Runtime struct {
+	Renderer         view.Renderer
+	OGImageGenerator service.OGImageGenerator
+	PostIndexer      service.PostIndexer
+	Favicon          []byte
+}
 
 func Run(ctx modules.RuntimeContext) error {
 	baseConf := ctx.Loader.BaseConfig()
@@ -36,14 +43,14 @@ func Run(ctx modules.RuntimeContext) error {
 		return err
 	}
 
-	repo, err := constructPostRepository(ctx, source, converter)
+	indexer, err := constructPostIndexer(ctx, source, converter)
 
 	if err != nil {
 		return err
 	}
 
-	err = repo.Start()
-	defer repo.Stop()
+	err = indexer.Start()
+	defer indexer.Stop()
 
 	if err != nil {
 		return err
@@ -55,12 +62,65 @@ func Run(ctx modules.RuntimeContext) error {
 		return err
 	}
 
-	incoming.Serve(&baseConf, repo, renderer, generator, favicon)
+	modules, err := getModules(ctx.Loader, indexer, renderer, generator, favicon)
 
-	return nil
+	if err != nil {
+		return err
+	}
+
+	return server.Listen(ctx.Loader, modules)
 }
 
-func constructPostRepository(ctx modules.RuntimeContext, source service.PostSource, converter service.Converter) (service.PostRepository, error) {
+type ServerModuleConfig struct {
+	HasHealth   bool `env:"HAS_HEALTH" env-default:"true" yaml:"has_health"`
+	HasAPI      bool `env:"HAS_API" env-default:"true" yaml:"has_api"`
+	HasXMLFeed  bool `env:"HAS_XML_FEED" env-default:"true" yaml:"has_xml_feed"`
+	HasHome     bool `env:"HAS_HOME" env-default:"true" yaml:"has_home"`
+	HasIcon     bool `env:"HAS_ICON" env-default:"true" yaml:"has_icon"`
+	HasPlain    bool `env:"HAS_PLAIN" env-default:"true" yaml:"has_plain"`
+	HasPostFeed bool `env:"HAS_POST_FEED" env-default:"true" yaml:"has_post_feed"`
+	HasDynamic  bool `env:"HAS_DYNAMIC" env-default:"true" yaml:"has_dynamic"`
+}
+
+func getModules(loader *config.ConfigLoader, indexer service.PostIndexer, renderer view.Renderer, generator service.OGImageGenerator, favicon []byte) ([]server.ServerModule, error) {
+	var conf ServerModuleConfig
+
+	err := loader.Load("server", &conf)
+	if err != nil {
+		return nil, err
+	}
+
+	var modules []server.ServerModule
+
+	if conf.HasHealth {
+		modules = append(modules, server.NewHealthModule())
+	}
+	if conf.HasAPI {
+		modules = append(modules, server.NewApiModule(indexer))
+	}
+	if conf.HasHome {
+		modules = append(modules, server.NewHomeModule(indexer, generator, renderer))
+	}
+	if conf.HasXMLFeed {
+		modules = append(modules, server.NewXmlFeedModule(indexer))
+	}
+	if conf.HasIcon {
+		modules = append(modules, server.NewIconModule(favicon))
+	}
+	if conf.HasPlain {
+		modules = append(modules, server.NewPlainModule(indexer))
+	}
+	if conf.HasPostFeed {
+		modules = append(modules, server.NewPostFeedModule(indexer, renderer))
+	}
+	if conf.HasDynamic {
+		modules = append(modules, server.NewDynamicModule(indexer, generator, renderer))
+	}
+
+	return modules, nil
+}
+
+func constructPostIndexer(ctx modules.RuntimeContext, source service.PostSource, converter service.Converter) (service.PostIndexer, error) {
 	var conf = config.TypeConfig{
 		Type: "bleve",
 	}

@@ -1,8 +1,7 @@
 address: ":8080"
 
 paths:
-  template: './template/template.html'
-  icon: './template/icon.png'  # path to a PNG file served as favicon and og:logo
+  template: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/template.docs.html"
 
 sources:
  - type: filesystem
@@ -16,8 +15,6 @@ blog_name: 'My Blog'
 nav_links:
   - name: 'Posts'
     url: '/posts'
-  - name: 'About'
-    url: '/more/about'
 
 site_url: 'http://localhost:8080'
 feed_description: 'Latest posts from My Blog'

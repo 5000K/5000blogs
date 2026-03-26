@@ -136,7 +136,7 @@ func (t *goldmarkLinkRewriter) Transform(node *ast.Document, reader text.Reader,
 		subdir = strings.Join(parts[:len(parts)-1], "/") + "/"
 	}
 	postsDir := t.postsBase + subdir
-	mediaDir := "/media/" + subdir
+	mediaDir := "/" + subdir
 
 	_ = ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {

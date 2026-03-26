@@ -122,7 +122,7 @@ func (p *wikilinkInlineParser) resolveImageSrc(filename string) string {
 			return u
 		}
 	}
-	return "/media/" + url.PathEscape(filename)
+	return "/" + url.PathEscape(filename)
 }
 
 // wikilinkNodeRenderer renders WikiLinkNode, WikiImageNode, and PostEmbedNode.

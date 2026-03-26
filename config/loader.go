@@ -59,6 +59,12 @@ func NewConfigLoader() (*ConfigLoader, error) {
 	}, nil
 }
 
+// NewConfigLoaderFromConfig creates a ConfigLoader backed by a pre-built Config.
+// Useful in tests and embeddings that already have a Config value.
+func NewConfigLoaderFromConfig(cfg Config) *ConfigLoader {
+	return &ConfigLoader{base: map[string]interface{}{}, core: &cfg}
+}
+
 // BaseConfig reads the core 5000blogs config. Use for compatibility, not for main source of truth.
 func (loader *ConfigLoader) BaseConfig() Config {
 	return *loader.core
@@ -89,6 +95,11 @@ func (loader *ConfigLoader) LoadSlice(prefix string, target any) error {
 }
 
 func (loader *ConfigLoader) getRawSub(prefix string) ([]byte, error) {
+
+	if prefix == "" {
+		return yaml.Marshal(loader.base)
+	}
+
 	if v, ok := loader.base[prefix]; ok {
 		return yaml.Marshal(v)
 	} else {

@@ -34,3 +34,5 @@ go.work.sum
 local.*
 
 5000blogs
+
+**.vsix

@@ -40,7 +40,7 @@ sources:
 
 See [Sources](sources).
 
-## Feeds
+## XML Feeds
 
 | YAML key | Env var | Default | Description |
 |---|---|---|---|
@@ -49,6 +49,33 @@ See [Sources](sources).
 | `rss_content` | `RSS_CONTENT` | `none` | Content in feed entries: `none`, `text`, or `html` |
 
 See [Feeds](feeds) for details.
+
+## Post Feeds
+
+Named list-view endpoints, each serving a filtered, paginated post list. Configured as an array under the `feeds` key:
+
+```yaml
+feeds:
+  - name: "posts"
+    tags: []
+    query: ""
+  - name: "go"
+    tags: ["go"]
+  - name: "tutorials"
+    query: "tutorial"
+```
+
+Each entry creates a route at `/<name>` serving posts that match the configured filter.
+
+| Key | Required | Default | Description |
+|---|---|---|---|
+| `name` | yes | - | URL path segment. Feed is served at `/<name>` |
+| `tags` | no | `[]` | Tag filter - posts must have at least one matching tag |
+| `query` | no | `""` | Search query filter |
+
+The `tags` and `query` filters can also be extended per-request via query parameters (`?tags=go,docker&q=setup`). Request parameters are merged with (appended to) the configured values.
+
+If no `feeds` array is configured, a single default feed named `posts` is created with no filters.
 
 ## Navigation
 
@@ -84,8 +111,30 @@ Toggle markdown extensions:
 | `features.autolinks` | `FEATURE_AUTOLINKS` | `false` | Auto-detect bare URLs |
 | `features.task_list` | `FEATURE_TASK_LIST` | `false` | `- [x]` / `- [ ]` checkboxes |
 | `features.footnotes` | `FEATURE_FOOTNOTES` | `false` | `[^1]` footnote references |
+| `features.comments` | `FEATURE_COMMENTS` | `false` | Obsidian-style `%%comment%%` blocks stripped from output |
 
 See [Markdown](markdown) for syntax details.
+
+## Server modules
+
+Each HTTP module can be individually disabled under the `server` key:
+
+| YAML key | Env var | Default | Description |
+|---|---|---|---|
+| `server.has_health` | `HAS_HEALTH` | `true` | `GET /health` health-check endpoint |
+| `server.has_api` | `HAS_API` | `true` | `GET /api/posts` JSON API |
+| `server.has_home` | `HAS_HOME` | `true` | Paginated post list at `/` |
+| `server.has_xml_feed` | `HAS_XML_FEED` | `true` | RSS and Atom feed endpoints |
+| `server.has_icon` | `HAS_ICON` | `true` | `/favicon.ico` and `/og-logo.png` icon endpoints |
+| `server.has_plain` | `HAS_PLAIN` | `true` | Plain-text post endpoints |
+| `server.has_post_feed` | `HAS_POST_FEED` | `true` | Per-tag feed endpoints |
+| `server.has_dynamic` | `HAS_DYNAMIC` | `true` | Dynamic post and media serving (`/*`) |
+
+```yaml
+server:
+  has_api: false
+  has_plain: false
+```
 
 ## OG Image
 

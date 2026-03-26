@@ -16,11 +16,13 @@ var builtinFS embed.FS
 // Paths are virtual: "builtin/<name>.md".
 type BuiltinSource struct {
 	paths []string
+	media []string
 }
 
 func NewBuiltinSource() *BuiltinSource {
 	return &BuiltinSource{
 		paths: []string{"builtin/index.md", "builtin/404.md", "builtin/footer.md"},
+		media: []string{"builtin/robots.txt"},
 	}
 }
 
@@ -57,11 +59,27 @@ func (b *BuiltinSource) StatPost(path string) (time.Time, error) {
 	return time.Time{}, nil
 }
 
-func (b *BuiltinSource) ReadMedia(_ string) ([]byte, time.Time, error) {
+func (b *BuiltinSource) ReadMedia(path string) ([]byte, time.Time, error) {
+	for _, m := range b.media {
+		if m == path {
+			data, err := builtinFS.ReadFile(m)
+			if err != nil {
+				return nil, time.Time{}, fmt.Errorf("builtin source: %w", err)
+			}
+			return data, time.Time{}, nil
+		}
+	}
 	return nil, time.Time{}, os.ErrNotExist
 }
 
-func (b *BuiltinSource) ResolveAssetByFilename(_ string) string { return "" }
+func (b *BuiltinSource) ResolveAssetByFilename(filename string) string {
+	for _, m := range b.media {
+		if strings.Contains(filename, m) {
+			return m
+		}
+	}
+	return ""
+}
 
 func (b *BuiltinSource) has(path string) bool {
 	for _, p := range b.paths {

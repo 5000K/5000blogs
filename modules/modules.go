@@ -14,8 +14,8 @@ type ConverterModule interface {
 	Initialize() error
 }
 
-type PostRepositoryModule interface {
-	service.PostRepository
+type PostIndexerModule interface {
+	service.PostIndexer
 
 	Initialize(source service.PostSource, converter service.Converter) error
 }
