@@ -13,7 +13,7 @@ It was built and tested to be easily able to reach a score of 100 in every categ
 
 
 ## Documentation
-Currently, we have full documentation for using [5000blogs as a blog server](./docs/config.md) (which is powered by 5000blogs). We will publish documentation for using 5000blogs as a library once our API is stable, probably once we are nearing version `1.0`.
+Currently, we have full documentation for using [5000blogs as a blog server](https://5000blogs.5000k.org) (which is powered by 5000blogs). We will publish documentation for using 5000blogs as a library once our API is stable, probably once we are nearing version `1.0`.
 
 # Run a demo
 
@@ -68,6 +68,6 @@ nav_links:
     url: '/posts'
 ```
 
-All other defaults should work to get you starteed, you can take a look at everything you can configure and customize [here](./docs/config.md).
+All other defaults should work to get you starteed, you can take a look at everything you can configure and customize [here](./docs/configuration.md).
 
 For full instructions, read our [Docs](https://5000blogs.5000k.org).
