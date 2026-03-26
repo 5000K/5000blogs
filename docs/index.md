@@ -26,14 +26,16 @@ rss-visible: false
 
 ```yaml
 # config.yml
-blog_name: 'My Blog'
-site_url: 'https://example.com'
-paths:
-  posts: './posts'
+blog_name: Blog
+site_url: http://localhost:8080
+nav_links:
+  - name: 'Posts'
+    url: '/posts'
 ```
 
 ```sh
-docker run -p 8080:8080 \
+docker run \
+  -p 8080:8080 \
   -v ./config.yml:/config.yml:ro \
   -v ./posts:/posts:ro \
   ghcr.io/5000k/5000blogs:latest

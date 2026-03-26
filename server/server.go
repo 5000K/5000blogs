@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -18,7 +19,9 @@ type ServerConfig struct {
 	Timeout       int    `env:"SERVER_TIMEOUT" env-default:"60" yaml:"timeout"`
 }
 
-func Listen(conf *config.ConfigLoader, modules []ServerModule) error {
+func Listen(conf *config.ConfigLoader, modules []ServerModule, logger *slog.Logger) error {
+	log := logger.With("component", "server")
+
 	var serverConf ServerConfig
 	conf.Load("", &serverConf)
 
@@ -30,6 +33,8 @@ func Listen(conf *config.ConfigLoader, modules []ServerModule) error {
 	for _, module := range modules {
 		module.RegisterRoutes(r, conf)
 	}
+
+	log.Info("Running server", "address", serverConf.ServerAddress)
 
 	return http.ListenAndServe(serverConf.ServerAddress, r)
 }

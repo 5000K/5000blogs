@@ -68,7 +68,7 @@ func Run(ctx modules.RuntimeContext) error {
 		return err
 	}
 
-	return server.Listen(ctx.Loader, modules)
+	return server.Listen(ctx.Loader, modules, ctx.Log)
 }
 
 type ServerModuleConfig struct {
