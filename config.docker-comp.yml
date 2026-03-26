@@ -1,16 +1,17 @@
 address: ":8080"
 
+paths:
+  template: /static/template.docs.html
+  theme: /static/theme.docs.css
+
+sources:
+ - type: filesystem
+   dir: ./docs
+
 log_level: 'info'
 page_size: 10
 
 blog_name: 'My Blog'
-# paths:
-#   icon: './template/icon.png'  # path to a PNG file served as favicon and og:logo
-
-
-sources:
- - type: filesystem
-   dir: /docs
 
 nav_links:
   - name: 'Posts'
@@ -18,7 +19,7 @@ nav_links:
 
 site_url: 'http://localhost:8080'
 feed_description: 'Latest posts from My Blog'
-feed_size: 20
+feed_size: 20  # number of posts to include in RSS and Atom feeds
 rss_content: 'none'  # 'none' (default), 'text' (plain text), or 'html' (rendered HTML)
 
 og_image:

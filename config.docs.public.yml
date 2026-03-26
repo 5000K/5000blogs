@@ -3,6 +3,8 @@ address: ":8080"
 
 paths:
   template: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/template.docs.html"
+  theme: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/main/template/theme.docs.css"
+
 
 log_level: 'info'
 page_size: 10

@@ -1,24 +1,7 @@
-/* theme.base.css - dark theme, matches template.html */
-:root {
-  /* Colors */
-  --color-bg:             #111111;
-  --color-surface:        #1a1a1a;
-  --color-border:         #2a2a2a;
-  --color-text:           #d8d8d8;
-  --color-text-heading:   #f0f0f0;
-  --color-text-muted:     #888888;
-  --color-text-dim:       #555555;
-  --color-header-bg:      #111111;
-  --color-header-border:  #1e1e1e;
-  --color-header-brand:   #f0f0f0;
-  --color-header-nav:     #555555;
-  --color-accent:         #7eb8f7;
-  --color-accent-hover:   #a8d0ff;
-  --color-tag-bg:         #1a1a2e;
-  --color-tag-text:       #7eb8f7;
-  --color-code-bg:        #1e1e2e;
-  --color-code-text:      #c8d3f5;
+/* theme.base.css - adapts to browser light/dark preference */
 
+/* ── Non-colour tokens: same for both modes ── */
+:root {
   /* Layout */
   --content-width:        48rem;
   --spacing-page-h:       1rem;
@@ -36,4 +19,48 @@
   --font-heading:         system-ui, -apple-system, sans-serif;
   --font-mono:            'SFMono-Regular', Menlo, Consolas, monospace;
   --font-size-base:       1rem;
+}
+
+/* ── Light mode (default) ── */
+:root {
+  --color-bg:             #f8f8f8;
+  --color-surface:        #eeeeee;
+  --color-border:         #cccccc;
+  --color-text:           #2a2a2a;
+  --color-text-heading:   #111111;
+  --color-text-muted:     #666666;
+  --color-text-dim:       #aaaaaa;
+  --color-header-bg:      #1a1a1a;
+  --color-header-border:  #2a2a2a;
+  --color-header-brand:   #f0f0f0;
+  --color-header-nav:     #888888;
+  --color-accent:         #2a6bca;
+  --color-accent-hover:   #1a5ab8;
+  --color-tag-bg:         #ddeeff;
+  --color-tag-text:       #1a4f8f;
+  --color-code-bg:        #efefef;
+  --color-code-text:      #2a2a2a;
+}
+
+/* ── Dark mode ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg:             #111111;
+    --color-surface:        #1a1a1a;
+    --color-border:         #2a2a2a;
+    --color-text:           #d8d8d8;
+    --color-text-heading:   #f0f0f0;
+    --color-text-muted:     #888888;
+    --color-text-dim:       #555555;
+    --color-header-bg:      #111111;
+    --color-header-border:  #1e1e1e;
+    --color-header-brand:   #f0f0f0;
+    --color-header-nav:     #555555;
+    --color-accent:         #7eb8f7;
+    --color-accent-hover:   #a8d0ff;
+    --color-tag-bg:         #1a1a2e;
+    --color-tag-text:       #7eb8f7;
+    --color-code-bg:        #1e1e2e;
+    --color-code-text:      #c8d3f5;
+  }
 }

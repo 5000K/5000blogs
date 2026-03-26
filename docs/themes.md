@@ -22,7 +22,7 @@ The file should contain a single `:root { }` block that defines the variables be
 
 | Theme file | Description |
 |---|---|
-| `theme.base.css` | Dark theme - blue accent, matches `template.html` |
+| `theme.base.css` | Adaptive light/dark - blue accent, matches `template.html` |
 | `theme.garden.css` | Warm earthy dark theme - serif headings, amber accent, matches `template.garden.html` |
 | `theme.docs.css` | Light documentation theme - indigo accent, matches `template.docs.html` |
 

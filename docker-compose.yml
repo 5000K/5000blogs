@@ -6,5 +6,6 @@ services:
     environment:
       CONFIG_PATH: /config.yml
     volumes:
-      - ./config.docker.yml:/config.yml:ro
+      - ./config.docker-comp.yml:/config.yml:ro
       - ./docs:/docs:ro
+      - ./template:/static:ro

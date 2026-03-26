@@ -40,7 +40,7 @@ For the canonical variable list see [Themes](themes).
 
 | Template | Matching theme | Description |
 |---|---|---|
-| `template.html` | `theme.base.css` | Dark theme, Tachyons CSS. Full-featured default |
+| `template.html` | `theme.base.css` | Adaptive light/dark, Tachyons CSS. Full-featured default |
 | `template.garden.html` | `theme.garden.css` | Warm/earthy theme with serif fonts and card layout |
 | `template.docs.html` | `theme.docs.css` | Light documentation theme, clean and minimal |
 | `template.raw.html` | - | Unstyled skeleton with all variables. Starting point for custom templates |
