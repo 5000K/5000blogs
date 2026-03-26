@@ -27,7 +27,7 @@ docker compose up --build
 ```
 
 # Deploy your own blog
-5000blogs does not have any runtime dependencies, so you could also just use a binary build. But it is highly recommended to use docker-compose for this, to keep things clean and reproducible.
+5000blogs does not have any runtime dependencies and executes no writing operations, so it would be reasonable to just use a binary build. But it is recommended to use docker(-compose) for this, to keep things clean and reproducible.
 
 Here is a simple docker-compose.yml, that simply mounts a config and a posts folder:
 ```yml
@@ -39,6 +39,16 @@ services:
     volumes:
       - ./config.yml:/config.yml:ro
       - ./posts:/posts:ro
+```
+
+Or using docker run:
+```bash
+docker run -d \
+  --name 5000blogs \
+  -p 8080:8080 \
+  -v ./config.yml:/config.yml:ro \
+  -v ./posts:/posts:ro \
+  ghcr.io/5000k/5000blogs:latest
 ```
 
 And here is a simple config.yml that you can tweak:
@@ -55,6 +65,6 @@ nav_links:
     url: '/posts'
 ```
 
-All other defaults should work for the vast majority of blogs, but you can take a look at everything you can configure [here](./docs/config.md).
+All other defaults should work to get you starteed, you can take a look at everything you can configure and customize [here](./docs/config.md).
 
 For full instructions, read our [Docs](https://5000blogs.5000k.org).
