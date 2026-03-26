@@ -18,7 +18,7 @@ Multiple sources can be combined. Earlier sources take priority when slugs colli
 ```yaml
 sources:
   - type: filesystem
-    path: "./local-posts"
+    dir: "./local-posts"
   - type: git
     url: "https://github.com/user/posts.git"
 ```
@@ -30,12 +30,12 @@ Reads `.md` files recursively from a local directory.
 | Key | Required | Description |
 |---|---|---|
 | `type` | yes | `filesystem` |
-| `path` | yes | Directory path |
+| `dir` | yes | Directory path |
 
 ```yaml
 sources:
   - type: filesystem
-    path: "./posts"
+    dir: "./posts"
 ```
 
 Subdirectories create nested slugs: `posts/guides/setup.md` → slug `guides/setup`, URL `/guides/setup`.

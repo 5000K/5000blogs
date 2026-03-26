@@ -40,10 +40,6 @@ func filterFromRequest(r *http.Request, feedConf PostFeedConfig) service.PostFil
 	filter := service.PostFilter{Tags: tags, Query: q}
 	filter.Tags = append(filter.Tags, feedConf.Tags...)
 
-	if len(filter.Query) == 0 {
-		filter.Query = feedConf.Query
-	}
-
 	return filter
 }
 
