@@ -71,18 +71,51 @@ func Run(ctx modules.RuntimeContext) error {
 	return server.Listen(ctx.Loader, modules)
 }
 
+type ServerModuleConfig struct {
+	HasHealth   bool `env:"HAS_HEALTH" env-default:"true" yaml:"has_health"`
+	HasAPI      bool `env:"HAS_API" env-default:"true" yaml:"has_api"`
+	HasXMLFeed  bool `env:"HAS_XML_FEED" env-default:"true" yaml:"has_xml_feed"`
+	HasHome     bool `env:"HAS_HOME" env-default:"true" yaml:"has_home"`
+	HasIcon     bool `env:"HAS_ICON" env-default:"true" yaml:"has_icon"`
+	HasPlain    bool `env:"HAS_PLAIN" env-default:"true" yaml:"has_plain"`
+	HasPostFeed bool `env:"HAS_POST_FEED" env-default:"true" yaml:"has_post_feed"`
+	HasDynamic  bool `env:"HAS_DYNAMIC" env-default:"true" yaml:"has_dynamic"`
+}
+
 func getModules(loader *config.ConfigLoader, indexer service.PostIndexer, renderer view.Renderer, generator service.OGImageGenerator, favicon []byte) ([]server.ServerModule, error) {
+	var conf ServerModuleConfig
+
+	err := loader.Load("server", &conf)
+	if err != nil {
+		return nil, err
+	}
+
 	var modules []server.ServerModule
 
-	// TODO: make this dynamic based on config
-	modules = append(modules, server.NewHealthModule())
-	modules = append(modules, server.NewApiModule(indexer))
-	modules = append(modules, server.NewHomeModule(indexer, generator, renderer))
-	modules = append(modules, server.NewXmlFeedModule(indexer))
-	modules = append(modules, server.NewIconModule(favicon))
-	modules = append(modules, server.NewPlainModule(indexer))
-	modules = append(modules, server.NewPostFeedModule(indexer, renderer))
-	modules = append(modules, server.NewDynamicModule(indexer, generator, renderer))
+	if conf.HasHealth {
+		modules = append(modules, server.NewHealthModule())
+	}
+	if conf.HasAPI {
+		modules = append(modules, server.NewApiModule(indexer))
+	}
+	if conf.HasHome {
+		modules = append(modules, server.NewHomeModule(indexer, generator, renderer))
+	}
+	if conf.HasXMLFeed {
+		modules = append(modules, server.NewXmlFeedModule(indexer))
+	}
+	if conf.HasIcon {
+		modules = append(modules, server.NewIconModule(favicon))
+	}
+	if conf.HasPlain {
+		modules = append(modules, server.NewPlainModule(indexer))
+	}
+	if conf.HasPostFeed {
+		modules = append(modules, server.NewPostFeedModule(indexer, renderer))
+	}
+	if conf.HasDynamic {
+		modules = append(modules, server.NewDynamicModule(indexer, generator, renderer))
+	}
 
 	return modules, nil
 }
