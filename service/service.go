@@ -11,6 +11,7 @@ type Metadata struct {
 	Date        time.Time `yaml:"date"`
 	Author      string    `yaml:"author"`
 	Tags        []string  `yaml:"tags"`
+	MetaTags    []string  `yaml:"meta-tags"`
 	Visible     *bool     `yaml:"visible"`
 	RSSVisible  *bool     `yaml:"rss-visible"`
 	NoIndex     *bool     `yaml:"noindex"`
@@ -116,6 +117,7 @@ type PostSummary struct {
 	Date        time.Time
 	Author      string
 	Tags        []string
+	MetaTags    []string // not rendered; used for internal tag filtering only
 }
 
 // PageResult is the output of GetPage.

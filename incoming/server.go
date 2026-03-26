@@ -178,6 +178,14 @@ func buildRouter(cfg *config.Config, repo service.PostRepository, renderer view.
 							}
 						}
 					}
+					for _, pt := range p.MetaTags {
+						for _, ft := range tags {
+							if pt == ft {
+								filtered = append(filtered, p)
+								goto nextResult
+							}
+						}
+					}
 				nextResult:
 				}
 				results = filtered
