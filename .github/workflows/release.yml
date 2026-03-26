@@ -7,12 +7,27 @@ on:
         description: "Version name (e.g. v1.0.0)"
         required: true
 
+defaults:
+  run:
+    shell: bash
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce development branch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/development" ]; then
+            echo "This workflow may only run on the development branch."
+            exit 1
+          fi
+
   release:
+    needs: check-branch
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -65,3 +80,22 @@ jobs:
             5000blogs-x86_64-linux
             plugins/link-preview.js
             plugins/sort-tables.js
+
+  merge-to-stable:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge development into stable
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin stable
+          git checkout stable
+          git merge --no-ff origin/development -m "chore: merge development into stable for ${{ github.event.inputs.version }}"
+          git push origin stable
