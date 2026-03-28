@@ -49,10 +49,10 @@ func TestWikiLink_KnownTitle_RendersAnchor(t *testing.T) {
 		}
 		return ""
 	}
-	post := &Post{slug: "about"}
+	post := &Post{Slug: "about"}
 	wikiConvert(t, post, []byte("See [[Another Example]] for details.\n"), resolver)
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="/example"`) {
 		t.Errorf("want href=/example, got:\n%s", html)
 	}
@@ -62,10 +62,10 @@ func TestWikiLink_KnownTitle_RendersAnchor(t *testing.T) {
 }
 
 func TestWikiLink_UnknownTitle_FallsBackToURLEncodedHref(t *testing.T) {
-	post := &Post{slug: "about"}
+	post := &Post{Slug: "about"}
 	wikiConvert(t, post, []byte("See [[No Such Post]] here.\n"), func(string) string { return "" })
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="/No%20Such%20Post"`) {
 		t.Errorf("want href=/No%%20Such%%20Post, got:\n%s", html)
 	}
@@ -75,10 +75,10 @@ func TestWikiLink_UnknownTitle_FallsBackToURLEncodedHref(t *testing.T) {
 }
 
 func TestWikiLink_NilResolver_FallsBackToURLEncodedHref(t *testing.T) {
-	post := &Post{slug: "about"}
+	post := &Post{Slug: "about"}
 	wikiConvert(t, post, []byte("[[Hello World]]\n"), nil)
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="/Hello%20World"`) {
 		t.Errorf("want href=/Hello%%20World, got:\n%s", html)
 	}
@@ -93,10 +93,10 @@ func TestWikiLink_NestedSlug_RewritesSlashSeparator(t *testing.T) {
 		}
 		return ""
 	}
-	post := &Post{slug: "index"}
+	post := &Post{Slug: "index"}
 	wikiConvert(t, post, []byte("[[About Me]]\n"), resolver)
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="/more/about"`) {
 		t.Errorf("want href=/more/about, got:\n%s", html)
 	}
@@ -113,7 +113,7 @@ func TestWikiLink_Multiple_AllResolved(t *testing.T) {
 	post := &Post{}
 	wikiConvert(t, post, []byte("[[First Post]] and [[Second Post]].\n"), resolver)
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="/first"`) {
 		t.Errorf("want first post link, got:\n%s", html)
 	}
@@ -136,7 +136,7 @@ func TestWikiLink_FeatureDisabled_LeftAsLiteral(t *testing.T) {
 		t.Fatalf("Convert: %v", err)
 	}
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if strings.Contains(html, `<a href=`) {
 		t.Errorf("wiki-links should not be parsed when feature is disabled, got:\n%s", html)
 	}
@@ -154,7 +154,7 @@ func TestWikiLink_CoexistsWithRegularLinks(t *testing.T) {
 	post := &Post{}
 	wikiConvert(t, post, []byte("[Regular](https://example.com) and [[Wiki Page]].\n"), resolver)
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="https://example.com"`) {
 		t.Errorf("regular link should be preserved, got:\n%s", html)
 	}
@@ -185,7 +185,7 @@ func TestWikiLink_CustomPostsBase_UsedInHref(t *testing.T) {
 		t.Fatalf("Convert: %v", err)
 	}
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="/articles/notes"`) {
 		t.Errorf("want href=/articles/notes, got:\n%s", html)
 	}
@@ -212,7 +212,7 @@ func TestWikiImage_ResolvedAsset_RendersImg(t *testing.T) {
 		t.Fatalf("Convert: %v", err)
 	}
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `src="/images/photo.png"`) {
 		t.Errorf("want src=/images/photo.png, got:\n%s", html)
 	}
@@ -232,7 +232,7 @@ func TestWikiImage_UnresolvedAsset_FallsBackToMediaPath(t *testing.T) {
 		t.Fatalf("Convert: %v", err)
 	}
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `src="/unknown.jpg"`) {
 		t.Errorf("want fallback src=/unknown.jpg, got:\n%s", html)
 	}
@@ -249,7 +249,7 @@ func TestWikiImage_DoesNotInterferWithRegularImage(t *testing.T) {
 		t.Fatalf("Convert: %v", err)
 	}
 
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `src="https://example.com/img.png"`) {
 		t.Errorf("regular markdown image should be preserved, got:\n%s", html)
 	}
@@ -289,7 +289,7 @@ func (r *fullResolver) ResolveEmbedBySlug(slug string) []byte {
 // --- ![[Post Name]] embed ---
 
 func TestWikiEmbed_KnownPost_RendersEmbeddedHTML(t *testing.T) {
-	post := &Post{slug: "host"}
+	post := &Post{Slug: "host"}
 	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
 	resolver := &fullResolver{
 		slugFn: func(title string) string {
@@ -312,7 +312,7 @@ func TestWikiEmbed_KnownPost_RendersEmbeddedHTML(t *testing.T) {
 	if err := c.Convert(post, body, resolver); err != nil {
 		t.Fatalf("Convert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, "<p>Embedded content</p>") {
 		t.Errorf("want embedded HTML in output, got:\n%s", html)
 	}
@@ -322,7 +322,7 @@ func TestWikiEmbed_KnownPost_RendersEmbeddedHTML(t *testing.T) {
 }
 
 func TestWikiEmbed_NoSlugMatch_FallsBackToImage(t *testing.T) {
-	post := &Post{slug: "host"}
+	post := &Post{Slug: "host"}
 	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
 	// resolver resolves no slugs - embed falls back to WikiImageNode
 	body, err := c.ExtractMetadata(post, []byte("![[photo.png]]\n"))
@@ -332,14 +332,14 @@ func TestWikiEmbed_NoSlugMatch_FallsBackToImage(t *testing.T) {
 	if err := c.Convert(post, body, &fullResolver{}); err != nil {
 		t.Fatalf("Convert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `<img`) {
 		t.Errorf("want img fallback when no slug resolves, got:\n%s", html)
 	}
 }
 
 func TestWikiEmbed_SlugResolvesButEmbedNil_FallsBackToImage(t *testing.T) {
-	post := &Post{slug: "host"}
+	post := &Post{Slug: "host"}
 	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
 	// slug resolves but embed returns nil (post not ready)
 	resolver := &fullResolver{
@@ -358,14 +358,14 @@ func TestWikiEmbed_SlugResolvesButEmbedNil_FallsBackToImage(t *testing.T) {
 	if err := c.Convert(post, body, resolver); err != nil {
 		t.Fatalf("Convert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `<img`) {
 		t.Errorf("want img fallback when embed returns nil, got:\n%s", html)
 	}
 }
 
 func TestWikiEmbed_RecursionComment_PassedThrough(t *testing.T) {
-	post := &Post{slug: "self"}
+	post := &Post{Slug: "self"}
 	c := &GoldmarkConverter{Features: config.Features{WikiLinks: true}}
 	const comment = `<!-- post "self" would be here, but it couldn't be loaded (recursion) -->`
 	resolver := &fullResolver{
@@ -379,7 +379,7 @@ func TestWikiEmbed_RecursionComment_PassedThrough(t *testing.T) {
 	if err := c.Convert(post, body, resolver); err != nil {
 		t.Fatalf("Convert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, "recursion") {
 		t.Errorf("want recursion comment in output, got:\n%s", html)
 	}

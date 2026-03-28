@@ -76,8 +76,8 @@ func TestBleve_Rescan_UpdatesChangedPost(t *testing.T) {
 	if p == nil {
 		t.Fatal("post 'a' not found")
 	}
-	if p.metadata.Title != "New" {
-		t.Errorf("want title 'New', got %q", p.metadata.Title)
+	if p.Metadata.Title != "New" {
+		t.Errorf("want title 'New', got %q", p.Metadata.Title)
 	}
 }
 
@@ -94,8 +94,8 @@ func TestBleve_Get_ReturnsPostByPath(t *testing.T) {
 	if p == nil {
 		t.Fatal("expected post, got nil")
 	}
-	if p.metadata.Title != "Hello" {
-		t.Errorf("want title 'Hello', got %q", p.metadata.Title)
+	if p.Metadata.Title != "Hello" {
+		t.Errorf("want title 'Hello', got %q", p.Metadata.Title)
 	}
 }
 
@@ -110,8 +110,8 @@ func TestBleve_GetBySlug_ReturnsPost(t *testing.T) {
 	if p == nil {
 		t.Fatal("expected post by slug, got nil")
 	}
-	if p.metadata.Title != "My Post" {
-		t.Errorf("want title 'My Post', got %q", p.metadata.Title)
+	if p.Metadata.Title != "My Post" {
+		t.Errorf("want title 'My Post', got %q", p.Metadata.Title)
 	}
 }
 
@@ -289,8 +289,8 @@ func TestBleve_LastModified_ReturnsLatest(t *testing.T) {
 	older := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	repo := newTestBleveRepo(t, newTestConf(10), newStubSource(nil))
-	repo.posts["posts/a.md"] = &Post{path: "posts/a.md", modTime: older, metadata: &Metadata{}}
-	repo.posts["posts/b.md"] = &Post{path: "posts/b.md", modTime: newer, metadata: &Metadata{}}
+	repo.posts["posts/a.md"] = &Post{Slug: "posts/a.md", modTime: older, Metadata: &Metadata{}}
+	repo.posts["posts/b.md"] = &Post{Slug: "posts/b.md", modTime: newer, Metadata: &Metadata{}}
 
 	got := repo.LastModified()
 	if !got.Equal(newer) {
@@ -401,8 +401,8 @@ func TestBleve_ListFiltered_VisibleOnly(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("want 1 visible post, got %d", len(results))
 	}
-	if results[0].slug != "visible" {
-		t.Errorf("want slug 'visible', got %q", results[0].slug)
+	if results[0].Slug != "visible" {
+		t.Errorf("want slug 'visible', got %q", results[0].Slug)
 	}
 }
 
@@ -418,8 +418,8 @@ func TestBleve_ListFiltered_TagFilter(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("want 1 post, got %d", len(results))
 	}
-	if results[0].slug != "go" {
-		t.Errorf("want slug 'go', got %q", results[0].slug)
+	if results[0].Slug != "go" {
+		t.Errorf("want slug 'go', got %q", results[0].Slug)
 	}
 }
 
@@ -435,8 +435,8 @@ func TestBleve_ListFiltered_QueryFilter(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("want 1 post, got %d", len(results))
 	}
-	if results[0].slug != "a" {
-		t.Errorf("want slug 'a', got %q", results[0].slug)
+	if results[0].Slug != "a" {
+		t.Errorf("want slug 'a', got %q", results[0].Slug)
 	}
 }
 
@@ -453,8 +453,8 @@ func TestBleve_ListFiltered_TagAndQueryFilter(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("want 1 post, got %d", len(results))
 	}
-	if results[0].slug != "a" {
-		t.Errorf("want slug 'a', got %q", results[0].slug)
+	if results[0].Slug != "a" {
+		t.Errorf("want slug 'a', got %q", results[0].Slug)
 	}
 }
 
@@ -473,8 +473,8 @@ func TestBleve_ListFiltered_SortedByDateDescending(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("want 2 posts, got %d", len(results))
 	}
-	if results[0].slug != "new" {
-		t.Errorf("want newest first, got %q", results[0].slug)
+	if results[0].Slug != "new" {
+		t.Errorf("want newest first, got %q", results[0].Slug)
 	}
 }
 

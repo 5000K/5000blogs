@@ -26,11 +26,11 @@ func TestGoldmarkExtractMetadata_ParsesFrontmatter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExtractMetadata: %v", err)
 	}
-	if post.metadata.Title != "Test Post" {
-		t.Errorf("title: want Test Post, got %q", post.metadata.Title)
+	if post.Metadata.Title != "Test Post" {
+		t.Errorf("title: want Test Post, got %q", post.Metadata.Title)
 	}
-	if post.metadata.Author != "Bob" {
-		t.Errorf("author: want Bob, got %q", post.metadata.Author)
+	if post.Metadata.Author != "Bob" {
+		t.Errorf("author: want Bob, got %q", post.Metadata.Author)
 	}
 	if post.hash == 0 {
 		t.Error("want non-zero hash after ExtractMetadata")
@@ -51,8 +51,8 @@ func TestGoldmarkExtractMetadata_NoFrontmatter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExtractMetadata: %v", err)
 	}
-	if post.metadata.Title != "" {
-		t.Errorf("want empty title, got %q", post.metadata.Title)
+	if post.Metadata.Title != "" {
+		t.Errorf("want empty title, got %q", post.Metadata.Title)
 	}
 	if string(body) != string(raw) {
 		t.Errorf("body should equal raw when no frontmatter")
@@ -80,13 +80,13 @@ func TestGoldmarkConvert_RendersHTML(t *testing.T) {
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	if post.metadata.Title != "Test Post" {
-		t.Errorf("title: want Test Post, got %q", post.metadata.Title)
+	if post.Metadata.Title != "Test Post" {
+		t.Errorf("title: want Test Post, got %q", post.Metadata.Title)
 	}
-	if post.metadata.Author != "Bob" {
-		t.Errorf("author: want Bob, got %q", post.metadata.Author)
+	if post.Metadata.Author != "Bob" {
+		t.Errorf("author: want Bob, got %q", post.Metadata.Author)
 	}
-	contents := string(*post.contents)
+	contents := string(*post.Contents)
 	if contents == "" {
 		t.Error("want non-empty HTML output")
 	}
@@ -108,10 +108,10 @@ func TestGoldmarkConvert_NoFrontmatter(t *testing.T) {
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	if post.metadata.Title != "" {
-		t.Errorf("want empty title, got %q", post.metadata.Title)
+	if post.Metadata.Title != "" {
+		t.Errorf("want empty title, got %q", post.Metadata.Title)
 	}
-	if post.contents == nil || string(*post.contents) == "" {
+	if post.Contents == nil || string(*post.Contents) == "" {
 		t.Error("want rendered HTML")
 	}
 }
@@ -145,7 +145,7 @@ func TestGoldmarkConvert_AutoHeadingID(t *testing.T) {
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	contents := string(*post.contents)
+	contents := string(*post.Contents)
 	if !strings.Contains(contents, `id="`) {
 		t.Errorf("want auto heading ID in HTML, got:\n%s", contents)
 	}
@@ -167,12 +167,12 @@ func TestGoldmarkConvert_SetsHash(t *testing.T) {
 
 func TestGoldmarkConvert_RelativeLinksRewritten(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "more/about"}
+	post := &Post{Slug: "more/about"}
 	raw := []byte("# Page\n\n[Example](./example.md)\n")
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="/more/example"`) {
 		t.Errorf("want href=/more/example in HTML, got:\n%s", html)
 	}
@@ -183,12 +183,12 @@ func TestGoldmarkConvert_RelativeLinksRewritten(t *testing.T) {
 
 func TestGoldmarkConvert_RelativeLinksRewritten_TopLevelPost(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "about"}
+	post := &Post{Slug: "about"}
 	raw := []byte("[Go](./other.md)\n")
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="/other"`) {
 		t.Errorf("want href=/other, got:\n%s", html)
 	}
@@ -196,12 +196,12 @@ func TestGoldmarkConvert_RelativeLinksRewritten_TopLevelPost(t *testing.T) {
 
 func TestGoldmarkConvert_AbsoluteLinksUnchanged(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "more/about"}
+	post := &Post{Slug: "more/about"}
 	raw := []byte("[External](https://example.com) [Anchor](#section) [Root](/hello)\n")
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `href="https://example.com"`) {
 		t.Errorf("external link changed: %s", html)
 	}
@@ -215,12 +215,12 @@ func TestGoldmarkConvert_AbsoluteLinksUnchanged(t *testing.T) {
 
 func TestGoldmarkConvert_RelativeImageRewrittenToMedia(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "more/about"}
+	post := &Post{Slug: "more/about"}
 	raw := []byte("# Page\n\n![Alt](./funny.png)\n")
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `src="/more/funny.png"`) {
 		t.Errorf("want src=/more/funny.png in HTML, got:\n%s", html)
 	}
@@ -228,12 +228,12 @@ func TestGoldmarkConvert_RelativeImageRewrittenToMedia(t *testing.T) {
 
 func TestGoldmarkConvert_RelativeImageTopLevelPost(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "about"}
+	post := &Post{Slug: "about"}
 	raw := []byte("![Banner](./banner.jpg)\n")
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `src="/banner.jpg"`) {
 		t.Errorf("want src=/banner.jpg in HTML, got:\n%s", html)
 	}
@@ -321,7 +321,7 @@ func TestGoldmarkRewriteDest_MediaFiles(t *testing.T) {
 
 func TestGoldmarkEmbed_MdImageWithResolver_RendersEmbeddedHTML(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "more/host"}
+	post := &Post{Slug: "more/host"}
 	resolver := &fullResolver{
 		embedFn: func(slug string) []byte {
 			if slug == "more/child" {
@@ -334,7 +334,7 @@ func TestGoldmarkEmbed_MdImageWithResolver_RendersEmbeddedHTML(t *testing.T) {
 	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
 		t.Fatalf("fullConvertWithResolver: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, "<p>Child post</p>") {
 		t.Errorf("want embedded HTML, got:\n%s", html)
 	}
@@ -345,12 +345,12 @@ func TestGoldmarkEmbed_MdImageWithResolver_RendersEmbeddedHTML(t *testing.T) {
 
 func TestGoldmarkEmbed_MdImageNilResolver_FallsBackToLink(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "about"}
+	post := &Post{Slug: "about"}
 	raw := []byte("![alt](./other.md)\n")
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	// with nil resolver, .md falls back to the rewritten post URL rendered as <img>
 	if !strings.Contains(html, `src="/other"`) {
 		t.Errorf("want rewritten src=/other fallback, got:\n%s", html)
@@ -359,14 +359,14 @@ func TestGoldmarkEmbed_MdImageNilResolver_FallsBackToLink(t *testing.T) {
 
 func TestGoldmarkEmbed_MdImageResolverReturnsNil_FallsBackToLink(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "about"}
+	post := &Post{Slug: "about"}
 	// embedFn nil → ResolveEmbedBySlug returns nil → falls back to img
 	resolver := &fullResolver{}
 	raw := []byte("![alt](./other.md)\n")
 	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
 		t.Fatalf("fullConvertWithResolver: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, `src="/other"`) {
 		t.Errorf("want rewritten src fallback, got:\n%s", html)
 	}
@@ -374,7 +374,7 @@ func TestGoldmarkEmbed_MdImageResolverReturnsNil_FallsBackToLink(t *testing.T) {
 
 func TestGoldmarkEmbed_TopLevelSlugDerivation(t *testing.T) {
 	c := &GoldmarkConverter{}
-	post := &Post{slug: "index"}
+	post := &Post{Slug: "index"}
 	resolver := &fullResolver{
 		embedFn: func(slug string) []byte {
 			if slug == "intro" {
@@ -387,7 +387,7 @@ func TestGoldmarkEmbed_TopLevelSlugDerivation(t *testing.T) {
 	if err := fullConvertWithResolver(c, post, raw, resolver); err != nil {
 		t.Fatalf("fullConvertWithResolver: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, "<section>Intro</section>") {
 		t.Errorf("want embedded HTML, got:\n%s", html)
 	}
@@ -432,7 +432,7 @@ func TestGoldmarkConvert_CommentsFeatureStripsComments(t *testing.T) {
 	if err := fullConvert(c, post, raw); err != nil {
 		t.Fatalf("fullConvert: %v", err)
 	}
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if strings.Contains(html, "hidden") {
 		t.Errorf("comment text should not appear in output: %s", html)
 	}
@@ -449,7 +449,7 @@ func TestGoldmarkConvert_CommentsFeatureDisabled(t *testing.T) {
 		t.Fatalf("fullConvert: %v", err)
 	}
 	// with feature off, %% markers pass through unchanged
-	html := string(*post.contents)
+	html := string(*post.Contents)
 	if !strings.Contains(html, "comment") {
 		t.Errorf("comment text should appear when feature is disabled: %s", html)
 	}

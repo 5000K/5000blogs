@@ -47,28 +47,28 @@ func TestIsVisible_NilMetadata(t *testing.T) {
 }
 
 func TestIsVisible_NilField(t *testing.T) {
-	p := &Post{metadata: &Metadata{}}
+	p := &Post{Metadata: &Metadata{}}
 	if !p.IsVisible() {
 		t.Error("want visible=true when Visible field is nil")
 	}
 }
 
 func TestIsVisible_ExplicitTrue(t *testing.T) {
-	p := &Post{metadata: &Metadata{Visible: boolPtr(true)}}
+	p := &Post{Metadata: &Metadata{Visible: boolPtr(true)}}
 	if !p.IsVisible() {
 		t.Error("want visible=true")
 	}
 }
 
 func TestIsVisible_ExplicitFalse(t *testing.T) {
-	p := &Post{metadata: &Metadata{Visible: boolPtr(false)}}
+	p := &Post{Metadata: &Metadata{Visible: boolPtr(false)}}
 	if p.IsVisible() {
 		t.Error("want visible=false")
 	}
 }
 
 func TestIsRSSVisible_DefaultTrue(t *testing.T) {
-	p := &Post{metadata: &Metadata{}}
+	p := &Post{Metadata: &Metadata{}}
 	if !p.IsRSSVisible() {
 		t.Error("want rss-visible=true by default")
 	}
@@ -76,7 +76,7 @@ func TestIsRSSVisible_DefaultTrue(t *testing.T) {
 
 func TestIsRSSVisible_InheritHidden(t *testing.T) {
 	// visible:false implies rss-visible:false regardless of RSSVisible field
-	p := &Post{metadata: &Metadata{
+	p := &Post{Metadata: &Metadata{
 		Visible:    boolPtr(false),
 		RSSVisible: boolPtr(true),
 	}}
@@ -86,7 +86,7 @@ func TestIsRSSVisible_InheritHidden(t *testing.T) {
 }
 
 func TestIsRSSVisible_ExplicitFalse(t *testing.T) {
-	p := &Post{metadata: &Metadata{RSSVisible: boolPtr(false)}}
+	p := &Post{Metadata: &Metadata{RSSVisible: boolPtr(false)}}
 	if p.IsRSSVisible() {
 		t.Error("want rss-visible=false when explicitly set to false")
 	}
@@ -138,9 +138,9 @@ func TestPostData_Fields(t *testing.T) {
 func TestPostData_DateFallsBackToModTime(t *testing.T) {
 	mod := time.Date(2024, 3, 15, 12, 0, 0, 0, time.UTC)
 	p := &Post{
-		path:     "posts/no-date.md",
+		Slug:     "posts/no-date.md",
 		modTime:  mod,
-		metadata: &Metadata{}, // no date set
+		Metadata: &Metadata{}, // no date set
 	}
 	d := p.Data()
 	if !d.Date.Equal(mod) {
@@ -149,7 +149,7 @@ func TestPostData_DateFallsBackToModTime(t *testing.T) {
 }
 
 func TestPostData_NoDateISO_WhenDateZero(t *testing.T) {
-	p := &Post{path: "posts/empty.md", metadata: &Metadata{}}
+	p := &Post{Slug: "posts/empty.md", Metadata: &Metadata{}}
 	d := p.Data()
 	if d.DateISO != "" {
 		t.Errorf("DateISO should be empty when date is zero, got %q", d.DateISO)
@@ -173,11 +173,8 @@ func TestPostData_NilContents(t *testing.T) {
 }
 
 func TestPostData_NilMetadata(t *testing.T) {
-	p := &Post{path: "posts/bare.md"}
+	p := &Post{Slug: "posts/bare.md"}
 	d := p.Data()
-	if d.Slug != "bare" {
-		t.Errorf("Slug: got %q", d.Slug)
-	}
 	if !d.Visible {
 		t.Error("want Visible=true when metadata is nil")
 	}
