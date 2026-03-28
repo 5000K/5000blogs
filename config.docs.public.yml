@@ -4,6 +4,7 @@ address: ":8080"
 paths:
   template: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/stable/template/template.docs.html"
   theme: "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/stable/template/theme.docs.css"
+  icon : "https://raw.githubusercontent.com/5000K/5000blogs/refs/heads/stable/template/icon.png"
 
 
 log_level: 'info'
