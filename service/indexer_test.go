@@ -81,8 +81,8 @@ func TestRescan_UpdatesChangedPost(t *testing.T) {
 	if p == nil {
 		t.Fatal("post 'a' not found")
 	}
-	if p.metadata.Title != "New" {
-		t.Errorf("want title 'New', got %q", p.metadata.Title)
+	if p.Metadata.Title != "New" {
+		t.Errorf("want title 'New', got %q", p.Metadata.Title)
 	}
 }
 
@@ -273,7 +273,7 @@ func TestSitemap_LastModFromDate(t *testing.T) {
 func TestSitemap_LastModFallsBackToModTime(t *testing.T) {
 	mod := time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC)
 	repo := newTestRepo(newTestConf(10), newStubSource(nil))
-	p := &Post{path: "posts/no-date.md", modTime: mod, metadata: &Metadata{}}
+	p := &Post{Slug: "posts/no-date.md", modTime: mod, Metadata: &Metadata{}}
 	repo.posts = []*Post{p}
 
 	entries := repo.Sitemap()
@@ -297,8 +297,8 @@ func TestLastModified_ReturnsMaxModTime(t *testing.T) {
 	newer := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	repo := newTestRepo(newTestConf(10), newStubSource(nil))
 	repo.posts = []*Post{
-		{path: "posts/a.md", modTime: older, metadata: &Metadata{}},
-		{path: "posts/b.md", modTime: newer, metadata: &Metadata{}},
+		{Slug: "posts/a.md", modTime: older, Metadata: &Metadata{}},
+		{Slug: "posts/b.md", modTime: newer, Metadata: &Metadata{}},
 	}
 
 	got := repo.LastModified()
@@ -313,8 +313,8 @@ func TestLastModified_IgnoresInvisiblePosts(t *testing.T) {
 	hiddenBool := false
 	repo := newTestRepo(newTestConf(10), newStubSource(nil))
 	repo.posts = []*Post{
-		{path: "posts/a.md", modTime: visible, metadata: &Metadata{}},
-		{path: "posts/b.md", modTime: hidden, metadata: &Metadata{Visible: &hiddenBool}},
+		{Slug: "posts/a.md", modTime: visible, Metadata: &Metadata{}},
+		{Slug: "posts/b.md", modTime: hidden, Metadata: &Metadata{Visible: &hiddenBool}},
 	}
 
 	got := repo.LastModified()
@@ -325,7 +325,7 @@ func TestLastModified_IgnoresInvisiblePosts(t *testing.T) {
 
 func TestModTime(t *testing.T) {
 	mod := time.Date(2026, 5, 10, 8, 30, 0, 0, time.UTC)
-	p := &Post{path: "posts/x.md", modTime: mod}
+	p := &Post{Slug: "posts/x.md", modTime: mod}
 	if !p.ModTime().Equal(mod) {
 		t.Errorf("ModTime: want %v, got %v", mod, p.ModTime())
 	}
@@ -529,8 +529,8 @@ func TestFeedPosts_MetaTagFilter_MatchesMetaTagOnly(t *testing.T) {
 	if len(posts) != 1 {
 		t.Errorf("want 1 feed post matching meta-tag, got %d", len(posts))
 	}
-	if posts[0].slug != "a" {
-		t.Errorf("want slug 'a', got %q", posts[0].slug)
+	if posts[0].Slug != "a" {
+		t.Errorf("want slug 'a', got %q", posts[0].Slug)
 	}
 }
 
@@ -660,8 +660,8 @@ func TestListFiltered_VisibleOnly(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("want 1 visible post, got %d", len(results))
 	}
-	if results[0].slug != "visible" {
-		t.Errorf("want slug 'visible', got %q", results[0].slug)
+	if results[0].Slug != "visible" {
+		t.Errorf("want slug 'visible', got %q", results[0].Slug)
 	}
 }
 
@@ -677,8 +677,8 @@ func TestListFiltered_TagFilter(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("want 1 post, got %d", len(results))
 	}
-	if results[0].slug != "go" {
-		t.Errorf("want slug 'go', got %q", results[0].slug)
+	if results[0].Slug != "go" {
+		t.Errorf("want slug 'go', got %q", results[0].Slug)
 	}
 }
 
@@ -694,8 +694,8 @@ func TestListFiltered_QueryFilter(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("want 1 post, got %d", len(results))
 	}
-	if results[0].slug != "a" {
-		t.Errorf("want slug 'a', got %q", results[0].slug)
+	if results[0].Slug != "a" {
+		t.Errorf("want slug 'a', got %q", results[0].Slug)
 	}
 }
 
@@ -712,8 +712,8 @@ func TestListFiltered_TagAndQueryFilter(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("want 1 post, got %d", len(results))
 	}
-	if results[0].slug != "a" {
-		t.Errorf("want slug 'a', got %q", results[0].slug)
+	if results[0].Slug != "a" {
+		t.Errorf("want slug 'a', got %q", results[0].Slug)
 	}
 }
 
@@ -730,8 +730,8 @@ func TestListFiltered_SortedByDateDescending(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("want 2 posts, got %d", len(results))
 	}
-	if results[0].slug != "new" {
-		t.Errorf("want newest first, got %q", results[0].slug)
+	if results[0].Slug != "new" {
+		t.Errorf("want newest first, got %q", results[0].Slug)
 	}
 }
 

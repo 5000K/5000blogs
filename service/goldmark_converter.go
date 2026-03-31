@@ -45,7 +45,7 @@ func (c *GoldmarkConverter) ExtractMetadata(post *Post, raw []byte) ([]byte, err
 	if err != nil {
 		return nil, err
 	}
-	post.metadata = metadata
+	post.Metadata = metadata
 	return body, nil
 }
 
@@ -65,7 +65,7 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolver AssetResol
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(
 				util.Prioritized(&goldmarkLinkRewriter{
-					slug:      post.slug,
+					slug:      post.Slug,
 					postsBase: c.postsBase(),
 					source:    body,
 					resolver:  resolver,
@@ -113,7 +113,7 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolver AssetResol
 	}
 
 	rendered := buf.Bytes()
-	post.contents = &rendered
+	post.Contents = &rendered
 	plain := htmlToPlainText(rendered)
 	post.plainText = &plain
 	return nil

@@ -20,13 +20,12 @@ type Metadata struct {
 }
 
 type Post struct {
-	path    string
-	slug    string
+	Slug    string
 	hash    uint64
 	modTime time.Time
 
-	metadata  *Metadata
-	contents  *[]byte
+	Metadata  *Metadata
+	Contents  *[]byte
 	plainText *[]byte
 }
 
@@ -47,23 +46,23 @@ type PostData struct {
 
 // Data returns a PostData view of the post.
 func (p *Post) Data() PostData {
-	slug := p.slug
+	slug := p.Slug
 	if slug == "" {
-		slug = slugFromPath(p.path)
+		slug = slugFromPath(p.Slug)
 	}
 	d := PostData{
 		Slug:       slug,
 		Visible:    p.IsVisible(),
 		RSSVisible: p.IsRSSVisible(),
 	}
-	if p.metadata != nil {
-		d.Title = p.metadata.Title
-		d.Description = p.metadata.Description
-		d.Date = p.metadata.Date
-		d.Author = p.metadata.Author
-		d.Tags = p.metadata.Tags
-		if p.metadata.NoIndex != nil {
-			d.NoIndex = *p.metadata.NoIndex
+	if p.Metadata != nil {
+		d.Title = p.Metadata.Title
+		d.Description = p.Metadata.Description
+		d.Date = p.Metadata.Date
+		d.Author = p.Metadata.Author
+		d.Tags = p.Metadata.Tags
+		if p.Metadata.NoIndex != nil {
+			d.NoIndex = *p.Metadata.NoIndex
 		}
 	}
 	// Fall back to file modification time when no date is set in metadata.
@@ -73,8 +72,8 @@ func (p *Post) Data() PostData {
 	if !d.Date.IsZero() {
 		d.DateISO = d.Date.Format(time.RFC3339)
 	}
-	if p.contents != nil {
-		d.Content = *p.contents
+	if p.Contents != nil {
+		d.Content = *p.Contents
 	}
 	return d
 }
@@ -93,20 +92,20 @@ func (p *Post) PlainText() []byte {
 }
 
 func (p *Post) IsVisible() bool {
-	if p.metadata == nil || p.metadata.Visible == nil {
+	if p.Metadata == nil || p.Metadata.Visible == nil {
 		return true
 	}
-	return *p.metadata.Visible
+	return *p.Metadata.Visible
 }
 
 func (p *Post) IsRSSVisible() bool {
 	if !p.IsVisible() {
 		return false
 	}
-	if p.metadata == nil || p.metadata.RSSVisible == nil {
+	if p.Metadata == nil || p.Metadata.RSSVisible == nil {
 		return true
 	}
-	return *p.metadata.RSSVisible
+	return *p.Metadata.RSSVisible
 }
 
 // PostSummary is a lightweight view of a post for list pages.

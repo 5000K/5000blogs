@@ -83,7 +83,7 @@ func (r *MemoryPostIndexer) Get(path string) *Post {
 // get is the unlocked version of Get; callers must hold at least postsMu.RLock.
 func (r *MemoryPostIndexer) get(path string) *Post {
 	for _, p := range r.posts {
-		if p.path == path {
+		if p.Slug == path {
 			return p
 		}
 	}
@@ -99,7 +99,7 @@ func (r *MemoryPostIndexer) GetBySlug(slug string) *Post {
 // getBySlug is the unlocked version of GetBySlug.
 func (r *MemoryPostIndexer) getBySlug(slug string) *Post {
 	for _, p := range r.posts {
-		if p.slug == slug {
+		if p.Slug == slug {
 			return p
 		}
 	}
@@ -143,11 +143,11 @@ func (r *MemoryPostIndexer) ListFiltered(filter PostFilter) []*Post {
 	}
 	sort.Slice(out, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
-		if out[i].metadata != nil {
-			di = out[i].metadata.Date
+		if out[i].Metadata != nil {
+			di = out[i].Metadata.Date
 		}
-		if out[j].metadata != nil {
-			dj = out[j].metadata.Date
+		if out[j].Metadata != nil {
+			dj = out[j].Metadata.Date
 		}
 		return di.After(dj)
 	})
@@ -184,8 +184,8 @@ func (r *MemoryPostIndexer) ListFilteredPaged(filter PostFilter, pageSize int, p
 	for _, p := range pagePosts {
 		d := p.Data()
 		var metaTags []string
-		if p.metadata != nil {
-			metaTags = p.metadata.MetaTags
+		if p.Metadata != nil {
+			metaTags = p.Metadata.MetaTags
 		}
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,
@@ -263,11 +263,11 @@ func (r *MemoryPostIndexer) GetPage(page int, tags []string) PageResult {
 	}
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
-		if filtered[i].metadata != nil {
-			di = filtered[i].metadata.Date
+		if filtered[i].Metadata != nil {
+			di = filtered[i].Metadata.Date
 		}
-		if filtered[j].metadata != nil {
-			dj = filtered[j].metadata.Date
+		if filtered[j].Metadata != nil {
+			dj = filtered[j].Metadata.Date
 		}
 		return di.After(dj)
 	})
@@ -298,8 +298,8 @@ func (r *MemoryPostIndexer) GetPage(page int, tags []string) PageResult {
 	for _, p := range pagePosts {
 		d := p.Data()
 		var metaTags []string
-		if p.metadata != nil {
-			metaTags = p.metadata.MetaTags
+		if p.Metadata != nil {
+			metaTags = p.Metadata.MetaTags
 		}
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,
@@ -355,8 +355,8 @@ func (r *MemoryPostIndexer) Search(query string) []PostSummary {
 			strings.Contains(strings.ToLower(d.Description), q) ||
 			strings.Contains(plain, q) {
 			var metaTags []string
-			if p.metadata != nil {
-				metaTags = p.metadata.MetaTags
+			if p.Metadata != nil {
+				metaTags = p.Metadata.MetaTags
 			}
 			results = append(results, PostSummary{
 				Slug:        d.Slug,
@@ -410,16 +410,16 @@ func (r *MemoryPostIndexer) FeedPosts(tags []string, query string) []*Post {
 // Both Tags and MetaTags are checked so meta-tags can be used for filtering
 // without being shown to users in rendered output.
 func hasAnyTag(p *Post, tags []string) bool {
-	if p.metadata == nil {
+	if p.Metadata == nil {
 		return false
 	}
 	for _, want := range tags {
-		for _, have := range p.metadata.Tags {
+		for _, have := range p.Metadata.Tags {
 			if strings.EqualFold(have, want) {
 				return true
 			}
 		}
-		for _, have := range p.metadata.MetaTags {
+		for _, have := range p.Metadata.MetaTags {
 			if strings.EqualFold(have, want) {
 				return true
 			}
@@ -434,10 +434,10 @@ func (r *MemoryPostIndexer) AllTags() []string {
 	defer r.postsMu.RUnlock()
 	seen := make(map[string]struct{})
 	for _, p := range r.posts {
-		if !p.IsVisible() || p.metadata == nil {
+		if !p.IsVisible() || p.Metadata == nil {
 			continue
 		}
-		for _, t := range p.metadata.Tags {
+		for _, t := range p.Metadata.Tags {
 			seen[t] = struct{}{}
 		}
 	}
@@ -488,7 +488,7 @@ func (r *MemoryPostIndexer) rescan() {
 	r.postsMu.RLock()
 	snapshot := make(map[string]*Post, len(r.posts))
 	for _, p := range r.posts {
-		snapshot[p.path] = p
+		snapshot[p.Slug] = p
 	}
 	r.postsMu.RUnlock()
 
@@ -526,22 +526,22 @@ func (r *MemoryPostIndexer) rescan() {
 	titleIndex := make(map[string]string)
 	slugIndex := make(map[string]*Post)
 	for _, p := range snapshot {
-		slugIndex[p.slug] = p
-		if p.metadata != nil && p.metadata.Title != "" {
-			titleIndex[p.metadata.Title] = p.slug
+		slugIndex[p.Slug] = p
+		if p.Metadata != nil && p.Metadata.Title != "" {
+			titleIndex[p.Metadata.Title] = p.Slug
 		}
 	}
 	for _, pr := range toRender {
-		slugIndex[pr.post.slug] = pr.post
-		if pr.post.metadata != nil && pr.post.metadata.Title != "" {
-			titleIndex[pr.post.metadata.Title] = pr.post.slug
+		slugIndex[pr.post.Slug] = pr.post
+		if pr.post.Metadata != nil && pr.post.Metadata.Title != "" {
+			titleIndex[pr.post.Metadata.Title] = pr.post.Slug
 		}
 	}
 	for _, path := range removals {
 		if p, ok := snapshot[path]; ok {
-			delete(slugIndex, p.slug)
-			if p.metadata != nil {
-				delete(titleIndex, p.metadata.Title)
+			delete(slugIndex, p.Slug)
+			if p.Metadata != nil {
+				delete(titleIndex, p.Metadata.Title)
 			}
 		}
 	}
@@ -561,7 +561,7 @@ func (r *MemoryPostIndexer) rescan() {
 			source:      baseResolver.source,
 			converter:   baseResolver.converter,
 			getBySlug:   baseResolver.getBySlug,
-			inProgress:  []string{pr.post.slug},
+			inProgress:  []string{pr.post.Slug},
 			log:         baseResolver.log,
 		}
 		if err := r.converter.Convert(pr.post, pr.body, resolver); err != nil {
@@ -592,7 +592,7 @@ func (r *MemoryPostIndexer) rescan() {
 			r.remove(ch.path)
 		} else if _, exists := snapshot[ch.path]; exists {
 			for i, p := range r.posts {
-				if p.path == ch.path {
+				if p.Slug == ch.path {
 					r.posts[i] = ch.post
 					break
 				}
@@ -618,7 +618,7 @@ func (r *MemoryPostIndexer) extractMetadataForNew(path string) (*Post, []byte, b
 		r.log.Error("failed to read post", "path", path, "err", err)
 		return nil, nil, false
 	}
-	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
+	post := &Post{Slug: r.source.SlugForPath(path), modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
@@ -657,7 +657,7 @@ func (r *MemoryPostIndexer) extractMetadataIfChanged(path string, existing *Post
 			return nil, nil, false
 		}
 	}
-	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
+	post := &Post{Slug: r.source.SlugForPath(path), modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
@@ -668,7 +668,7 @@ func (r *MemoryPostIndexer) extractMetadataIfChanged(path string, existing *Post
 
 func (r *MemoryPostIndexer) remove(path string) {
 	for i, p := range r.posts {
-		if p.path == path {
+		if p.Slug == path {
 			r.posts = append(r.posts[:i], r.posts[i+1:]...)
 			return
 		}
@@ -733,17 +733,17 @@ func (r *repoAssetResolver) ResolveEmbedBySlug(slug string) []byte {
 	}
 
 	// If the post already has rendered HTML, return it directly.
-	if post.contents != nil {
-		return *post.contents
+	if post.Contents != nil {
+		return *post.Contents
 	}
 
 	// Post exists but has no rendered contents yet - render it now.
-	buf, err := r.source.ReadPost(post.path)
+	buf, err := r.source.ReadPost(post.Slug)
 	if err != nil {
 		r.log.Error("embed: failed to read post", "slug", slug, "err", err)
 		return nil
 	}
-	tmp := &Post{path: post.path, slug: post.slug}
+	tmp := &Post{Slug: post.Slug}
 	body, err := r.converter.ExtractMetadata(tmp, buf)
 	if err != nil {
 		r.log.Error("embed: failed to extract metadata", "slug", slug, "err", err)
@@ -761,5 +761,5 @@ func (r *repoAssetResolver) ResolveEmbedBySlug(slug string) []byte {
 		r.log.Error("embed: failed to convert post", "slug", slug, "err", err)
 		return nil
 	}
-	return *tmp.contents
+	return *tmp.Contents
 }

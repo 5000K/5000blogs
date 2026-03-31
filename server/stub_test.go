@@ -164,7 +164,7 @@ func newStubPost(slug, title string) *service.Post {
 
 // convertedPost creates a post with plain text populated via the converter.
 func convertedPost(slug string, raw []byte) (*service.Post, error) {
-	post := service.NewPostWithSlug(slug+".md", slug, nil, nil)
+	post := service.NewPostWithSlug(slug, nil, nil)
 	c := &service.GoldmarkConverter{}
 	body, err := c.ExtractMetadata(post, raw)
 	if err != nil {
