@@ -5,26 +5,24 @@ package service
 // The slug is derived from path using slugFromPath (basename without extension).
 func NewPost(path string, metadata *Metadata, content []byte) *Post {
 	p := &Post{
-		path:     path,
-		slug:     slugFromPath(path),
-		metadata: metadata,
+		Slug:     slugFromPath(path),
+		Metadata: metadata,
 	}
 	if content != nil {
-		p.contents = &content
+		p.Contents = &content
 	}
 	return p
 }
 
 // NewPostWithSlug is like NewPost but allows setting the slug explicitly.
 // Useful for tests that need nested slugs (e.g. "more/things/hello").
-func NewPostWithSlug(path string, slug string, metadata *Metadata, content []byte) *Post {
+func NewPostWithSlug(slug string, metadata *Metadata, content []byte) *Post {
 	p := &Post{
-		path:     path,
-		slug:     slug,
-		metadata: metadata,
+		Slug:     slug,
+		Metadata: metadata,
 	}
 	if content != nil {
-		p.contents = &content
+		p.Contents = &content
 	}
 	return p
 }

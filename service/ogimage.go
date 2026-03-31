@@ -212,12 +212,12 @@ func (g *BuiltinOGImageGenerator) generate(post *Post) ([]byte, error) {
 
 	title := ""
 	description := ""
-	if post.metadata != nil {
-		title = post.metadata.Title
-		description = post.metadata.Description
+	if post.Metadata != nil {
+		title = post.Metadata.Title
+		description = post.Metadata.Description
 	}
 	if title == "" {
-		title = slugFromPath(post.path)
+		title = slugFromPath(post.Slug)
 	}
 
 	// Top-left: icon + blog name

@@ -59,6 +59,21 @@ func NewConfigLoader() (*ConfigLoader, error) {
 	}, nil
 }
 
+func NewVirtualConfigLoader(base map[string]interface{}) (*ConfigLoader, error) {
+	loader := &ConfigLoader{
+		base: base,
+	}
+
+	var core Config
+
+	err := loader.Load("", &core)
+	if err != nil {
+		return nil, err
+	}
+
+	return loader, nil
+}
+
 // NewConfigLoaderFromConfig creates a ConfigLoader backed by a pre-built Config.
 // Useful in tests and embeddings that already have a Config value.
 func NewConfigLoaderFromConfig(cfg Config) *ConfigLoader {

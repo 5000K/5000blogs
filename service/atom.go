@@ -1,11 +1,12 @@
 package service
 
 import (
-	"github.com/5000K/5000blogs/config"
 	"encoding/xml"
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/5000K/5000blogs/config"
 )
 
 type atomLink struct {
@@ -50,11 +51,11 @@ func BuildAtomFeed(conf *config.Config, posts []*Post) ([]byte, error) {
 
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := time.Time{}, time.Time{}
-		if filtered[i].metadata != nil {
-			di = filtered[i].metadata.Date
+		if filtered[i].Metadata != nil {
+			di = filtered[i].Metadata.Date
 		}
-		if filtered[j].metadata != nil {
-			dj = filtered[j].metadata.Date
+		if filtered[j].Metadata != nil {
+			dj = filtered[j].Metadata.Date
 		}
 		return di.After(dj)
 	})

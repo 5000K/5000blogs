@@ -47,9 +47,9 @@ func toPostDoc(p *Post) postDoc {
 		tags[i] = strings.ToLower(t)
 	}
 	var metaTags []string
-	if p.metadata != nil {
-		metaTags = make([]string, len(p.metadata.MetaTags))
-		for i, t := range p.metadata.MetaTags {
+	if p.Metadata != nil {
+		metaTags = make([]string, len(p.Metadata.MetaTags))
+		for i, t := range p.Metadata.MetaTags {
 			metaTags[i] = strings.ToLower(t)
 		}
 	}
@@ -58,7 +58,7 @@ func toPostDoc(p *Post) postDoc {
 		content = string(plain)
 	}
 	return postDoc{
-		Path:        p.path,
+		Path:        p.Slug,
 		Slug:        d.Slug,
 		Title:       d.Title,
 		Description: d.Description,
@@ -317,8 +317,8 @@ func (r *BlevePostIndexer) ListFilteredPaged(filter PostFilter, pageSize int, pa
 		}
 		d := p.Data()
 		var metaTags []string
-		if p.metadata != nil {
-			metaTags = p.metadata.MetaTags
+		if p.Metadata != nil {
+			metaTags = p.Metadata.MetaTags
 		}
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,
@@ -400,8 +400,8 @@ func (r *BlevePostIndexer) GetPage(page int, tags []string) PageResult {
 		}
 		d := p.Data()
 		var metaTags []string
-		if p.metadata != nil {
-			metaTags = p.metadata.MetaTags
+		if p.Metadata != nil {
+			metaTags = p.Metadata.MetaTags
 		}
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,
@@ -497,8 +497,8 @@ func (r *BlevePostIndexer) Search(query string) []PostSummary {
 		}
 		d := p.Data()
 		var metaTags []string
-		if p.metadata != nil {
-			metaTags = p.metadata.MetaTags
+		if p.Metadata != nil {
+			metaTags = p.Metadata.MetaTags
 		}
 		summaries = append(summaries, PostSummary{
 			Slug:        d.Slug,
@@ -519,10 +519,10 @@ func (r *BlevePostIndexer) AllTags() []string {
 	defer r.postsMu.RUnlock()
 	seen := make(map[string]struct{})
 	for _, p := range r.posts {
-		if !p.IsVisible() || p.metadata == nil {
+		if !p.IsVisible() || p.Metadata == nil {
 			continue
 		}
-		for _, t := range p.metadata.Tags {
+		for _, t := range p.Metadata.Tags {
 			seen[t] = struct{}{}
 		}
 	}
@@ -653,22 +653,22 @@ func (r *BlevePostIndexer) rescan() {
 	titleIndex := make(map[string]string)
 	slugIndex := make(map[string]*Post)
 	for _, p := range snapshot {
-		slugIndex[p.slug] = p
-		if p.metadata != nil && p.metadata.Title != "" {
-			titleIndex[p.metadata.Title] = p.slug
+		slugIndex[p.Slug] = p
+		if p.Metadata != nil && p.Metadata.Title != "" {
+			titleIndex[p.Metadata.Title] = p.Slug
 		}
 	}
 	for _, pr := range toRender {
-		slugIndex[pr.post.slug] = pr.post
-		if pr.post.metadata != nil && pr.post.metadata.Title != "" {
-			titleIndex[pr.post.metadata.Title] = pr.post.slug
+		slugIndex[pr.post.Slug] = pr.post
+		if pr.post.Metadata != nil && pr.post.Metadata.Title != "" {
+			titleIndex[pr.post.Metadata.Title] = pr.post.Slug
 		}
 	}
 	for _, path := range removals {
 		if p, ok := snapshot[path]; ok {
-			delete(slugIndex, p.slug)
-			if p.metadata != nil {
-				delete(titleIndex, p.metadata.Title)
+			delete(slugIndex, p.Slug)
+			if p.Metadata != nil {
+				delete(titleIndex, p.Metadata.Title)
 			}
 		}
 	}
@@ -688,7 +688,7 @@ func (r *BlevePostIndexer) rescan() {
 			source:      baseResolver.source,
 			converter:   baseResolver.converter,
 			getBySlug:   baseResolver.getBySlug,
-			inProgress:  []string{pr.post.slug},
+			inProgress:  []string{pr.post.Slug},
 			log:         baseResolver.log,
 		}
 		if err := r.converter.Convert(pr.post, pr.body, resolver); err != nil {
@@ -743,7 +743,7 @@ func (r *BlevePostIndexer) extractMetadataForNew(path string) (*Post, []byte, bo
 		r.log.Error("failed to read post", "path", path, "err", err)
 		return nil, nil, false
 	}
-	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
+	post := &Post{Slug: r.source.SlugForPath(path), modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
@@ -782,7 +782,7 @@ func (r *BlevePostIndexer) extractMetadataIfChanged(path string, existing *Post)
 			return nil, nil, false
 		}
 	}
-	post := &Post{path: path, slug: r.source.SlugForPath(path), modTime: modTime}
+	post := &Post{Slug: r.source.SlugForPath(path), modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
