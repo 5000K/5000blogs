@@ -72,6 +72,9 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolver AssetResol
 				}, 100),
 			),
 		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(),
+		),
 		// PostEmbedNode is produced by the link rewriter for .md image destinations;
 		// register its renderer unconditionally so it works without WikiLinks enabled.
 		goldmark.WithRendererOptions(renderer.WithNodeRenderers(
