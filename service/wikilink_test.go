@@ -163,6 +163,44 @@ func TestWikiLink_CoexistsWithRegularLinks(t *testing.T) {
 	}
 }
 
+// --- in-page anchor (#Header) ---
+
+func TestWikiLink_HashHeader_RendersInPageAnchor(t *testing.T) {
+	post := &Post{Slug: "about"}
+	wikiConvert(t, post, []byte("See [[#Title of the Header]] here.\n"), nil)
+
+	html := string(*post.Contents)
+	if !strings.Contains(html, `href="#title-of-the-header"`) {
+		t.Errorf("want href=#title-of-the-header, got:\n%s", html)
+	}
+	if !strings.Contains(html, `>Title of the Header<`) {
+		t.Errorf("want display text without #, got:\n%s", html)
+	}
+}
+
+func TestWikiLink_HashHeader_SpecialCharsStripped(t *testing.T) {
+	post := &Post{}
+	wikiConvert(t, post, []byte("[[#Hello, World!]]\n"), nil)
+
+	html := string(*post.Contents)
+	if !strings.Contains(html, `href="#hello-world"`) {
+		t.Errorf("want special chars stripped, got:\n%s", html)
+	}
+}
+
+func TestWikiLink_HashHeader_SkipsResolver(t *testing.T) {
+	called := false
+	post := &Post{}
+	wikiConvert(t, post, []byte("[[#Some Section]]\n"), func(title string) string {
+		called = true
+		return ""
+	})
+
+	if called {
+		t.Error("resolver should not be called for in-page anchor links")
+	}
+}
+
 // --- custom postsBase ---
 
 func TestWikiLink_CustomPostsBase_UsedInHref(t *testing.T) {
