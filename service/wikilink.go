@@ -108,12 +108,33 @@ func (p *wikilinkInlineParser) Parse(parent ast.Node, block text.Reader, pc pars
 }
 
 func (p *wikilinkInlineParser) resolveHref(title string) string {
+	// [[#Some Header]] → in-page anchor
+	if strings.HasPrefix(title, "#") {
+		return "#" + headingID(title[1:])
+	}
 	if p.resolver != nil {
 		if slug := p.resolver.ResolveSlugByTitle(title); slug != "" {
 			return p.postsBase + slug
 		}
 	}
 	return "/" + url.PathEscape(title)
+}
+
+// headingID converts a heading title to an HTML element ID using the same
+// convention as goldmark's AutoHeadingID: lowercase, spaces to hyphens,
+// keep only ASCII letters, digits, and hyphens.
+func headingID(s string) string {
+	s = strings.ToLower(s)
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '-':
+			b.WriteRune(r)
+		case r == ' ':
+			b.WriteByte('-')
+		}
+	}
+	return b.String()
 }
 
 func (p *wikilinkInlineParser) resolveImageSrc(filename string) string {
@@ -147,10 +168,15 @@ func (r *wikilinkNodeRenderer) renderLink(w util.BufWriter, _ []byte, n ast.Node
 		return ast.WalkContinue, nil
 	}
 	node := n.(*WikiLinkNode)
+	// Strip leading '#' from display text for in-page anchor links.
+	display := node.Title
+	if strings.HasPrefix(display, "#") {
+		display = display[1:]
+	}
 	_, _ = w.WriteString(`<a href="`)
 	_, _ = w.WriteString(stdhtml.EscapeString(node.Href))
 	_, _ = w.WriteString(`">`)
-	_, _ = w.WriteString(stdhtml.EscapeString(node.Title))
+	_, _ = w.WriteString(stdhtml.EscapeString(display))
 	_, _ = w.WriteString(`</a>`)
 	return ast.WalkContinue, nil
 }
