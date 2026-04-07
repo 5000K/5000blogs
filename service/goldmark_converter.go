@@ -13,6 +13,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
+	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
@@ -71,6 +72,9 @@ func (c *GoldmarkConverter) Convert(post *Post, body []byte, resolver AssetResol
 					resolver:  resolver,
 				}, 100),
 			),
+		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(),
 		),
 		// PostEmbedNode is produced by the link rewriter for .md image destinations;
 		// register its renderer unconditionally so it works without WikiLinks enabled.
