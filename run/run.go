@@ -1,6 +1,8 @@
 package run
 
 import (
+	"html/template"
+	
 	"github.com/5000K/5000blogs/config"
 	"github.com/5000K/5000blogs/core"
 	"github.com/5000K/5000blogs/modules"
@@ -61,6 +63,14 @@ func Run(ctx modules.RuntimeContext) error {
 	if err != nil {
 		return err
 	}
+
+	renderer.SetFooter(func() template.HTML {
+		post := indexer.GetBySlug("footer")
+		if post == nil {
+			return ""
+		}
+		return template.HTML(post.Data().Content) //nolint:gosec
+	})
 
 	modules, err := getModules(ctx.Loader, indexer, renderer, generator, favicon)
 
