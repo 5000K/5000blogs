@@ -900,3 +900,38 @@ func TestRepoAssetResolver_ResolveEmbedBySlug_RecursionReturnsComment(t *testing
 		t.Errorf("want HTML comment syntax, got: %s", html)
 	}
 }
+
+// TestRepoAssetResolver_ResolveEmbedBySlug_OnDemandRender verifies that a post
+// registered in the slug index but not yet rendered (Contents == nil) is
+// rendered on-demand. This is the scenario where footer.md embeds signup.md
+// but signup.md comes later alphabetically and hasn't been converted yet.
+func TestRepoAssetResolver_ResolveEmbedBySlug_OnDemandRender(t *testing.T) {
+	src := newStubSource(map[string][]byte{
+		"posts/signup.md": []byte("---\ntitle: Signup\n---\n\nSubscribe here.\n"),
+	})
+
+	// Simulate a post that is in the slug index but not yet rendered (Contents == nil).
+	unrendered := &Post{Slug: "signup", sourcePath: "posts/signup.md"}
+
+	resolver := &repoAssetResolver{
+		slugByTitle: func(string) string { return "" },
+		source:      src,
+		converter:   &GoldmarkConverter{},
+		getBySlug: func(slug string) *Post {
+			if slug == "signup" {
+				return unrendered
+			}
+			return nil
+		},
+		inProgress: []string{"footer"},
+		log:        slog.Default(),
+	}
+
+	html := resolver.ResolveEmbedBySlug("signup")
+	if html == nil {
+		t.Fatal("want rendered HTML for unrendered post, got nil")
+	}
+	if !strings.Contains(string(html), "Subscribe here") {
+		t.Errorf("want post content in HTML, got: %s", html)
+	}
+}

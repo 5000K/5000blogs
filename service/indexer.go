@@ -618,7 +618,7 @@ func (r *MemoryPostIndexer) extractMetadataForNew(path string) (*Post, []byte, b
 		r.log.Error("failed to read post", "path", path, "err", err)
 		return nil, nil, false
 	}
-	post := &Post{Slug: r.source.SlugForPath(path), modTime: modTime}
+	post := &Post{Slug: r.source.SlugForPath(path), sourcePath: path, modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
@@ -657,7 +657,7 @@ func (r *MemoryPostIndexer) extractMetadataIfChanged(path string, existing *Post
 			return nil, nil, false
 		}
 	}
-	post := &Post{Slug: r.source.SlugForPath(path), modTime: modTime}
+	post := &Post{Slug: r.source.SlugForPath(path), sourcePath: path, modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
@@ -738,7 +738,12 @@ func (r *repoAssetResolver) ResolveEmbedBySlug(slug string) []byte {
 	}
 
 	// Post exists but has no rendered contents yet - render it now.
-	buf, err := r.source.ReadPost(post.Slug)
+	// Use sourcePath (the original file-system path) because ReadPost requires it.
+	readPath := post.sourcePath
+	if readPath == "" {
+		readPath = post.Slug
+	}
+	buf, err := r.source.ReadPost(readPath)
 	if err != nil {
 		r.log.Error("embed: failed to read post", "slug", slug, "err", err)
 		return nil
