@@ -1,6 +1,8 @@
 package run
 
 import (
+	"html/template"
+	
 	"github.com/5000K/5000blogs/config"
 	"github.com/5000K/5000blogs/core"
 	"github.com/5000K/5000blogs/modules"
