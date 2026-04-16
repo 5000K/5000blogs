@@ -62,6 +62,14 @@ func Run(ctx modules.RuntimeContext) error {
 		return err
 	}
 
+	renderer.SetFooter(func() template.HTML {
+		post := indexer.GetBySlug("footer")
+		if post == nil {
+			return ""
+		}
+		return template.HTML(post.Data().Content) //nolint:gosec
+	})
+
 	modules, err := getModules(ctx.Loader, indexer, renderer, generator, favicon)
 
 	if err != nil {
