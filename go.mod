@@ -6,7 +6,7 @@ require (
 	github.com/blevesearch/bleve v1.0.14
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-git/go-billy/v5 v5.8.0
-	github.com/go-git/go-git/v5 v5.17.1
+	github.com/go-git/go-git/v5 v5.18.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/yuin/goldmark v1.7.16
