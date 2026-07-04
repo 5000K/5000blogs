@@ -10,7 +10,7 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/yuin/goldmark v1.7.16
-	golang.org/x/image v0.38.0
+	golang.org/x/image v0.41.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -55,7 +55,7 @@ require (
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect
