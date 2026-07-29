@@ -10,7 +10,7 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/yuin/goldmark v1.7.16
-	golang.org/x/image v0.38.0
+	golang.org/x/image v0.41.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
