@@ -37,6 +37,7 @@ type templateData struct {
 	Tags    []string
 	Content template.HTML
 	NoIndex bool
+	Dates   map[string]service.DateStrings
 
 	// Injected by SetFooter
 	FooterContent template.HTML
@@ -163,6 +164,15 @@ func (r *DefaultRenderer) ogLogoURL() string {
 	return r.cfg.SiteURL + "/og-logo.png"
 }
 
+// dateFormat returns the configured date format, falling back to the Go default
+// when unset.
+func (r *DefaultRenderer) dateFormat() string {
+	if r.cfg.DateFormat == "" {
+		return "January 2, 2006"
+	}
+	return r.cfg.DateFormat
+}
+
 // Serve404 renders a 404 page with HTTP 404 status. If post is provided and
 // has content it is rendered; otherwise a placeholder title is used.
 func (r *DefaultRenderer) Serve404(post *service.Post, w http.ResponseWriter) {
@@ -214,6 +224,7 @@ func (r *DefaultRenderer) ServePost(post *service.Post, w http.ResponseWriter, p
 		Content:       template.HTML(data.Content), //nolint:gosec // content is markdown-rendered HTML
 		DateISO:       data.DateISO,
 		NoIndex:       data.NoIndex,
+		Dates:         data.Dates,
 		Plugins:       r.cfg.Plugins,
 		BlogName:      r.cfg.BlogName,
 		NavLinks:      r.navLinks(),
@@ -221,7 +232,7 @@ func (r *DefaultRenderer) ServePost(post *service.Post, w http.ResponseWriter, p
 		Slug:          data.Slug,
 	}
 	if !data.Date.IsZero() {
-		td.DateStr = data.Date.Format("January 2, 2006")
+		td.DateStr = data.Date.Format(r.dateFormat())
 	}
 
 	r.execute(w, td)
@@ -240,7 +251,7 @@ func (r *DefaultRenderer) ServeSearchResults(query string, tags []string, result
 			Tags:        p.Tags,
 		}
 		if !p.Date.IsZero() {
-			item.DateStr = p.Date.Format("January 2, 2006")
+			item.DateStr = p.Date.Format(r.dateFormat())
 		}
 		if item.Title == "" {
 			item.Title = p.Slug
@@ -276,7 +287,7 @@ func (r *DefaultRenderer) ServePostList(pr service.PageResult, w http.ResponseWr
 			Tags:        p.Tags,
 		}
 		if !p.Date.IsZero() {
-			item.DateStr = p.Date.Format("January 2, 2006")
+			item.DateStr = p.Date.Format(r.dateFormat())
 		}
 		if item.Title == "" {
 			item.Title = p.Slug

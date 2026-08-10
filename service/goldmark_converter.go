@@ -5,6 +5,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/5000K/5000blogs/config"
 
@@ -27,6 +28,15 @@ type GoldmarkConverter struct {
 
 func NewGoldmarkConverter(postsBase string, features config.Features) *GoldmarkConverter {
 	return &GoldmarkConverter{PostsBase: postsBase, Features: features}
+}
+
+// FormatDate formats t using the given layout. An empty layout falls back to
+// time.RFC3339 (the RFC 3339 date-time format).
+func (c *GoldmarkConverter) FormatDate(t time.Time, layout string) string {
+	if layout == "" {
+		layout = time.RFC3339
+	}
+	return t.Format(layout)
 }
 
 func (c *GoldmarkConverter) Initialize() error {

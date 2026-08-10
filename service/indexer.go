@@ -620,6 +620,7 @@ func (r *MemoryPostIndexer) extractMetadataForNew(path string) (*Post, []byte, b
 	}
 	post := &Post{Slug: r.source.SlugForPath(path), sourcePath: path, modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
+	post.SetDateFormat(r.conf.DateFormat)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
 		return nil, nil, false
@@ -659,6 +660,7 @@ func (r *MemoryPostIndexer) extractMetadataIfChanged(path string, existing *Post
 	}
 	post := &Post{Slug: r.source.SlugForPath(path), sourcePath: path, modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
+	post.SetDateFormat(r.conf.DateFormat)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
 		return nil, nil, false

@@ -3,6 +3,7 @@ package service
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/5000K/5000blogs/config"
 )
@@ -14,6 +15,24 @@ func fullConvert(c *GoldmarkConverter, post *Post, raw []byte) error {
 		return err
 	}
 	return c.Convert(post, body, nil)
+}
+
+func TestGoldmarkConverter_FormatDate_DefaultRFC3339(t *testing.T) {
+	c := &GoldmarkConverter{}
+	d := time.Date(2025, 6, 1, 12, 30, 0, 0, time.UTC)
+	got := c.FormatDate(d, "")
+	if got != "2025-06-01T12:30:00Z" {
+		t.Errorf("FormatDate default: got %q, want %q", got, "2025-06-01T12:30:00Z")
+	}
+}
+
+func TestGoldmarkConverter_FormatDate_CustomLayout(t *testing.T) {
+	c := &GoldmarkConverter{}
+	d := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	got := c.FormatDate(d, "2006-01-02")
+	if got != "2025-06-01" {
+		t.Errorf("FormatDate custom: got %q, want %q", got, "2025-06-01")
+	}
 }
 
 // --- ExtractMetadata ---

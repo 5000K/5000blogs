@@ -28,6 +28,7 @@ type Config struct {
 	SkipUnchangedModTime bool   `env:"SKIP_UNCHANGED_MOD_TIME" env-default:"true" yaml:"skip_unchanged_mod_time"`
 	LogLevel             string `env:"LOG_LEVEL" env-default:"info" yaml:"log_level"`
 	PageSize             int    `env:"PAGE_SIZE" env-default:"10" yaml:"page_size"`
+	DateFormat           string `env:"DATE_FORMAT" env-default:"January 2, 2006" yaml:"date_format"`
 
 	SiteURL         string `env:"SITE_URL" env-default:"http://localhost:8080" yaml:"site_url"`
 	FeedDescription string `env:"FEED_DESCRIPTION" env-default:"" yaml:"feed_description"`

@@ -179,3 +179,73 @@ func TestPostData_NilMetadata(t *testing.T) {
 		t.Error("want Visible=true when metadata is nil")
 	}
 }
+
+func TestPostData_ExtraDateFields(t *testing.T) {
+	pubDate := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	updatedDate := time.Date(2025, 7, 15, 12, 30, 0, 0, time.UTC)
+	p := NewPost("posts/my-slug.md", &Metadata{
+		Date: pubDate,
+		Raw: map[string]interface{}{
+			"date":        pubDate,
+			"publishdate": pubDate,
+			"updateddate": updatedDate,
+			"notadate":    "hello",
+			"publishDate": pubDate, // mixed-case key preserved
+		},
+	}, nil)
+	p.SetDateFormat("2006-01-02")
+
+	d := p.Data()
+
+	if d.Dates == nil {
+		t.Fatal("want Dates map populated")
+	}
+	// primary "date" key is excluded from Dates
+	if _, ok := d.Dates["date"]; ok {
+		t.Error("primary \"date\" should not appear in Dates")
+	}
+	pub, ok := d.Dates["publishdate"]
+	if !ok {
+		t.Fatal("want publishdate entry")
+	}
+	if pub.Str != "2025-06-01" {
+		t.Errorf("publishdate Str: got %q, want %q", pub.Str, "2025-06-01")
+	}
+	if pub.ISO != "2025-06-01T00:00:00Z" {
+		t.Errorf("publishdate ISO: got %q, want %q", pub.ISO, "2025-06-01T00:00:00Z")
+	}
+	upd, ok := d.Dates["updateddate"]
+	if !ok {
+		t.Fatal("want updateddate entry")
+	}
+	if upd.ISO != "2025-07-15T12:30:00Z" {
+		t.Errorf("updateddate ISO: got %q, want %q", upd.ISO, "2025-07-15T12:30:00Z")
+	}
+	// mixed-case key preserved
+	if _, ok := d.Dates["publishDate"]; !ok {
+		t.Error("want publishDate (original casing) preserved as key")
+	}
+	// non-date field excluded
+	if _, ok := d.Dates["notadate"]; ok {
+		t.Error("notadate should not appear in Dates")
+	}
+}
+
+func TestPostData_ExtraDateFields_DefaultFormat(t *testing.T) {
+	pubDate := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	p := NewPost("posts/my-slug.md", &Metadata{
+		Date: pubDate,
+		Raw: map[string]interface{}{
+			"publishdate": pubDate,
+		},
+	}, nil)
+	// no SetDateFormat call → default "January 2, 2006"
+	d := p.Data()
+	pub, ok := d.Dates["publishdate"]
+	if !ok {
+		t.Fatal("want publishdate entry")
+	}
+	if pub.Str != "June 1, 2025" {
+		t.Errorf("default format Str: got %q, want %q", pub.Str, "June 1, 2025")
+	}
+}
