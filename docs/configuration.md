@@ -9,23 +9,24 @@ Configuration is loaded from a YAML file (path set by `CONFIG_PATH` env var, def
 
 ## General
 
-| YAML key | Env var | Default | Description |
-|---|---|---|---|
-| `address` | `SERVER_ADDRESS` | `:8080` | HTTP listen address |
-| `blog_name` | `BLOG_NAME` | `Blog` | Displayed in header, feeds, og:image |
-| `site_url` | `SITE_URL` | `http://localhost:8080` | Absolute base URL. Must include scheme. Used in feeds, sitemap, og:image |
-| `log_level` | `LOG_LEVEL` | `info` | Log verbosity: `debug`, `info`, `warn`, `error` |
-| `rescan_cron` | `RESCAN_CRON` | `* * * * *` | Cron expression for post rescan interval |
-| `skip_unchanged_mod_time` | `SKIP_UNCHANGED_MOD_TIME` | `true` | Skip re-reading files whose modification time hasn't changed |
-| `page_size` | `PAGE_SIZE` | `10` | Posts per page on list view. Must be > 0 |
+| YAML key                  | Env var                   | Default                 | Description                                                                                                  |
+| ------------------------- | ------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `address`                 | `SERVER_ADDRESS`          | `:8080`                 | HTTP listen address                                                                                          |
+| `blog_name`               | `BLOG_NAME`               | `Blog`                  | Displayed in header, feeds, og:image                                                                         |
+| `site_url`                | `SITE_URL`                | `http://localhost:8080` | Absolute base URL. Must include scheme. Used in feeds, sitemap, og:image                                     |
+| `log_level`               | `LOG_LEVEL`               | `info`                  | Log verbosity: `debug`, `info`, `warn`, `error`                                                              |
+| `rescan_cron`             | `RESCAN_CRON`             | `* * * * *`             | Cron expression for post rescan interval                                                                     |
+| `skip_unchanged_mod_time` | `SKIP_UNCHANGED_MOD_TIME` | `true`                  | Skip re-reading files whose modification time hasn't changed                                                 |
+| `page_size`               | `PAGE_SIZE`               | `10`                    | Posts per page on list view. Must be > 0                                                                     |
+| `date_format`             | `DATE_FORMAT`             | `January 2, 2006`       | Go time layout used to render human-readable date strings. Applied to `.DateStr` and extra date `Str` fields |
 
 ## Paths
 
-| YAML key | Env var | Default | Description |
-|---|---|---|---|
-| `paths.template` | `TEMPLATE_PATH` | GitHub raw URL | Path or URL to the HTML template file |
-| `paths.icon` | `ICON_PATH` | GitHub raw URL | Path or URL to the site icon (PNG). Served at `/favicon.ico` and `/og-logo.png` |
-| `paths.theme` | `THEME_PATH` | `""` | Path or URL to a CSS theme file. Injected before template styles. Empty = no theme |
+| YAML key         | Env var         | Default        | Description                                                                        |
+| ---------------- | --------------- | -------------- | ---------------------------------------------------------------------------------- |
+| `paths.template` | `TEMPLATE_PATH` | GitHub raw URL | Path or URL to the HTML template file                                              |
+| `paths.icon`     | `ICON_PATH`     | GitHub raw URL | Path or URL to the site icon (PNG). Served at `/favicon.ico` and `/og-logo.png`    |
+| `paths.theme`    | `THEME_PATH`    | `""`           | Path or URL to a CSS theme file. Injected before template styles. Empty = no theme |
 
 All three accept local file paths and HTTP(S) URLs. By default template and icon are fetched from the official repository; theme is opt-in.
 
@@ -45,11 +46,11 @@ See [Sources](sources).
 
 ## XML Feeds
 
-| YAML key | Env var | Default | Description |
-|---|---|---|---|
-| `feed_description` | `FEED_DESCRIPTION` | `""` | Description text in RSS/Atom channel |
-| `feed_size` | `FEED_SIZE` | `20` | Max items in feed. Must be > 0 |
-| `rss_content` | `RSS_CONTENT` | `none` | Content in feed entries: `none`, `text`, or `html` |
+| YAML key           | Env var            | Default | Description                                        |
+| ------------------ | ------------------ | ------- | -------------------------------------------------- |
+| `feed_description` | `FEED_DESCRIPTION` | `""`    | Description text in RSS/Atom channel               |
+| `feed_size`        | `FEED_SIZE`        | `20`    | Max items in feed. Must be > 0                     |
+| `rss_content`      | `RSS_CONTENT`      | `none`  | Content in feed entries: `none`, `text`, or `html` |
 
 See [Feeds](feeds) for details.
 
@@ -70,11 +71,11 @@ feeds:
 
 Each entry creates a route at `/<name>` serving posts that match the configured filter.
 
-| Key | Required | Default | Description |
-|---|---|---|---|
-| `name` | yes | - | URL path segment. Feed is served at `/<name>` |
-| `tags` | no | `[]` | Tag filter - posts must have at least one matching tag |
-| `query` | no | `""` | Search query filter |
+| Key     | Required | Default | Description                                            |
+| ------- | -------- | ------- | ------------------------------------------------------ |
+| `name`  | yes      | -       | URL path segment. Feed is served at `/<name>`          |
+| `tags`  | no       | `[]`    | Tag filter - posts must have at least one matching tag |
+| `query` | no       | `""`    | Search query filter                                    |
 
 The `tags` and `query` filters can also be extended per-request via query parameters (`?tags=go,docker&q=setup`). Request parameters are merged with (appended to) the configured values.
 
@@ -101,20 +102,19 @@ plugins:
 
 List of JavaScript URLs injected into every page via `<script>` tags. See [Plugins](plugins).
 
-
 ## Features
 
 Toggle markdown extensions:
 
-| YAML key | Env var | Default | Description |
-|---|---|---|---|
-| `features.wiki_links` | `FEATURE_WIKI_LINKS` | `true` | `[[Title]]` links resolved to post slugs |
-| `features.tables` | `FEATURE_TABLES` | `true` | GFM pipe tables |
-| `features.strikethrough` | `FEATURE_STRIKETHROUGH` | `true` | `~~text~~` strikethrough |
-| `features.autolinks` | `FEATURE_AUTOLINKS` | `false` | Auto-detect bare URLs |
-| `features.task_list` | `FEATURE_TASK_LIST` | `false` | `- [x]` / `- [ ]` checkboxes |
-| `features.footnotes` | `FEATURE_FOOTNOTES` | `false` | `[^1]` footnote references |
-| `features.comments` | `FEATURE_COMMENTS` | `false` | Obsidian-style `%%comment%%` blocks stripped from output |
+| YAML key                 | Env var                 | Default | Description                                              |
+| ------------------------ | ----------------------- | ------- | -------------------------------------------------------- |
+| `features.wiki_links`    | `FEATURE_WIKI_LINKS`    | `true`  | `[[Title]]` links resolved to post slugs                 |
+| `features.tables`        | `FEATURE_TABLES`        | `true`  | GFM pipe tables                                          |
+| `features.strikethrough` | `FEATURE_STRIKETHROUGH` | `true`  | `~~text~~` strikethrough                                 |
+| `features.autolinks`     | `FEATURE_AUTOLINKS`     | `false` | Auto-detect bare URLs                                    |
+| `features.task_list`     | `FEATURE_TASK_LIST`     | `false` | `- [x]` / `- [ ]` checkboxes                             |
+| `features.footnotes`     | `FEATURE_FOOTNOTES`     | `false` | `[^1]` footnote references                               |
+| `features.comments`      | `FEATURE_COMMENTS`      | `false` | Obsidian-style `%%comment%%` blocks stripped from output |
 
 See [Markdown](markdown) for syntax details.
 
@@ -122,16 +122,16 @@ See [Markdown](markdown) for syntax details.
 
 Each HTTP module can be individually disabled under the `server` key:
 
-| YAML key | Env var | Default | Description |
-|---|---|---|---|
-| `server.has_health` | `HAS_HEALTH` | `true` | `GET /health` health-check endpoint |
-| `server.has_api` | `HAS_API` | `true` | `GET /api/posts` JSON API |
-| `server.has_home` | `HAS_HOME` | `true` | Paginated post list at `/` |
-| `server.has_xml_feed` | `HAS_XML_FEED` | `true` | RSS and Atom feed endpoints |
-| `server.has_icon` | `HAS_ICON` | `true` | `/favicon.ico` and `/og-logo.png` icon endpoints |
-| `server.has_plain` | `HAS_PLAIN` | `true` | Plain-text post endpoints |
-| `server.has_post_feed` | `HAS_POST_FEED` | `true` | Per-tag feed endpoints |
-| `server.has_dynamic` | `HAS_DYNAMIC` | `true` | Dynamic post and media serving (`/*`) |
+| YAML key               | Env var         | Default | Description                                      |
+| ---------------------- | --------------- | ------- | ------------------------------------------------ |
+| `server.has_health`    | `HAS_HEALTH`    | `true`  | `GET /health` health-check endpoint              |
+| `server.has_api`       | `HAS_API`       | `true`  | `GET /api/posts` JSON API                        |
+| `server.has_home`      | `HAS_HOME`      | `true`  | Paginated post list at `/`                       |
+| `server.has_xml_feed`  | `HAS_XML_FEED`  | `true`  | RSS and Atom feed endpoints                      |
+| `server.has_icon`      | `HAS_ICON`      | `true`  | `/favicon.ico` and `/og-logo.png` icon endpoints |
+| `server.has_plain`     | `HAS_PLAIN`     | `true`  | Plain-text post endpoints                        |
+| `server.has_post_feed` | `HAS_POST_FEED` | `true`  | Per-tag feed endpoints                           |
+| `server.has_dynamic`   | `HAS_DYNAMIC`   | `true`  | Dynamic post and media serving (`/*`)            |
 
 ```yaml
 server:
@@ -141,14 +141,14 @@ server:
 
 ## OG Image
 
-| YAML key | Env var | Default | Description |
-|---|---|---|---|
-| `og_image.enabled` | `OG_IMAGE_ENABLED` | `true` | Generate `og:image` PNGs |
-| `og_image.bg_color` | `OG_IMAGE_BG_COLOR` | `#111111` | Background color (hex) |
-| `og_image.text_color` | `OG_IMAGE_TEXT_COLOR` | `#f0f0f0` | Title text color |
-| `og_image.sub_color` | `OG_IMAGE_SUB_COLOR` | `#999999` | Description text color |
-| `og_image.accent_color` | `OG_IMAGE_ACCENT_COLOR` | `#7eb8f7` | Accent line color |
-| `og_image.cache_size` | `OG_IMAGE_CACHE_SIZE` | `128` | LRU cache capacity. Must be > 0 |
+| YAML key                | Env var                 | Default   | Description                     |
+| ----------------------- | ----------------------- | --------- | ------------------------------- |
+| `og_image.enabled`      | `OG_IMAGE_ENABLED`      | `true`    | Generate `og:image` PNGs        |
+| `og_image.bg_color`     | `OG_IMAGE_BG_COLOR`     | `#111111` | Background color (hex)          |
+| `og_image.text_color`   | `OG_IMAGE_TEXT_COLOR`   | `#f0f0f0` | Title text color                |
+| `og_image.sub_color`    | `OG_IMAGE_SUB_COLOR`    | `#999999` | Description text color          |
+| `og_image.accent_color` | `OG_IMAGE_ACCENT_COLOR` | `#7eb8f7` | Accent line color               |
+| `og_image.cache_size`   | `OG_IMAGE_CACHE_SIZE`   | `128`     | LRU cache capacity. Must be > 0 |
 
 See [OG Images](og-images).
 

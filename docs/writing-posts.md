@@ -24,32 +24,50 @@ visible: true
 rss-visible: true
 noindex: false
 ---
-
 Post content starts here.
 ```
 
 All fields are optional. Behavior when omitted:
 
-| Field | Default | Description |
-|---|---|---|
-| `title` | `""` | Page title. Displayed in lists, feeds, og:image |
-| `description` | `""` | Summary. Used in feed entries and `<meta>` tags |
-| `date` | file mod time | Publication date. Determines sort order |
-| `author` | `""` | Post author. Shown in post view and Atom entries |
-| `tags` | `[]` | Categorization. Used for filtering in lists and feeds |
-| `visible` | `true` | `false` hides from post list, search, feeds, and sitemap |
-| `rss-visible` | `true` | `false` hides from RSS/Atom feeds only |
-| `noindex` | `false` | `true` adds `<meta name="robots" content="noindex">` |
+| Field         | Default       | Description                                              |
+| ------------- | ------------- | -------------------------------------------------------- |
+| `title`       | `""`          | Page title. Displayed in lists, feeds, og:image          |
+| `description` | `""`          | Summary. Used in feed entries and `<meta>` tags          |
+| `date`        | file mod time | Publication date. Determines sort order                  |
+| `author`      | `""`          | Post author. Shown in post view and Atom entries         |
+| `tags`        | `[]`          | Categorization. Used for filtering in lists and feeds    |
+| `visible`     | `true`        | `false` hides from post list, search, feeds, and sitemap |
+| `rss-visible` | `true`        | `false` hides from RSS/Atom feeds only                   |
+| `noindex`     | `false`       | `true` adds `<meta name="robots" content="noindex">`     |
 
 Front matter also supports arbitrary keys via the `Raw` map, accessible in custom tooling.
+
+## Additional date fields
+
+Any front matter key whose name ends in `date` (case-insensitive) is treated as a date field. The primary `date` key is excluded. It is already exposed as `.DateStr` and `.DateISO`.
+
+Each additional date field is parsed as an RFC 3339 timestamp. It is then exposed in the template as two entries under the `.Dates` map. The map key is the original front matter key. Each entry has a `Str` field and an `ISO` field.
+
+Example front matter:
+
+```yaml
+---
+title: My Post
+date: 2025-06-15
+publishdate: 2025-05-01
+updateddate: 2025-07-20T09:00:00Z
+---
+```
+
+This produces `.Dates.publishdate` and `.Dates.updateddate`. Each has `.Str` (formatted using `date_format`) and `.ISO` (RFC 3339). See [Templates](templates) for usage.
 
 ## Slugs
 
 The URL slug is derived from the file path relative to the source root, without the `.md` extension:
 
-| File path | Slug | URL |
-|---|---|---|
-| `hello.md` | `hello` | `/hello` |
+| File path         | Slug           | URL             |
+| ----------------- | -------------- | --------------- |
+| `hello.md`        | `hello`        | `/hello`        |
 | `guides/setup.md` | `guides/setup` | `/guides/setup` |
 | `2025/my-post.md` | `2025/my-post` | `/2025/my-post` |
 
@@ -74,10 +92,10 @@ Content injected as the page footer on every page. Set `visible: false` and `rss
 ## Visibility rules
 
 | `visible` | `rss-visible` | In post list | In feeds | Directly accessible |
-|---|---|---|---|---|
-| `true` | `true` | yes | yes | yes |
-| `true` | `false` | yes | no | yes |
-| `false` | any | no | no | yes |
+| --------- | ------------- | ------------ | -------- | ------------------- |
+| `true`    | `true`        | yes          | yes      | yes                 |
+| `true`    | `false`       | yes          | no       | yes                 |
+| `false`   | any           | no           | no       | yes                 |
 
 Hidden posts (`visible: false`) are still accessible by direct URL. They are excluded from search, sitemap, and the post list.
 

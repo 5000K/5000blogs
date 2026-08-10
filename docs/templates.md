@@ -38,12 +38,12 @@ For the canonical variable list see [Themes](themes).
 
 ## Built-in templates
 
-| Template | Matching theme | Description |
-|---|---|---|
-| `template.html` | `theme.base.css` | Adaptive light/dark, Tachyons CSS. Full-featured default |
-| `template.garden.html` | `theme.garden.css` | Warm/earthy theme with serif fonts and card layout |
-| `template.docs.html` | `theme.docs.css` | Light documentation theme, clean and minimal |
-| `template.raw.html` | - | Unstyled skeleton with all variables. Starting point for custom templates |
+| Template               | Matching theme     | Description                                                               |
+| ---------------------- | ------------------ | ------------------------------------------------------------------------- |
+| `template.html`        | `theme.base.css`   | Adaptive light/dark, Tachyons CSS. Full-featured default                  |
+| `template.garden.html` | `theme.garden.css` | Warm/earthy theme with serif fonts and card layout                        |
+| `template.docs.html`   | `theme.docs.css`   | Light documentation theme, clean and minimal                              |
+| `template.raw.html`    | -                  | Unstyled skeleton with all variables. Starting point for custom templates |
 
 You can use a URL to reference built-in variants directly:
 
@@ -58,63 +58,64 @@ The template receives a single `templateData` struct. All fields:
 
 ### Shared fields (all pages)
 
-| Field | Type | Description |
-|---|---|---|
-| `.Title` | `string` | Page title |
-| `.Description` | `string` | Meta description |
-| `.URL` | `string` | Canonical page URL |
-| `.OGImageURL` | `string` | Absolute og:image URL (empty if disabled) |
-| `.OGLogoURL` | `string` | Absolute site logo URL |
-| `.Plugins` | `[]string` | JS plugin URLs |
-| `.BlogName` | `string` | Blog name from config |
-| `.NavLinks` | `[]navLink` | Navigation entries (`.Name`, `.URL`) |
-| `.Slug` | `string` | Current post slug (empty on list pages) |
-| `.FooterContent` | `template.HTML` | Rendered footer HTML |
+| Field            | Type            | Description                               |
+| ---------------- | --------------- | ----------------------------------------- |
+| `.Title`         | `string`        | Page title                                |
+| `.Description`   | `string`        | Meta description                          |
+| `.URL`           | `string`        | Canonical page URL                        |
+| `.OGImageURL`    | `string`        | Absolute og:image URL (empty if disabled) |
+| `.OGLogoURL`     | `string`        | Absolute site logo URL                    |
+| `.Plugins`       | `[]string`      | JS plugin URLs                            |
+| `.BlogName`      | `string`        | Blog name from config                     |
+| `.NavLinks`      | `[]navLink`     | Navigation entries (`.Name`, `.URL`)      |
+| `.Slug`          | `string`        | Current post slug (empty on list pages)   |
+| `.FooterContent` | `template.HTML` | Rendered footer HTML                      |
 
 ### Post view fields
 
-| Field | Type | Description |
-|---|---|---|
-| `.DateStr` | `string` | Formatted date string |
-| `.DateISO` | `string` | RFC 3339 date for `<time datetime>` |
-| `.Author` | `string` | Post author |
-| `.Tags` | `[]string` | Post tags |
-| `.Content` | `template.HTML` | Rendered post HTML |
-| `.NoIndex` | `bool` | `true` → add noindex meta tag |
+| Field      | Type                     | Description                                                                                                                       |
+| ---------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `.DateStr` | `string`                 | Formatted date string                                                                                                             |
+| `.DateISO` | `string`                 | RFC 3339 date for `<time datetime>`                                                                                               |
+| `.Author`  | `string`                 | Post author                                                                                                                       |
+| `.Tags`    | `[]string`               | Post tags                                                                                                                         |
+| `.Content` | `template.HTML`          | Rendered post HTML                                                                                                                |
+| `.NoIndex` | `bool`                   | `true` → add noindex meta tag                                                                                                     |
+| `.Dates`   | `map[string]DateStrings` | Additional date fields from front matter. Key is the original field name. Each entry has `.Str` (formatted) and `.ISO` (RFC 3339) |
 
 ### List view fields
 
-| Field | Type | Description |
-|---|---|---|
-| `.IsListPage` | `bool` | `true` when rendering a list (not a single post) |
-| `.SearchQuery` | `string` | Active search query (empty if none) |
-| `.FilterTags` | `[]string` | Active tag filter |
-| `.Posts` | `[]postListItem` | Post entries for this page |
-| `.Pagination` | `paginationData` | Pagination state |
+| Field          | Type             | Description                                      |
+| -------------- | ---------------- | ------------------------------------------------ |
+| `.IsListPage`  | `bool`           | `true` when rendering a list (not a single post) |
+| `.SearchQuery` | `string`         | Active search query (empty if none)              |
+| `.FilterTags`  | `[]string`       | Active tag filter                                |
+| `.Posts`       | `[]postListItem` | Post entries for this page                       |
+| `.Pagination`  | `paginationData` | Pagination state                                 |
 
 ### `postListItem` fields
 
-| Field | Type |
-|---|---|
-| `.Slug` | `string` |
-| `.Title` | `string` |
-| `.Description` | `string` |
-| `.DateStr` | `string` |
-| `.Author` | `string` |
-| `.Tags` | `[]string` |
+| Field          | Type       |
+| -------------- | ---------- |
+| `.Slug`        | `string`   |
+| `.Title`       | `string`   |
+| `.Description` | `string`   |
+| `.DateStr`     | `string`   |
+| `.Author`      | `string`   |
+| `.Tags`        | `[]string` |
 
 ### `paginationData` fields
 
-| Field | Type | Description |
-|---|---|---|
-| `.Page` | `int` | Current page number |
-| `.TotalPages` | `int` | Total pages |
-| `.TotalPosts` | `int` | Total visible posts |
-| `.HasPrev` | `bool` | Previous page exists |
-| `.HasNext` | `bool` | Next page exists |
-| `.PrevPage` | `int` | Previous page number |
-| `.NextPage` | `int` | Next page number |
-| `.TagParam` | `string` | e.g. `&tags=foo,bar` for pagination links |
+| Field         | Type     | Description                               |
+| ------------- | -------- | ----------------------------------------- |
+| `.Page`       | `int`    | Current page number                       |
+| `.TotalPages` | `int`    | Total pages                               |
+| `.TotalPosts` | `int`    | Total visible posts                       |
+| `.HasPrev`    | `bool`   | Previous page exists                      |
+| `.HasNext`    | `bool`   | Next page exists                          |
+| `.PrevPage`   | `int`    | Previous page number                      |
+| `.NextPage`   | `int`    | Next page number                          |
+| `.TagParam`   | `string` | e.g. `&tags=foo,bar` for pagination links |
 
 ## Conditional rendering
 
@@ -122,20 +123,30 @@ Use Go template conditionals to switch between page types:
 
 ```html
 {{if .IsListPage}}
-  <!-- post list -->
+<!-- post list -->
 {{else}}
-  <!-- single post -->
+<!-- single post -->
 {{end}}
 ```
 
 Check for optional values:
 
 ```html
-{{if .Author}}<span>by {{.Author}}</span>{{end}}
-{{if .Tags}}
-  {{range .Tags}}<span>{{.}}</span>{{end}}
+{{if .Author}}<span>by {{.Author}}</span>{{end}} {{if .Tags}} {{range
+.Tags}}<span>{{.}}</span>{{end}} {{end}}
+```
+
+## Additional date fields
+
+Front matter keys ending in `date` (except the primary `date`) are exposed as `.Dates`. This is a map keyed by the original front matter field name. Each value has `.Str` and `.ISO`.
+
+```html
+{{range $name, $ds := .Dates}}
+<time datetime="{{$ds.ISO}}">{{$ds.Str}}</time>
 {{end}}
 ```
+
+The `.Str` field uses the `date_format` config option. The `.ISO` field is always RFC 3339. See [Writing Posts](writing-posts#additional-date-fields) for how to define these fields in front matter.
 
 ## Plugins in templates
 
