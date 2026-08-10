@@ -28,6 +28,8 @@ og_image:
   sub_color: '#999999'
   accent_color: '#7eb8f7'
 
+rescan_cron: "0 0,12 * * *"
+
 sources:
   - type: git
     url: "https://github.com/5000K/5000blogs"

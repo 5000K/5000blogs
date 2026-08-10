@@ -743,7 +743,7 @@ func (r *BlevePostIndexer) extractMetadataForNew(path string) (*Post, []byte, bo
 		r.log.Error("failed to read post", "path", path, "err", err)
 		return nil, nil, false
 	}
-	post := &Post{Slug: r.source.SlugForPath(path), modTime: modTime}
+	post := &Post{Slug: r.source.SlugForPath(path), sourcePath: path, modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)
@@ -782,7 +782,7 @@ func (r *BlevePostIndexer) extractMetadataIfChanged(path string, existing *Post)
 			return nil, nil, false
 		}
 	}
-	post := &Post{Slug: r.source.SlugForPath(path), modTime: modTime}
+	post := &Post{Slug: r.source.SlugForPath(path), sourcePath: path, modTime: modTime}
 	body, err := r.converter.ExtractMetadata(post, buf)
 	if err != nil {
 		r.log.Error("failed to extract metadata", "path", path, "err", err)

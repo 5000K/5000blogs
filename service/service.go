@@ -20,9 +20,10 @@ type Metadata struct {
 }
 
 type Post struct {
-	Slug    string
-	hash    uint64
-	modTime time.Time
+	Slug       string
+	sourcePath string // original file-system path used to read from PostSource
+	hash       uint64
+	modTime    time.Time
 
 	Metadata  *Metadata
 	Contents  *[]byte
