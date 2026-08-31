@@ -2,7 +2,7 @@
 
 # <img src="./template/icon.png" width="64"/> 5000blogs
 
-> ! 5000blogs is nearly feature-stable, but config and API might still change. In the future, there probably will be manual migrations (mostly regarding your config and template) needed towards version 1.0. We will help with them. But they will probably be needed.
+> ! 5000blogs is nearly feature-stable, but we still advise against using 5000blogs in mission-critical scenarios.
 
 ## About
 5000blogs is a lightweight platform for blogging and publishing markdown files.
