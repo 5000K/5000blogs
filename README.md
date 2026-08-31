@@ -2,7 +2,7 @@
 
 # <img src="./template/icon.png" width="64"/> 5000blogs
 
-> ! 5000blogs is nearly feature-stable, but we still advise against using 5000blogs in mission-critical scenarios.
+> ! 5000blogs is nearly feature-stable, but we still advise against using 5000blogs in mission-critical scenarios until it reached version 1.0.
 
 ## About
 5000blogs is a lightweight platform for blogging and publishing markdown files.
